@@ -1,9 +1,10 @@
 /*
- * Phase 1 BigInt test driver.
+ * Phase 1 BigInt + Phase 2 Frac test driver.
  * Exercises all SPEC and .cursorrules edge cases.
  * Exits 0 on success, non-zero on failure.
  */
 #include "bigint.h"
+#include "frac.h"
 #include <iostream>
 #include <string>
 
@@ -90,6 +91,65 @@ int main() {
     CHECK(BigInt(-42).str() == "-42");
     CHECK(BigInt(48) / BigInt(18) == BigInt(2));
     CHECK(BigInt(48) % BigInt(18) == BigInt(12));
+
+    std::cout << "\n=== Frac Phase 2 test driver ===\n\n";
+
+    // --- Frac: SPEC reduction ---
+    std::cout << "--- Frac SPEC reduction: 6/4→3/2, 0/5→0/1 ---\n";
+    CHECK(Frac(6, 4).str() == "3/2");
+    CHECK(Frac(0, 5).str() == "0");
+    CHECK(Frac(0, 5).num == BigInt(0) && Frac(0, 5).den == BigInt(1));
+
+    // --- Frac: Zero denominator throws ---
+    std::cout << "\n--- Frac: zero denominator must throw ---\n";
+    {
+        bool threw = false;
+        try { (void)Frac(1, 0); } catch (const std::invalid_argument&) { threw = true; }
+        CHECK(threw);
+    }
+    {
+        bool threw = false;
+        try { (void)(Frac(1, 2) / Frac(0)); } catch (const std::invalid_argument&) { threw = true; }
+        CHECK(threw);
+    }
+
+    // --- Frac: add/sub/mul/div ---
+    std::cout << "\n--- Frac arithmetic: add/sub/mul/div ---\n";
+    CHECK((Frac(1, 2) + Frac(1, 3)).str() == "5/6");
+    CHECK((Frac(1, 2) - Frac(1, 3)).str() == "1/6");
+    CHECK((Frac(1, 2) * Frac(2, 3)).str() == "1/3");
+    CHECK((Frac(1, 2) / Frac(2, 3)).str() == "3/4");
+    CHECK((Frac(-1, 2) + Frac(1, 2)) == Frac(0));
+    CHECK((Frac(-1, 2) * Frac(2, 1)) == Frac(-1));
+
+    // --- Frac: Sign handling ---
+    std::cout << "\n--- Frac sign handling ---\n";
+    CHECK(Frac(-3, 4).str() == "-3/4");
+    CHECK(Frac(3, -4).str() == "-3/4");
+    CHECK(Frac(-1, 2) < Frac(1, 2));
+    CHECK(Frac(1, 3) < Frac(1, 2));
+
+    // --- Frac: str() integer form ---
+    std::cout << "\n--- Frac str() integer form ---\n";
+    CHECK(Frac(7).str() == "7");
+    CHECK(Frac(0).str() == "0");
+
+    // --- Frac: Long-chain growth test (no exponential BigInt growth) ---
+    std::cout << "\n--- Frac long-chain: add chain 1+50*(1/2)=26 ---\n";
+    {
+        Frac f(1, 1);
+        for (int i = 0; i < 50; i++) f = f + Frac(1, 2);
+        CHECK(f.den == BigInt(1) && f.num == BigInt(26));
+    }
+    std::cout << "\n--- Frac long-chain: mul chain (3/2)^20 reduced ---\n";
+    {
+        Frac f(1, 1);
+        for (int i = 0; i < 20; i++) f = f * Frac(3, 2);
+        // Reduced form: (3/2)^20 = 3^20/2^20, gcd(3^20,2^20)=1 so den=2^20
+        BigInt g = bigGcd(f.num.abs(), f.den);
+        CHECK(g == BigInt(1));
+        CHECK(f.den > BigInt(0));
+    }
 
     std::cout << "\n=== " << (fail_count == 0 ? "All PASS" : "FAILURES") << " (fail_count=" << fail_count << ") ===\n";
     return fail_count;
