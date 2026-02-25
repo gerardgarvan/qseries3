@@ -11,7 +11,7 @@ Build a zero-dependency C++20 REPL for q-series computation bottom-up: BigInt �
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: BigInt** - Arbitrary precision integers, base 10⁹, signed (completed 2026-02-25)
-- [ ] **Phase 2: Frac** - Exact rationals with auto-reduce via GCD
+- [x] **Phase 2: Frac** - Exact rationals with auto-reduce via GCD (completed 2026-02-25)
 - [ ] **Phase 3: Series** - Truncated power series with inverse, truncation propagation
 - [ ] **Phase 4: qfuncs** - aqprod, etaq, theta, qbin, products; number theory helpers
 - [ ] **Phase 5: prodmake** - Andrews' algorithm; Rogers-Ramanujan canary test
@@ -46,10 +46,11 @@ Plans:
   1. 6/4 reduces to 3/2; 0/5 reduces to 0/1
   2. reduce() runs after every construction and operation
   3. Long chains of Frac ops produce no exponential BigInt growth
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: TBD
+- [ ] 02-01-PLAN.md — frac.h: Frac struct, reduce, arithmetic, comparisons, str
+- [ ] 02-02-PLAN.md — main.cpp Frac test suite (SPEC + add/sub/mul/div + sign + long-chain)
 
 ### Phase 3: Series
 **Goal**: Truncated power series with correct arithmetic and inversion
@@ -163,7 +164,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. BigInt | 0/3 | Complete    | 2026-02-25 |
-| 2. Frac | 0/? | Not started | - |
+| 2. Frac | 0/? | Complete    | 2026-02-25 |
 | 3. Series | 0/? | Not started | - |
 | 4. qfuncs | 0/? | Not started | - |
 | 5. prodmake | 0/? | Not started | - |
