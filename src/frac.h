@@ -49,6 +49,63 @@ struct Frac {
         r.den = den;
         return r;
     }
+
+    Frac operator-() const {
+        Frac r;
+        r.num = -num;
+        r.den = den;
+        return r;
+    }
+
+    Frac operator+(const Frac& o) const {
+        BigInt n = num * o.den + o.num * den;
+        BigInt d = den * o.den;
+        return Frac(std::move(n), std::move(d));
+    }
+
+    Frac operator-(const Frac& o) const {
+        BigInt n = num * o.den - o.num * den;
+        BigInt d = den * o.den;
+        return Frac(std::move(n), std::move(d));
+    }
+
+    Frac operator*(const Frac& o) const {
+        BigInt n = num * o.num;
+        BigInt d = den * o.den;
+        return Frac(std::move(n), std::move(d));
+    }
+
+    Frac operator/(const Frac& o) const {
+        if (o.isZero())
+            throw std::invalid_argument("Frac: division by zero");
+        BigInt n = num * o.den;
+        BigInt d = den * o.num;
+        return Frac(std::move(n), std::move(d));
+    }
+
+    bool operator==(const Frac& o) const {
+        return num == o.num && den == o.den;
+    }
+
+    bool operator!=(const Frac& o) const {
+        return !(*this == o);
+    }
+
+    bool operator<(const Frac& o) const {
+        return (num * o.den) < (o.num * den);
+    }
+
+    bool operator<=(const Frac& o) const {
+        return !(o < *this);
+    }
+
+    bool operator>(const Frac& o) const {
+        return o < *this;
+    }
+
+    bool operator>=(const Frac& o) const {
+        return !(*this < o);
+    }
 };
 
 #endif
