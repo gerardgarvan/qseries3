@@ -6,6 +6,7 @@
 #include "frac.h"
 #include "convert.h"
 #include "qfuncs.h"
+#include "relations.h"
 #include <map>
 #include <vector>
 #include <string>
@@ -33,13 +34,22 @@ struct Environment {
 // EvalResult: union of all possible evaluation outcomes
 struct DisplayOnly {};  // tag for series/coeffs display-only built-ins
 
+struct RelationKernelResult {
+    std::vector<std::vector<Frac>> basis;
+    std::vector<std::vector<int>> monomialExponents;
+};
+struct RelationComboResult {
+    std::optional<std::vector<Frac>> coeffs;
+    std::vector<std::vector<int>> monomialExponents;
+};
+
 using EvalResult = std::variant<
     Series,
     std::map<int, Frac>,                              // prodmake
     std::vector<std::pair<int, Frac>>,                // etamake
     std::vector<JacFactor>,                           // jacprodmake
-    std::vector<std::vector<Frac>>,                   // findhom/findnonhom
-    std::optional<std::vector<Frac>>,                 // findhomcombo/findnonhomcombo
+    RelationKernelResult,                             // findhom/findnonhom
+    RelationComboResult,                              // findhomcombo/findnonhomcombo
     QFactorResult,                                    // qfactor
     int64_t,                                          // legendre/sigma
     DisplayOnly,
@@ -225,13 +235,13 @@ inline EvalResult dispatchBuiltin(const std::string& name,
     if (name == "series") {
         if (args.size() == 1) {
             Series f = ev(0).truncTo(T);
-            std::cout << f.str(30) << std::endl;
+            std::cout << f.str(std::min(100, T)) << std::endl;
             return DisplayOnly{};
         }
         if (args.size() == 2) {
             int Tr = static_cast<int>(evi(1));
             Series f = ev(0).truncTo(Tr);
-            std::cout << f.str(std::min(30, Tr)) << std::endl;
+            std::cout << f.str(std::min(Tr, 100)) << std::endl;
             return DisplayOnly{};
         }
         throw std::runtime_error("series(f) or series(f,T)");
@@ -260,6 +270,106 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         env.T = N;
         env.env["q"] = Series::q(N);
         return std::monostate{};
+    }
+
+    auto evalListToSeries = [&](const Expr* listExpr) {
+        if (!listExpr || listExpr->tag != Expr::Tag::List)
+            throw std::runtime_error("expected list of series");
+        std::vector<Series> out;
+        for (const auto& e : listExpr->elements)
+            out.push_back(evalAsSeries(e.get(), env, sumIndices));
+        return out;
+    };
+    auto evalListToInt = [&](const Expr* listExpr) {
+        if (!listExpr || listExpr->tag != Expr::Tag::List)
+            throw std::runtime_error("expected list of integers");
+        std::vector<int> out;
+        for (const auto& e : listExpr->elements)
+            out.push_back(static_cast<int>(evalToInt(e.get(), env, sumIndices)));
+        return out;
+    };
+
+    if (name == "findhom") {
+        if (args.size() != 3)
+            throw std::runtime_error("findhom(L,n,topshift) expects 3 arguments");
+        auto L = evalListToSeries(args[0].get());
+        int n = static_cast<int>(evi(1));
+        int topshift = static_cast<int>(evi(2));
+        auto basis = findhom(L, n, topshift);
+        std::vector<std::vector<int>> exps;
+        enumerate_hom_exponents(static_cast<int>(L.size()), n, {}, exps);
+        return RelationKernelResult{std::move(basis), std::move(exps)};
+    }
+    if (name == "findnonhom") {
+        if (args.size() != 3)
+            throw std::runtime_error("findnonhom(L,n,topshift) expects 3 arguments");
+        auto L = evalListToSeries(args[0].get());
+        int n = static_cast<int>(evi(1));
+        int topshift = static_cast<int>(evi(2));
+        auto basis = findnonhom(L, n, topshift);
+        std::vector<std::vector<int>> exps;
+        enumerate_nonhom_exponents(static_cast<int>(L.size()), n, exps);
+        return RelationKernelResult{std::move(basis), std::move(exps)};
+    }
+    if (name == "findhomcombo") {
+        if (args.size() < 4 || args.size() > 5)
+            throw std::runtime_error("findhomcombo(f,L,n,topshift[,etaopt]) expects 4 or 5 arguments");
+        Series f = ev(0);
+        auto L = evalListToSeries(args[1].get());
+        int n = static_cast<int>(evi(2));
+        int topshift = static_cast<int>(evi(3));
+        bool etaopt = (args.size() == 5) && (evi(4) != 0);
+        (void)etaopt;
+        auto coeffs = findhomcombo(f, L, n, topshift, false);
+        std::vector<std::vector<int>> exps;
+        enumerate_hom_exponents(static_cast<int>(L.size()), n, {}, exps);
+        return RelationComboResult{std::move(coeffs), std::move(exps)};
+    }
+    if (name == "findnonhomcombo") {
+        if (args.size() < 4 || args.size() > 5)
+            throw std::runtime_error("findnonhomcombo(f,L,n_list,topshift[,etaopt]) expects 4 or 5 arguments");
+        Series f = ev(0);
+        auto L = evalListToSeries(args[1].get());
+        auto n_list = evalListToInt(args[2].get());
+        int topshift = static_cast<int>(evi(3));
+        bool etaopt = (args.size() == 5) && (evi(4) != 0);
+        (void)etaopt;
+        auto coeffs = findnonhomcombo(f, L, n_list, topshift, false);
+        std::vector<std::vector<int>> exps;
+        enumerate_nlist_exponents(n_list, {}, 0, exps);
+        return RelationComboResult{std::move(coeffs), std::move(exps)};
+    }
+    if (name == "findpoly") {
+        if (args.size() < 4 || args.size() > 5)
+            throw std::runtime_error("findpoly(x,y,deg1,deg2[,check]) expects 4 or 5 arguments");
+        Series x = ev(0);
+        Series y = ev(1);
+        int deg1 = static_cast<int>(evi(2));
+        int deg2 = static_cast<int>(evi(3));
+        std::optional<int> check = (args.size() == 5) ? std::optional<int>(static_cast<int>(evi(4))) : std::nullopt;
+        auto basis = findpoly(x, y, deg1, deg2, check);
+        std::vector<std::vector<int>> exps;
+        for (int j = 0; j <= deg2; ++j)
+            for (int i = 0; i <= deg1; ++i)
+                exps.push_back({i, j});
+        return RelationKernelResult{std::move(basis), std::move(exps)};
+    }
+    if (name == "legendre") {
+        if (args.size() != 2)
+            throw std::runtime_error("legendre(a,p) expects 2 arguments");
+        return static_cast<int64_t>(legendre(evi(0), evi(1)));
+    }
+    if (name == "sigma") {
+        if (args.size() == 1)
+            return sigma(static_cast<int>(evi(0)), 1);
+        if (args.size() == 2)
+            return sigma(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
+        throw std::runtime_error("sigma(n) or sigma(n,k)");
+    }
+    if (name == "subs_q") {
+        if (args.size() != 2)
+            throw std::runtime_error("subs_q(f,k) expects 2 arguments");
+        return ev(0).subs_q(static_cast<int>(evi(1)));
     }
 
     throw std::runtime_error("unknown built-in: " + name);
@@ -476,11 +586,11 @@ inline void display(const EvalResult& res, Environment& env, int /*T*/) {
             std::cout << formatEtamake(arg) << std::endl;
         } else if constexpr (std::is_same_v<T, std::vector<JacFactor>>) {
             std::cout << jac2prod(arg) << std::endl;
-        } else if constexpr (std::is_same_v<T, std::vector<std::vector<Frac>>>) {
-            for (const auto& r : arg)
-                std::cout << formatRelation(r, {}, {}) << std::endl;
-        } else if constexpr (std::is_same_v<T, std::optional<std::vector<Frac>>>) {
-            if (arg) std::cout << formatRelation(*arg, {}, {}) << std::endl;
+        } else if constexpr (std::is_same_v<T, RelationKernelResult>) {
+            for (const auto& r : arg.basis)
+                std::cout << formatRelation(r, arg.monomialExponents, {}) << std::endl;
+        } else if constexpr (std::is_same_v<T, RelationComboResult>) {
+            if (arg.coeffs) std::cout << formatRelation(*arg.coeffs, arg.monomialExponents, {}) << std::endl;
             else std::cout << "(no solution)" << std::endl;
         } else if constexpr (std::is_same_v<T, QFactorResult>) {
             std::cout << formatQfactor(arg) << std::endl;
@@ -512,13 +622,24 @@ inline EvalResult evalStmt(const Stmt* s, Environment& env) {
 }
 
 inline void runRepl() {
-    std::cout << R"(
-  /\  /\
- ( o  o )
- (  __  )
-  \____/
+    std::cout << R"banner(
+     (\-"""-/)
+        | |
+     \ ^ ^ / .-.
+     \_o_/ / /
+     /` `\/ |
+     / \ |
+     \ ( ) / |
+     / \_) (_/ \ /
+     | (\-/) |
+     \ --^o^-- /
+     \ '.___.' /
+     .' \-=-/ '.
+     / /` `\ \
+     (//./ \.\\) `"` `"`
+
  q-series REPL (Maple-like), version 1.0
-)" << std::endl;
+)banner" << std::endl;
 
     Environment env;
     std::deque<std::string> history;

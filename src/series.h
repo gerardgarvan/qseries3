@@ -252,8 +252,9 @@ struct Series {
     }
 
     std::string str(int maxTerms = 30) const {
+        std::string oTerm = " + O(q" + expToUnicode(trunc) + ")";
         if (c.empty())
-            return "0 + O(q^" + std::to_string(trunc) + ")";
+            return "0" + oTerm;
         std::string out;
         int count = 0;
         for (const auto& [e, v] : c) {
@@ -277,7 +278,7 @@ struct Series {
             }
             ++count;
         }
-        out += " + O(q^" + std::to_string(trunc) + ")";
+        out += " + O(q" + expToUnicode(trunc) + ")";
         return out;
     }
 
