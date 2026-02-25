@@ -10,7 +10,7 @@ Build a zero-dependency C++20 REPL for q-series computation bottom-up: BigInt �
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: BigInt** - Arbitrary precision integers, base 10⁹, signed
+- [x] **Phase 1: BigInt** - Arbitrary precision integers, base 10⁹, signed (completed 2026-02-25)
 - [ ] **Phase 2: Frac** - Exact rationals with auto-reduce via GCD
 - [ ] **Phase 3: Series** - Truncated power series with inverse, truncation propagation
 - [ ] **Phase 4: qfuncs** - aqprod, etaq, theta, qbin, products; number theory helpers
@@ -31,10 +31,12 @@ Build a zero-dependency C++20 REPL for q-series computation bottom-up: BigInt �
   1. BigInt supports +, -, *, divmod with correct results for large operands
   2. Long division uses binary-search quotient; remainder invariant holds
   3. GCD computes correctly; edge cases (0, negatives, base boundaries) handled
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: TBD
+- [ ] 01-01-PLAN.md — BigInt core: struct, constructors, +, -, *, comparisons, str
+- [ ] 01-02-PLAN.md — divmod (binary-search quotient), /, %, bigGcd
+- [ ] 01-03-PLAN.md — main.cpp test driver with SPEC edge cases
 
 ### Phase 2: Frac
 **Goal**: Exact rational arithmetic with no coefficient growth
@@ -160,7 +162,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. BigInt | 0/? | Not started | - |
+| 1. BigInt | 0/3 | Complete    | 2026-02-25 |
 | 2. Frac | 0/? | Not started | - |
 | 3. Series | 0/? | Not started | - |
 | 4. qfuncs | 0/? | Not started | - |
