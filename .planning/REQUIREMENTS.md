@@ -96,12 +96,49 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (To be filled by roadmapper) | | |
+| CORE-01 | Phase 1 | Pending |
+| CORE-02 | Phase 1 | Pending |
+| CORE-03 | Phase 2 | Pending |
+| CORE-04 | Phase 3 | Pending |
+| CORE-05 | Phase 3 | Pending |
+| CORE-06 | Phase 4 | Pending |
+| QFUNCS-01 | Phase 4 | Pending |
+| QFUNCS-02 | Phase 4 | Pending |
+| QFUNCS-03 | Phase 4 | Pending |
+| QFUNCS-04 | Phase 4 | Pending |
+| QFUNCS-05 | Phase 4 | Pending |
+| QFUNCS-06 | Phase 4 | Pending |
+| CONVERT-01 | Phase 5 | Pending |
+| CONVERT-02 | Phase 6 | Pending |
+| CONVERT-03 | Phase 6 | Pending |
+| CONVERT-04 | Phase 6 | Pending |
+| CONVERT-05 | Phase 6 | Pending |
+| LINALG-01 | Phase 7 | Pending |
+| LINALG-02 | Phase 7 | Pending |
+| REL-01 | Phase 8 | Pending |
+| REL-02 | Phase 8 | Pending |
+| REL-03 | Phase 8 | Pending |
+| REL-04 | Phase 8 | Pending |
+| REPL-01 | Phase 9 | Pending |
+| REPL-02 | Phase 10 | Pending |
+| REPL-03 | Phase 10 | Pending |
+| REPL-04 | Phase 10 | Pending |
+| REPL-05 | Phase 10 | Pending |
+| REPL-06 | Phase 10 | Pending |
+| TEST-01 | Phase 5 | Pending |
+| TEST-02 | Phase 4 | Pending |
+| TEST-03 | Phase 6 | Pending |
+| TEST-04 | Phase 6 | Pending |
+| TEST-05 | Phase 8 | Pending |
+| TEST-06 | Phase 6 | Pending |
+| TEST-07 | Phase 6 | Pending |
+| TEST-08 | Phase 8 | Pending |
+| TEST-09 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 35 total
-- Mapped to phases: 0
-- Unmapped: 35 ⚠️
+- v1 requirements: 38 total
+- Mapped to phases: 38
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2025-02-24*
