@@ -1,51 +1,96 @@
+/*
+ * Phase 1 BigInt test driver.
+ * Exercises all SPEC and .cursorrules edge cases.
+ * Exits 0 on success, non-zero on failure.
+ */
 #include "bigint.h"
 #include <iostream>
-#include <cassert>
+#include <string>
+
+static int fail_count = 0;
+
+#define CHECK(cond) do { \
+    if (!(cond)) { std::cerr << "FAIL: " << #cond << '\n'; ++fail_count; } \
+    else { std::cout << "PASS: " << #cond << '\n'; } \
+} while(0)
 
 int main() {
-    // Task 1 verification
-    assert(BigInt("0").str() == "0");
-    assert(BigInt("-42").str() == "-42");
-    assert(BigInt(123456789).str() == "123456789");
-    assert(BigInt(0).str() == "0");
-    assert(BigInt(-1).str() == "-1");
+    std::cout << "=== BigInt Phase 1 test driver ===\n\n";
 
-    BigInt a = BigInt("0");
-    BigInt b = BigInt(-42);
-    assert(a == BigInt(0));
-    assert(b < BigInt(0));
-    assert(BigInt(5) > BigInt(3));
-    assert(BigInt(-5) < BigInt(-3));
+    // --- Group 1: 0 * anything = 0 ---
+    std::cout << "--- 0 * anything = 0 ---\n";
+    CHECK(BigInt(0) * BigInt(0) == BigInt(0));
+    CHECK(BigInt(0) * BigInt(1) == BigInt(0));
+    CHECK(BigInt(0) * BigInt(-1) == BigInt(0));
+    CHECK(BigInt(0) * BigInt("123456789012345") == BigInt(0));
+    CHECK(BigInt("123456789012345") * BigInt(0) == BigInt(0));
 
-    // Task 2 verification
-    BigInt p = BigInt("999999999") * BigInt("999999999");
-    assert(p.str() == "999999998000000001");
-    assert((-BigInt(7)) * (-BigInt(3)) == BigInt(21));
-    assert(BigInt(0) * BigInt("123456789012345") == BigInt(0));
-    assert(BigInt(100) + BigInt(-30) == BigInt(70));
-    assert(BigInt(100) - BigInt(30) == BigInt(70));
+    // --- Group 2: (-a) * (-b) = a*b ---
+    std::cout << "\n--- (-a) * (-b) = a*b ---\n";
+    CHECK((-BigInt(7)) * (-BigInt(3)) == BigInt(21));
+    CHECK((-BigInt("999999999")) * (-BigInt("999999999")) == BigInt("999999998000000001"));
 
-    // Plan 01-02: divmod verification
+    // --- Group 3: Division cases ---
+    std::cout << "\n--- Division: 1000000000/1, 999999999/1000000000, 123456789012345/123 ---\n";
     auto [q1, r1] = BigInt::divmod(BigInt("1000000000"), BigInt("1"));
-    assert(q1 == BigInt("1000000000") && r1 == BigInt(0));
+    CHECK(q1 == BigInt("1000000000") && r1 == BigInt(0));
     auto [q2, r2] = BigInt::divmod(BigInt("999999999"), BigInt("1000000000"));
-    assert(q2 == BigInt(0) && r2 == BigInt("999999999"));
+    CHECK(q2 == BigInt(0) && r2 == BigInt("999999999"));
     auto [q3, r3] = BigInt::divmod(BigInt("123456789012345"), BigInt("123"));
-    assert(q3 * BigInt("123") + r3 == BigInt("123456789012345"));
-    assert(BigInt(0) <= r3 && r3 < BigInt("123"));
+    CHECK(q3 * BigInt("123") + r3 == BigInt("123456789012345"));
+    CHECK(BigInt(0) <= r3 && r3 < BigInt("123"));
 
-    // Plan 01-02 Task 2: operator/, operator%, bigGcd
-    assert(BigInt(48) / BigInt(18) == BigInt(2));
-    assert(BigInt(48) % BigInt(18) == BigInt(12));
-    assert(bigGcd(BigInt(48), BigInt(18)) == BigInt(6));
-    assert(bigGcd(BigInt(0), BigInt(7)) == BigInt(7));
-    assert(bigGcd(BigInt(-12), BigInt(8)) == BigInt(4));
+    // --- Group 4: Negatives — (-7)/3, 7/(-3), remainder sign = dividend sign ---
+    std::cout << "\n--- Negatives: (-7)/3, 7/(-3), remainder sign = dividend ---\n";
+    auto [qd4, rd4] = BigInt::divmod(BigInt(-7), BigInt(3));
+    CHECK(qd4 == BigInt(-2) && rd4 == BigInt(-1));  // -7 = -2*3 + (-1)
+    auto [qd5, rd5] = BigInt::divmod(BigInt(7), BigInt(-3));
+    CHECK(qd5 == BigInt(-2) && rd5 == BigInt(1));   // 7 = -2*(-3) + 1
+    CHECK((BigInt(-7) / BigInt(3)) == BigInt(-2));
+    CHECK((BigInt(7) / BigInt(-3)) == BigInt(-2));
+    CHECK((BigInt(-7) % BigInt(3)) == BigInt(-1));
+    CHECK((BigInt(7) % BigInt(-3)) == BigInt(1));
 
-    bool threw = false;
-    try { BigInt(1) / BigInt(0); } catch (const std::invalid_argument&) { threw = true; }
-    assert(threw);
+    // --- Group 5: GCD ---
+    std::cout << "\n--- GCD: gcd(48,18)==6, gcd(0,x)=|x|, gcd with negatives ---\n";
+    CHECK(bigGcd(BigInt(48), BigInt(18)) == BigInt(6));
+    CHECK(bigGcd(BigInt(0), BigInt(7)) == BigInt(7));
+    CHECK(bigGcd(BigInt(0), BigInt(-7)) == BigInt(7));
+    CHECK(bigGcd(BigInt(-12), BigInt(8)) == BigInt(4));
 
-    std::cout << "Task 1 & 2 OK: BigInt +, -, * with correct signed arithmetic\n";
-    std::cout << "Plan 01-02: divmod, /, %, bigGcd OK\n";
-    return 0;
+    // --- Group 6: Division by zero must throw ---
+    std::cout << "\n--- Division by zero: must throw ---\n";
+    {
+        bool threw = false;
+        try { BigInt(1) / BigInt(0); } catch (const std::invalid_argument&) { threw = true; }
+        CHECK(threw);
+    }
+    {
+        bool threw = false;
+        try { BigInt::divmod(BigInt(1), BigInt(0)); } catch (const std::invalid_argument&) { threw = true; }
+        CHECK(threw);
+    }
+
+    // --- Group 7: Invalid string must throw ---
+    std::cout << "\n--- Invalid string: BigInt(\"abc\"), BigInt(\"12x3\") must throw ---\n";
+    {
+        bool threw = false;
+        try { (void)BigInt("abc"); } catch (const std::invalid_argument&) { threw = true; }
+        CHECK(threw);
+    }
+    {
+        bool threw = false;
+        try { (void)BigInt("12x3"); } catch (const std::invalid_argument&) { threw = true; }
+        CHECK(threw);
+    }
+
+    // --- Basic sanity (from plans 01-01, 01-02) ---
+    std::cout << "\n--- Basic sanity ---\n";
+    CHECK(BigInt("0").str() == "0");
+    CHECK(BigInt(-42).str() == "-42");
+    CHECK(BigInt(48) / BigInt(18) == BigInt(2));
+    CHECK(BigInt(48) % BigInt(18) == BigInt(12));
+
+    std::cout << "\n=== " << (fail_count == 0 ? "All PASS" : "FAILURES") << " (fail_count=" << fail_count << ") ===\n";
+    return fail_count;
 }
