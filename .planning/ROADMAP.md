@@ -12,7 +12,7 @@ Build a zero-dependency C++20 REPL for q-series computation bottom-up: BigInt �
 
 - [x] **Phase 1: BigInt** - Arbitrary precision integers, base 10⁹, signed (completed 2026-02-25)
 - [x] **Phase 2: Frac** - Exact rationals with auto-reduce via GCD (completed 2026-02-25)
-- [ ] **Phase 3: Series** - Truncated power series with inverse, truncation propagation
+- [x] **Phase 3: Series** - Truncated power series with inverse, truncation propagation (completed 2026-02-25)
 - [ ] **Phase 4: qfuncs** - aqprod, etaq, theta, qbin, products; number theory helpers
 - [ ] **Phase 5: prodmake** - Andrews' algorithm; Rogers-Ramanujan canary test
 - [ ] **Phase 6: convert-extended** - etamake, jacprodmake, qfactor, sift
@@ -63,8 +63,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — series.h: struct, constructors, arithmetic, inverse, subs_q, str
-- [ ] 03-02-PLAN.md — main.cpp Series test suite (SPEC inverse + arithmetic + subs_q + pow)
+- [x] 03-01-PLAN.md — series.h: struct, constructors, arithmetic, inverse, subs_q, str
+- [x] 03-02-PLAN.md — main.cpp Series test suite (SPEC inverse + arithmetic + subs_q + pow)
 
 ### Phase 4: qfuncs
 **Goal**: q-series building blocks and number theory helpers
@@ -166,7 +166,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. BigInt | 0/3 | Complete    | 2026-02-25 |
 | 2. Frac | 0/? | Complete    | 2026-02-25 |
-| 3. Series | 0/? | Not started | - |
+| 3. Series | 2/2 | Complete | 2026-02-25 |
 | 4. qfuncs | 0/? | Not started | - |
 | 5. prodmake | 0/? | Not started | - |
 | 6. convert-extended | 0/? | Not started | - |

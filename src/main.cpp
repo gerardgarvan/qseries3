@@ -1,5 +1,5 @@
 /*
- * Phase 1 BigInt + Phase 2 Frac test driver.
+ * Phase 1 BigInt + Phase 2 Frac + Phase 3 Series test driver.
  * Exercises all SPEC and .cursorrules edge cases.
  * Exits 0 on success, non-zero on failure.
  */
@@ -135,8 +135,10 @@ int main() {
     CHECK(Frac(7).str() == "7");
     CHECK(Frac(0).str() == "0");
 
-    // --- Series Phase 3: critical (1-q)*(1/(1-q))=1 ---
-    std::cout << "\n=== Series Phase 3 (03-01 verification) ===\n\n";
+    std::cout << "\n=== Series Phase 3 test driver ===\n\n";
+
+    // --- Task 1: SPEC inverse, minExp>0 inverse, invalid inverse throws ---
+    std::cout << "--- Series SPEC: (1-q)*(1/(1-q))=1 ---\n";
     {
         auto one_q = Series::one(20) - Series::q(20);
         auto inv = one_q.inverse();
@@ -144,6 +146,122 @@ int main() {
         CHECK(prod.coeff(0) == Frac(1));
         for (int i = 1; i < 20; i++)
             CHECK(prod.coeff(i) == Frac(0));
+    }
+    std::cout << "--- Series: inverse of q*(1-q) (minExp>0) ---\n";
+    {
+        auto f = Series::q(20) * (Series::one(20) - Series::q(20));
+        auto g = f.inverse();
+        // 1/(q*(1-q)) = q^{-1} * 1/(1-q) = q^{-1} * (1+q+q²+...), so coeff at -1 is 1, at 0 is 1, at 1 is 1, etc.
+        CHECK(g.coeff(-1) == Frac(1));
+        CHECK(g.coeff(0) == Frac(1));
+        CHECK(g.coeff(1) == Frac(1));
+    }
+    std::cout << "--- Series: invalid inverse throws ---\n";
+    {
+        bool threw = false;
+        try { (void)Series::zero(10).inverse(); } catch (const std::invalid_argument&) { threw = true; }
+        CHECK(threw);
+    }
+    // Series::q(10).inverse() succeeds (minExp>0 handled via shift: 1/q = q^{-1})
+
+    // --- Task 2: add/sub/mul/div, truncation ---
+    std::cout << "\n--- Series add/sub ---\n";
+    {
+        auto a = Series::one(10) + Series::q(10);
+        auto b = Series::one(10) - Series::q(10);
+        auto sum = a + b;
+        CHECK(sum.coeff(0) == Frac(2));
+        CHECK(sum.coeff(1) == Frac(0));
+    }
+    {
+        auto f = Series::one(10) + Series::q(10) + Series::qpow(2, 10);
+        auto g = f - Series::one(10);
+        CHECK(g.coeff(0) == Frac(0));
+        CHECK(g.coeff(1) == Frac(1));
+        CHECK(g.coeff(2) == Frac(1));
+    }
+    std::cout << "--- Series truncation propagation ---\n";
+    {
+        auto a = Series::one(5) + Series::q(5);
+        auto b = Series::one(3) + Series::q(3);
+        auto sum = a + b;
+        CHECK(sum.trunc == 3);
+    }
+    std::cout << "--- Series mul ---\n";
+    {
+        auto a = Series::one(10) - Series::q(10);
+        auto b = Series::one(10) + Series::q(10);
+        auto prod = a * b;
+        CHECK(prod.coeff(0) == Frac(1));
+        CHECK(prod.coeff(1) == Frac(0));
+        CHECK(prod.coeff(2) == Frac(-1));
+    }
+    {
+        auto f = Series::one(10) + Series::q(10);
+        auto sq = f * f;
+        CHECK(sq.coeff(0) == Frac(1));
+        CHECK(sq.coeff(1) == Frac(2));
+        CHECK(sq.coeff(2) == Frac(1));
+    }
+    std::cout << "--- Series div ---\n";
+    {
+        auto num = Series::one(10) - Series::qpow(2, 10);
+        auto den = Series::one(10) - Series::q(10);
+        auto quot = num / den;
+        CHECK(quot.coeff(0) == Frac(1));
+        CHECK(quot.coeff(1) == Frac(1));
+    }
+    std::cout << "--- Series: division by non-invertible throws ---\n";
+    {
+        bool threw = false;
+        try { (void)(Series::one(10) / Series::zero(10)); } catch (const std::invalid_argument&) { threw = true; }
+        CHECK(threw);
+    }
+
+    // --- Task 3: subs_q, pow, str ---
+    std::cout << "\n--- Series subs_q ---\n";
+    {
+        auto f = Series::one(10) + Series::q(10) + Series::qpow(2, 10);
+        auto g = f.subs_q(2);
+        CHECK(g.coeff(0) == Frac(1));
+        CHECK(g.coeff(2) == Frac(1));
+        CHECK(g.coeff(4) == Frac(1));
+        CHECK(g.trunc == 20);
+    }
+    {
+        auto f = Series::one(10) + Series::q(10) + Series::qpow(2, 10);
+        auto g = f.subs_q(0);
+        CHECK(g.coeff(0) == Frac(3));
+        CHECK(g.c.size() <= 1u);
+    }
+    std::cout << "--- Series pow ---\n";
+    {
+        auto f = Series::one(10) + Series::q(10);
+        auto sq = f.pow(2);
+        CHECK(sq.coeff(0) == Frac(1));
+        CHECK(sq.coeff(1) == Frac(2));
+        CHECK(sq.coeff(2) == Frac(1));
+    }
+    {
+        auto f = Series::one(10) + Series::q(10);
+        CHECK(f.pow(0).coeff(0) == Frac(1));
+    }
+    {
+        auto one_q = Series::one(20) - Series::q(20);
+        auto inv_one_q = one_q.inverse();
+        auto back = inv_one_q.pow(-1);
+        CHECK(back.coeff(0) == one_q.coeff(0));
+        CHECK(back.coeff(1) == one_q.coeff(1));
+    }
+    std::cout << "--- Series str ---\n";
+    {
+        std::string s = Series::one(5).str();
+        CHECK(s.find("1") != std::string::npos);
+        CHECK(s.find("O(q^") != std::string::npos);
+    }
+    {
+        std::string s = Series::q(5).str();
+        CHECK(s.find("q") != std::string::npos);
     }
 
     // --- Frac: Long-chain growth test (no exponential BigInt growth) ---
