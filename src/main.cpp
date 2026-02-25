@@ -289,6 +289,30 @@ int main() {
         auto qb = qbin(q, 1, 3, 25);
         CHECK(qb.coeff(0) == Frac(1) && qb.coeff(1) == Frac(1) && qb.coeff(2) == Frac(1));
     }
+    std::cout << "--- qfuncs theta (04-02 verification) ---\n";
+    {
+        auto q = Series::q(50);
+        auto t2 = theta2(q, 50);
+        CHECK(t2.coeff(0) == Frac(2));
+        CHECK(t2.coeff(2) == Frac(2));
+        auto t3 = theta3(q, 50);
+        CHECK(t3.coeff(0) == Frac(1));
+        CHECK(t3.coeff(1) == Frac(2));
+        CHECK(t3.coeff(4) == Frac(2));
+        CHECK(t3.coeff(9) == Frac(2));
+        auto t4 = theta4(q, 50);
+        CHECK(t4.coeff(0) == Frac(1));
+        CHECK(t4.coeff(1) == Frac(-2));
+        CHECK(t4.coeff(4) == Frac(2));
+    }
+    {
+        auto q = Series::q(25);
+        auto z = Series::constant(Frac(-1), 25);
+        auto th = theta(z, q, 25);
+        CHECK(th.coeff(0) == Frac(1));
+        CHECK(th.coeff(1) == Frac(-2));
+        CHECK(th.coeff(4) == Frac(2));
+    }
 
     std::cout << "--- Series str ---\n";
     {

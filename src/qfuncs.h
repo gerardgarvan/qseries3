@@ -124,4 +124,54 @@ inline Series qbin(const Series& q, int m, int n, int T) {
     return result;
 }
 
+// ============ Theta functions ============
+
+inline Series theta2(const Series& q, int T) {
+    Series result = Series::zero(T);
+    result.trunc = T;
+    for (int n = 0; n * (n + 1) < T; ++n) {
+        int exp = n * (n + 1);
+        result.setCoeff(exp, Frac(2));
+    }
+    return result;
+}
+
+inline Series theta3(const Series& q, int T) {
+    Series result = Series::one(T);
+    result.trunc = T;
+    for (int n = 1; n * n < T; ++n) {
+        int exp = n * n;
+        result.setCoeff(exp, result.coeff(exp) + Frac(2));
+    }
+    return result;
+}
+
+inline Series theta4(const Series& q, int T) {
+    Series result = Series::one(T);
+    result.trunc = T;
+    for (int n = 1; n * n < T; ++n) {
+        int exp = n * n;
+        int sign = (n % 2 == 0) ? 2 : -2;
+        result.setCoeff(exp, result.coeff(exp) + Frac(sign));
+    }
+    return result;
+}
+
+inline Series theta(const Series& z, const Series& q, int T) {
+    Series result = Series::zero(T);
+    result.trunc = T;
+    Series zt = z.truncTo(T);
+    Series qt = q.truncTo(T);
+    for (int i = -T; i <= T; ++i) {
+        Series zi = (i >= 0) ? zt.pow(i) : zt.inverse().pow(-i);
+        Series qi2 = qt.pow(i * i);
+        Series term = (zi * qi2).truncTo(T);
+        for (const auto& [e, v] : term.c) {
+            if (e < T) result.setCoeff(e, result.coeff(e) + v);
+        }
+    }
+    result.clean();
+    return result;
+}
+
 #endif
