@@ -75,10 +75,13 @@ Plans:
   2. theta2, theta3, theta4, tripleprod, quinprod, winquist work per SPEC
   3. divisors, mobius, legendre, sigma, euler_phi return correct values
   4. Partition function 1/etaq(1,50) coefficients match SPEC (TEST-02)
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01-PLAN.md — qfuncs.h: nthelpers, etaq, aqprod, qbin
+- [ ] 04-02-PLAN.md — theta2, theta3, theta4, theta
+- [ ] 04-03-PLAN.md — tripleprod, quinprod, winquist
+- [ ] 04-04-PLAN.md — main.cpp qfuncs test suite (pentagonal, partition TEST-02)
 
 ### Phase 5: prodmake
 **Goal**: Andrews' algorithm recovers infinite product from series; Rogers-Ramanujan works
