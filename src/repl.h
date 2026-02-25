@@ -445,11 +445,16 @@ inline EvalResult eval(const Expr* e, Environment& env,
 
 // --- Display helpers (Garvan style) ---
 
-inline std::string formatProdmake(const std::map<int, Frac>& a) {
+inline std::string formatProdmake(const std::map<int, Frac>& a, bool mapleStyle = true) {
     std::vector<std::string> num_parts, den_parts;
     for (const auto& [n, an] : a) {
         if (an.isZero()) continue;
-        std::string part = "(1-q" + (n == 1 ? "" : Series::expToUnicode(n)) + ")";
+        std::string part;
+        if (mapleStyle) {
+            part = (n == 1) ? "(1-q)" : "(-q" + Series::expToUnicode(n) + "+1)";
+        } else {
+            part = "(1-q" + (n == 1 ? "" : Series::expToUnicode(n)) + ")";
+        }
         int ex = 0;
         if (an.den == BigInt(1) && an.num.d.size() == 1 && an.num.d[0] <= 1000)
             ex = an.num.neg ? -static_cast<int>(an.num.d[0]) : static_cast<int>(an.num.d[0]);
@@ -581,7 +586,7 @@ inline void display(const EvalResult& res, Environment& env, int /*T*/) {
         if constexpr (std::is_same_v<T, Series>) {
             std::cout << arg.str(30) << std::endl;
         } else if constexpr (std::is_same_v<T, std::map<int, Frac>>) {
-            std::cout << formatProdmake(arg) << std::endl;
+            std::cout << formatProdmake(arg, true) << std::endl;
         } else if constexpr (std::is_same_v<T, std::vector<std::pair<int, Frac>>>) {
             std::cout << formatEtamake(arg) << std::endl;
         } else if constexpr (std::is_same_v<T, std::vector<JacFactor>>) {
