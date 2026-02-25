@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Phase 10 REPL (plan 02 complete)
+**Current focus:** Milestone v1.1 (Garvan demo) — Phase 12 Rogers-Ramanujan demo
 
 ## Current Position
 
-Phase: 10 of 10 (repl)
-Plan: 2 of 3 in current phase
-Status: Plan 10-02 complete
-Last activity: 2026-02-25 — Plan 10-02 complete (built-in dispatch: qfuncs, convert, q-injection)
+Phase: 12 (Rogers-Ramanujan demo)
+Plan: 12-01
+Status: Complete
+Last activity: 2026-02-25 — Plan 12-01 executed
 
-Progress: [██████░░░] 67%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -30,7 +30,7 @@ Progress: [██████░░░] 67%
 | 01-bigint | 3 | ~45min | ~15min |
 | 02-frac | 2 | ~25min | ~12min |
 
-**Recent Trend:** Plan 10-02 complete — dispatchBuiltin for aqprod, etaq, theta, prodmake, jacprodmake, sum/add; Rogers-Ramanujan via REPL
+**Recent Trend:** Phase 10 complete — REPL with findhom/findnonhomcombo, subs_q, tests/acceptance.sh; all 9 SPEC tests pass
 
 ## Accumulated Context
 
@@ -46,6 +46,8 @@ Progress: [██████░░░] 67%
 - Phase 3 (Series): throw on invalid inverse; display "1 + q + 2q² + ... + O(q^T)"; subs_q(0) ok; broader suite (SPEC + ops); must pass before Phase 4
 - Plan 10-01: EnvValue = variant<Series, vector<JacFactor>>; Call stub returns DisplayOnly; prompt "qseries> "; history 100
 - Plan 10-02: q-injection when 1 fewer arg; jac2prod(var) looks up env; Rogers-Ramanujan verified via REPL
+- Plan 10-03: findhom, findnonhom, findhomcombo, findnonhomcombo, findpoly, subs_q; tests/acceptance.sh; all 9 SPEC tests pass
+- Plan 12-01: series(f,T) honors T; O-term uses expToUnicode; formatProdmake mapleStyle (1-q), (-q^n+1); demo series(rr,50)
 
 ### Pending Todos
 
@@ -58,5 +60,13 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 10-02-PLAN.md
-Resume file: .planning/phases/10-repl/10-CONTEXT.md
+Stopped at: Completed 12-01-PLAN.md (Rogers-Ramanujan demo format)
+
+### Milestone v1.1 Roadmap (2026-02-25)
+
+- Phases 11–15 derived from DEMO-01 through DEMO-05
+- Phase 11: Demo artifact (script/doc)
+- Phase 12: Rogers-Ramanujan demo (§3.1)
+- Phase 13: Product conversion demo (§3.2–3.4)
+- Phase 14: Relations demo (§4)
+- Phase 15: Sifting and product identities demo (§5, §6)
