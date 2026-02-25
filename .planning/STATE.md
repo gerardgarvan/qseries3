@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Phase 2 Frac
+**Current focus:** Phase 3 Series
 
 ## Current Position
 
-Phase: 2 of 10 (Frac)
-Plan: 2 of 2 in current phase
-Status: Completed
-Last activity: 2025-02-24 — Plan 02-02 Frac test driver complete
+Phase: 3 of 10 (Series)
+Plan: 0 of ? in current phase
+Status: Context captured
+Last activity: 2025-02-24 — Phase 3 CONTEXT captured
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
@@ -43,6 +43,7 @@ Progress: [██████████] 100%
 - Phase 2 (Frac): throw on Frac(n,0) and a/b when b zero; both standalone and integration tests; broader suite (SPEC + arithmetic + sign); must pass before Phase 3
 - Plan 02-01: std::invalid_argument for zero denominator; den > 0, gcd(|num|,den)=1, 0/1 for zero
 - Plan 02-02: main.cpp Frac test suite - SPEC reduction, arithmetic, sign, long-chain (add 50x, mul 20x)
+- Phase 3 (Series): throw on invalid inverse; display "1 + q + 2q² + ... + O(q^T)"; subs_q(0) ok; broader suite (SPEC + ops); must pass before Phase 4
 
 ### Pending Todos
 
@@ -56,4 +57,4 @@ None yet.
 
 Last session: 2025-02-24
 Stopped at: Completed 02-02-PLAN.md
-Resume file: .planning/phases/02-frac/02-CONTEXT.md
+Resume file: .planning/phases/03-series/03-CONTEXT.md
