@@ -5,6 +5,7 @@
 #include "series.h"
 #include "frac.h"
 #include "convert.h"
+#include "qfuncs.h"
 #include <map>
 #include <vector>
 #include <string>
@@ -96,6 +97,174 @@ inline bool isQLike(const Expr* e) {
 inline EvalResult eval(const Expr* e, Environment& env,
     const std::map<std::string, int64_t>& sumIndices);
 
+// Get Series from EvalResult (throws if not Series)
+inline Series evalAsSeries(const Expr* e, Environment& env,
+    const std::map<std::string, int64_t>& sumIndices) {
+    EvalResult r = eval(e, env, sumIndices);
+    if (!std::holds_alternative<Series>(r))
+        throw std::runtime_error("expected series");
+    return std::get<Series>(r);
+}
+
+inline EvalResult dispatchBuiltin(const std::string& name,
+    const std::vector<ExprPtr>& args, Environment& env,
+    const std::map<std::string, int64_t>& sumIndices) {
+    Series q = getSeriesFromEnv(env.env.at("q"));
+    int T = env.T;
+
+    auto ev = [&](size_t i) { return evalAsSeries(args[i].get(), env, sumIndices); };
+    auto evi = [&](size_t i) { return evalToInt(args[i].get(), env, sumIndices); };
+
+    if (name == "aqprod") {
+        if (args.size() != 4)
+            throw std::runtime_error("aqprod(a,q,n,T) expects 4 arguments");
+        return aqprod(ev(0), ev(1), static_cast<int>(evi(2)), static_cast<int>(evi(3)));
+    }
+    if (name == "etaq") {
+        if (args.size() == 2) {
+            int k = static_cast<int>(evi(0));
+            int Tr = static_cast<int>(evi(1));
+            return etaq(q, k, Tr);
+        }
+        if (args.size() == 3)
+            return etaq(ev(0), static_cast<int>(evi(1)), static_cast<int>(evi(2)));
+        throw std::runtime_error("etaq(k,T) or etaq(q,k,T)");
+    }
+    if (name == "theta2" || name == "theta3" || name == "theta4") {
+        if (args.size() == 1) {
+            int Tr = static_cast<int>(evi(0));
+            if (name == "theta2") return theta2(q, Tr);
+            if (name == "theta3") return theta3(q, Tr);
+            return theta4(q, Tr);
+        }
+        if (args.size() == 2) {
+            int Tr = static_cast<int>(evi(1));
+            if (name == "theta2") return theta2(ev(0), Tr);
+            if (name == "theta3") return theta3(ev(0), Tr);
+            return theta4(ev(0), Tr);
+        }
+        throw std::runtime_error("theta2/3/4(T) or theta2/3/4(q,T)");
+    }
+    if (name == "theta") {
+        if (args.size() == 2)
+            return theta(ev(0), q, static_cast<int>(evi(1)));
+        if (args.size() == 3)
+            return theta(ev(0), ev(1), static_cast<int>(evi(2)));
+        throw std::runtime_error("theta(z,T) or theta(z,q,T)");
+    }
+    if (name == "qbin") {
+        if (args.size() == 3)
+            return qbin(q, static_cast<int>(evi(0)), static_cast<int>(evi(1)), static_cast<int>(evi(2)));
+        if (args.size() == 4)
+            return qbin(ev(0), static_cast<int>(evi(1)), static_cast<int>(evi(2)), static_cast<int>(evi(3)));
+        throw std::runtime_error("qbin(m,n,T) or qbin(q,m,n,T)");
+    }
+    if (name == "tripleprod") {
+        if (args.size() != 3)
+            throw std::runtime_error("tripleprod(z,q,T) expects 3 arguments");
+        return tripleprod(ev(0), ev(1), static_cast<int>(evi(2)));
+    }
+    if (name == "quinprod") {
+        if (args.size() != 3)
+            throw std::runtime_error("quinprod(z,q,T) expects 3 arguments");
+        return quinprod(ev(0), ev(1), static_cast<int>(evi(2)));
+    }
+    if (name == "winquist") {
+        if (args.size() != 4)
+            throw std::runtime_error("winquist(a,b,q,T) expects 4 arguments");
+        return winquist(ev(0), ev(1), ev(2), static_cast<int>(evi(3)));
+    }
+    if (name == "sift") {
+        if (args.size() != 4)
+            throw std::runtime_error("sift(f,n,k,T) expects 4 arguments");
+        return sift(ev(0), static_cast<int>(evi(1)), static_cast<int>(evi(2)), static_cast<int>(evi(3)));
+    }
+    if (name == "T") {
+        if (args.size() == 2)
+            return T_rn(static_cast<int>(evi(0)), static_cast<int>(evi(1)), T);
+        if (args.size() == 3)
+            return T_rn(static_cast<int>(evi(0)), static_cast<int>(evi(1)), static_cast<int>(evi(2)));
+        throw std::runtime_error("T(r,n) or T(r,n,T)");
+    }
+    if (name == "prodmake") {
+        if (args.size() != 2)
+            throw std::runtime_error("prodmake(f,T) expects 2 arguments");
+        return prodmake(ev(0), static_cast<int>(evi(1)));
+    }
+    if (name == "etamake") {
+        if (args.size() != 2)
+            throw std::runtime_error("etamake(f,T) expects 2 arguments");
+        return etamake(ev(0), static_cast<int>(evi(1)));
+    }
+    if (name == "jacprodmake") {
+        if (args.size() != 2)
+            throw std::runtime_error("jacprodmake(f,T) expects 2 arguments");
+        return jacprodmake(ev(0), static_cast<int>(evi(1)));
+    }
+    if (name == "jac2prod") {
+        if (args.size() != 1)
+            throw std::runtime_error("jac2prod(var) expects 1 argument");
+        if (args[0]->tag != Expr::Tag::Var)
+            throw std::runtime_error("jac2prod expects variable name");
+        auto it = env.env.find(args[0]->varName);
+        if (it == env.env.end())
+            throw std::runtime_error("undefined variable: " + args[0]->varName);
+        if (std::holds_alternative<std::vector<JacFactor>>(it->second)) {
+            std::cout << jac2prod(std::get<std::vector<JacFactor>>(it->second)) << std::endl;
+            return DisplayOnly{};
+        }
+        throw std::runtime_error("jac2prod expects jacprodmake result");
+    }
+    if (name == "qfactor") {
+        if (args.size() == 1)
+            return qfactor(ev(0), T);
+        if (args.size() == 2)
+            return qfactor(ev(0), static_cast<int>(evi(1)));
+        throw std::runtime_error("qfactor(f) or qfactor(f,T)");
+    }
+    if (name == "series") {
+        if (args.size() == 1) {
+            Series f = ev(0).truncTo(T);
+            std::cout << f.str(30) << std::endl;
+            return DisplayOnly{};
+        }
+        if (args.size() == 2) {
+            int Tr = static_cast<int>(evi(1));
+            Series f = ev(0).truncTo(Tr);
+            std::cout << f.str(std::min(30, Tr)) << std::endl;
+            return DisplayOnly{};
+        }
+        throw std::runtime_error("series(f) or series(f,T)");
+    }
+    if (name == "coeffs") {
+        if (args.size() != 3)
+            throw std::runtime_error("coeffs(f,from,to) expects 3 arguments");
+        Series f = ev(0);
+        int from = static_cast<int>(evi(1));
+        int to = static_cast<int>(evi(2));
+        auto list = f.coeffList(from, to);
+        std::cout << "[";
+        for (size_t i = 0; i < list.size(); ++i) {
+            if (i) std::cout << ", ";
+            std::cout << list[i].str();
+        }
+        std::cout << "]" << std::endl;
+        return DisplayOnly{};
+    }
+    if (name == "set_trunc") {
+        if (args.size() != 1)
+            throw std::runtime_error("set_trunc(N) expects 1 argument");
+        int N = static_cast<int>(evi(0));
+        if (N <= 0)
+            throw std::runtime_error("truncation must be positive");
+        env.T = N;
+        env.env["q"] = Series::q(N);
+        return std::monostate{};
+    }
+
+    throw std::runtime_error("unknown built-in: " + name);
+}
+
 inline EvalResult evalExpr(const Expr* e, Environment& env,
     const std::map<std::string, int64_t>& sumIndices) {
     if (!e) throw std::runtime_error("eval: null expr");
@@ -140,8 +309,7 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
             return -s;
         }
         case Expr::Tag::Call:
-            // Stub: unknown built-in → DisplayOnly (built-ins in 10-02)
-            return DisplayOnly{};
+            return dispatchBuiltin(e->callName, e->args, env, sumIndices);
         case Expr::Tag::List:
             throw std::runtime_error("list evaluation not yet implemented");
         case Expr::Tag::Sum: {
