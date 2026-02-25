@@ -6,6 +6,7 @@
 #include "bigint.h"
 #include "frac.h"
 #include "series.h"
+#include "qfuncs.h"
 #include <iostream>
 #include <string>
 
@@ -253,6 +254,42 @@ int main() {
         CHECK(back.coeff(0) == one_q.coeff(0));
         CHECK(back.coeff(1) == one_q.coeff(1));
     }
+    std::cout << "--- qfuncs Phase 4 (04-01 verification) ---\n";
+    {
+        auto d = divisors(12);
+        CHECK(d.size() == 6u && d[0] == 1 && d[1] == 2 && d[2] == 3 && d[3] == 4 && d[4] == 6 && d[5] == 12);
+        CHECK(mobius(6) == 1);
+        CHECK(sigma(6) == 12);
+        CHECK(euler_phi(6) == 2);
+    }
+    {
+        auto q = Series::q(25);
+        auto et = etaq(q, 1, 25);
+        // Euler pentagonal: coeff ±1 at 0,1,2,5,7,12,15
+        CHECK(et.coeff(0) == Frac(1));
+        CHECK(et.coeff(1) == Frac(-1));
+        CHECK(et.coeff(2) == Frac(-1));
+        CHECK(et.coeff(5) == Frac(1));
+        CHECK(et.coeff(7) == Frac(1));
+        CHECK(et.coeff(12) == Frac(-1));
+    }
+    {
+        auto q = Series::q(25);
+        auto ap = aqprod(q, q, 5, 25);
+        // (1-q)(1-q²)(1-q³)(1-q⁴)(1-q⁵): coeff 0..5
+        CHECK(ap.coeff(0) == Frac(1));
+        CHECK(ap.coeff(1) == Frac(-1));
+        CHECK(ap.coeff(2) == Frac(-1));
+    }
+    {
+        auto q = Series::q(25);
+        CHECK(aqprod(q, q, 0, 25).coeff(0) == Frac(1));
+        CHECK(qbin(q, 0, 5, 25).coeff(0) == Frac(1));
+        CHECK(qbin(q, 5, 5, 25).coeff(0) == Frac(1));
+        auto qb = qbin(q, 1, 3, 25);
+        CHECK(qb.coeff(0) == Frac(1) && qb.coeff(1) == Frac(1) && qb.coeff(2) == Frac(1));
+    }
+
     std::cout << "--- Series str ---\n";
     {
         std::string s = Series::one(5).str();

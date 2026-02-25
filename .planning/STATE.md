@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 ## Current Position
 
 Phase: 4 of 10 (qfuncs)
-Plan: 0 of 4 in current phase
-Status: Planned
-Last activity: 2025-02-24 — Phase 4 plans created (04-01 through 04-04)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2025-02-24 — Plan 04-01 qfuncs (nthelpers, etaq, aqprod, qbin) complete
 
 Progress: [██████░░░░] 60%
 
