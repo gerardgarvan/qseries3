@@ -5,6 +5,7 @@
  */
 #include "bigint.h"
 #include "frac.h"
+#include "series.h"
 #include <iostream>
 #include <string>
 
@@ -133,6 +134,17 @@ int main() {
     std::cout << "\n--- Frac str() integer form ---\n";
     CHECK(Frac(7).str() == "7");
     CHECK(Frac(0).str() == "0");
+
+    // --- Series Phase 3: critical (1-q)*(1/(1-q))=1 ---
+    std::cout << "\n=== Series Phase 3 (03-01 verification) ===\n\n";
+    {
+        auto one_q = Series::one(20) - Series::q(20);
+        auto inv = one_q.inverse();
+        auto prod = one_q * inv;
+        CHECK(prod.coeff(0) == Frac(1));
+        for (int i = 1; i < 20; i++)
+            CHECK(prod.coeff(i) == Frac(0));
+    }
 
     // --- Frac: Long-chain growth test (no exponential BigInt growth) ---
     std::cout << "\n--- Frac long-chain: add chain 1+50*(1/2)=26 ---\n";
