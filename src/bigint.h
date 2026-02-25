@@ -2,6 +2,7 @@
 #define BIGINT_H
 
 #include <cstdint>
+#include <utility>
 #include <climits>
 #include <string>
 #include <vector>
@@ -218,6 +219,84 @@ struct BigInt {
         return r;
     }
 
+    static std::pair<BigInt, BigInt> divmod(const BigInt& a, const BigInt& b) {
+        if (b.isZero())
+            throw std::invalid_argument("BigInt: division by zero");
+        BigInt ad = a.abs();
+        BigInt bd = b.abs();
+        if (cmpAbs(ad, bd) < 0) {
+            BigInt r = ad;
+            r.neg = a.neg;
+            return {BigInt(0), r};
+        }
+        bool q_neg = (a.neg != b.neg);
+        bool r_neg = a.neg;
+
+        size_t n = bd.d.size();
+        size_t m = ad.d.size();
+        BigInt rem = ad;
+        rem.d.push_back(0);  // leading zero for (n+1)-digit partial
+
+        std::vector<uint32_t> qdigits;
+        for (size_t pos = 0; pos <= m - n; ++pos) {
+            size_t j = m - n - pos;
+            BigInt partial;
+            partial.neg = false;
+            partial.d.clear();
+            for (size_t i = 0; i < n + 1 && j + i < rem.d.size(); ++i)
+                partial.d.push_back(rem.d[j + i]);
+            partial.normalize();
+
+            if (cmpAbs(partial, bd) < 0) {
+                qdigits.push_back(0);
+                continue;
+            }
+
+            uint32_t lo = 0, hi = BASE - 1;
+            while (lo < hi) {
+                uint32_t mid = lo + (hi - lo + 1) / 2;
+                BigInt prod = bd * BigInt(static_cast<int64_t>(mid));
+                if (cmpAbs(prod, partial) <= 0)
+                    lo = mid;
+                else
+                    hi = mid - 1;
+            }
+            qdigits.push_back(lo);
+
+            BigInt to_sub = bd * BigInt(static_cast<int64_t>(lo));
+            BigInt shifted;
+            shifted.neg = false;
+            shifted.d.assign(j, 0);
+            shifted.d.insert(shifted.d.end(), to_sub.d.begin(), to_sub.d.end());
+            shifted.normalize();
+            rem = subAbs(rem, shifted);
+        }
+
+        BigInt quot;
+        quot.neg = q_neg;
+        quot.d.clear();
+        for (size_t i = 0; i < qdigits.size(); ++i)
+            quot.d.push_back(qdigits[qdigits.size() - 1 - i]);
+        quot.normalize();
+        if (quot.isZero())
+            quot.neg = false;
+
+        BigInt rr = rem;
+        rr.normalize();
+        rr.neg = r_neg;
+        if (rr.isZero())
+            rr.neg = false;
+        return {quot, rr};
+    }
+
+    BigInt operator/(const BigInt& o) const {
+        return divmod(*this, o).first;
+    }
+
+    BigInt operator%(const BigInt& o) const {
+        return divmod(*this, o).second;
+    }
+
 private:
     BigInt withSign(bool n) const {
         BigInt r = *this;
@@ -225,5 +304,16 @@ private:
         return r;
     }
 };
+
+inline BigInt bigGcd(BigInt a, BigInt b) {
+    a = a.abs();
+    b = b.abs();
+    while (!b.isZero()) {
+        auto [q, r] = BigInt::divmod(a, b);
+        a = std::move(b);
+        b = std::move(r);
+    }
+    return a;
+}
 
 #endif
