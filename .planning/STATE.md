@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v1.1 (Garvan demo) — Phase 12 Rogers-Ramanujan demo
+**Current focus:** Milestone v1.1 (Garvan demo) — Phase 14 Relations demo
 
 ## Current Position
 
-Phase: 12 (Rogers-Ramanujan demo)
-Plan: 12-01
+Phase: 14 (Relations demo)
+Plan: 14-01
 Status: Complete
-Last activity: 2026-02-25 — Plan 12-01 executed
+Last activity: 2026-02-25 — Plan 14-01 executed
 
 Progress: [██████████] 100%
 
@@ -48,6 +48,8 @@ Progress: [██████████] 100%
 - Plan 10-02: q-injection when 1 fewer arg; jac2prod(var) looks up env; Rogers-Ramanujan verified via REPL
 - Plan 10-03: findhom, findnonhom, findhomcombo, findnonhomcombo, findpoly, subs_q; tests/acceptance.sh; all 9 SPEC tests pass
 - Plan 12-01: series(f,T) honors T; O-term uses expToUnicode; formatProdmake mapleStyle (1-q), (-q^n+1); demo series(rr,50)
+- [Phase 13-product-conversion-demo]: Plan 13-01: theta2(100) without /q^(1/4); rr redefined in jacprodmake block
+- [Phase 14-relations-demo]: Plan 14-01: findhomcombo theta fallback (nested sum unsupported); Relations section with findhom, findhomcombo, findnonhomcombo
 
 ### Pending Todos
 
@@ -60,7 +62,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 12-01-PLAN.md (Rogers-Ramanujan demo format)
+Stopped at: Completed 14-01-PLAN.md (Relations run blocks)
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
