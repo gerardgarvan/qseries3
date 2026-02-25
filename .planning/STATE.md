@@ -10,27 +10,27 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 ## Current Position
 
 Phase: 2 of 10 (Frac)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2025-02-24 — Plan 02-01 Frac implementation complete
+Plan: 2 of 2 in current phase
+Status: Completed
+Last activity: 2025-02-24 — Plan 02-02 Frac test driver complete
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: ~15min
-- Total execution time: ~45min
+- Total execution time: ~55min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-bigint | 3 | ~45min | ~15min |
-| 02-frac | 1 | ~15min | ~15min |
+| 02-frac | 2 | ~25min | ~12min |
 
-**Recent Trend:** Plan 02-01 Frac (frac.h) complete
+**Recent Trend:** Plan 02-02 Frac test driver (main.cpp) complete
 
 ## Accumulated Context
 
@@ -42,6 +42,7 @@ Progress: [█████░░░░░] 50%
 - Plan 01-03: main.cpp as Phase 1 BigInt test driver; CHECK macro with PASS/FAIL; remainder sign = dividend sign
 - Phase 2 (Frac): throw on Frac(n,0) and a/b when b zero; both standalone and integration tests; broader suite (SPEC + arithmetic + sign); must pass before Phase 3
 - Plan 02-01: std::invalid_argument for zero denominator; den > 0, gcd(|num|,den)=1, 0/1 for zero
+- Plan 02-02: main.cpp Frac test suite - SPEC reduction, arithmetic, sign, long-chain (add 50x, mul 20x)
 
 ### Pending Todos
 
@@ -54,5 +55,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2025-02-24
-Stopped at: Completed 02-01-PLAN.md
+Stopped at: Completed 02-02-PLAN.md
 Resume file: .planning/phases/02-frac/02-CONTEXT.md
