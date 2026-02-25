@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Phase 4 qfuncs
+**Current focus:** Phase 10 REPL (plan 01 complete)
 
 ## Current Position
 
-Phase: 4 of 10 (qfuncs)
-Plan: 2 of 4 in current phase
-Status: In progress
-Last activity: 2025-02-24 — Plan 04-02 theta2/3/4, theta complete
+Phase: 10 of 10 (repl)
+Plan: 1 of 3 in current phase
+Status: Plan 10-01 complete
+Last activity: 2026-02-25 — Plan 10-01 complete (repl.h eval engine, display helpers, runRepl loop)
 
-Progress: [██████░░░░] 60%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
+- Total plans completed: 8
 - Average duration: ~15min
 - Total execution time: ~55min
 
@@ -30,7 +30,7 @@ Progress: [██████░░░░] 60%
 | 01-bigint | 3 | ~45min | ~15min |
 | 02-frac | 2 | ~25min | ~12min |
 
-**Recent Trend:** Plan 02-02 Frac test driver (main.cpp) complete
+**Recent Trend:** Plan 10-01 complete — repl.h with Env, eval, evalToInt, display helpers, runRepl; main.cpp --test/runRepl wiring
 
 ## Accumulated Context
 
@@ -44,6 +44,7 @@ Progress: [██████░░░░] 60%
 - Plan 02-01: std::invalid_argument for zero denominator; den > 0, gcd(|num|,den)=1, 0/1 for zero
 - Plan 02-02: main.cpp Frac test suite - SPEC reduction, arithmetic, sign, long-chain (add 50x, mul 20x)
 - Phase 3 (Series): throw on invalid inverse; display "1 + q + 2q² + ... + O(q^T)"; subs_q(0) ok; broader suite (SPEC + ops); must pass before Phase 4
+- Plan 10-01: EnvValue = variant<Series, vector<JacFactor>>; Call stub returns DisplayOnly; prompt "qseries> "; history 100
 
 ### Pending Todos
 
@@ -55,6 +56,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2025-02-24
-Stopped at: Completed 02-02-PLAN.md
-Resume file: .planning/phases/03-series/03-CONTEXT.md
+Last session: 2026-02-25
+Stopped at: Completed 10-01-PLAN.md
+Resume file: .planning/phases/10-repl/10-CONTEXT.md
