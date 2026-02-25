@@ -60,10 +60,11 @@ Plans:
   1. (1-q) * (1/(1-q)) = 1 to truncation
   2. Inverse recurrence uses j=1..n (not j=0); invert q*(1-q) correctly
   3. Truncation propagates in +, -, *, /, pow, subs_q; multiplication skips pairs where e1+e2 >= trunc
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md — series.h: struct, constructors, arithmetic, inverse, subs_q, str
+- [ ] 03-02-PLAN.md — main.cpp Series test suite (SPEC inverse + arithmetic + subs_q + pow)
 
 ### Phase 4: qfuncs
 **Goal**: q-series building blocks and number theory helpers
