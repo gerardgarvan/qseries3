@@ -106,6 +106,12 @@ struct Frac {
     bool operator>=(const Frac& o) const {
         return !(*this < o);
     }
+
+    std::string str() const {
+        if (den == BigInt(1))
+            return num.str();
+        return num.str() + "/" + den.str();
+    }
 };
 
 #endif
