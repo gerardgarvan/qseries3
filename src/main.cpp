@@ -7,6 +7,11 @@
 #include "frac.h"
 #include "series.h"
 #include "qfuncs.h"
+#include "convert.h"
+#include "linalg.h"
+#include "relations.h"
+#include "parser.h"
+#include "repl.h"
 #include <iostream>
 #include <string>
 
@@ -17,7 +22,7 @@ static int fail_count = 0;
     else { std::cout << "PASS: " << #cond << '\n'; } \
 } while(0)
 
-int main() {
+int runUnitTests() {
     std::cout << "=== BigInt Phase 1 test driver ===\n\n";
 
     // --- Group 1: 0 * anything = 0 ---
@@ -261,6 +266,8 @@ int main() {
         CHECK(mobius(6) == 1);
         CHECK(sigma(6) == 12);
         CHECK(euler_phi(6) == 2);
+        CHECK(legendre(2, 7) == 1);
+        CHECK(legendre(3, 7) == -1);
     }
     {
         auto q = Series::q(25);
@@ -272,6 +279,24 @@ int main() {
         CHECK(et.coeff(5) == Frac(1));
         CHECK(et.coeff(7) == Frac(1));
         CHECK(et.coeff(12) == Frac(-1));
+        CHECK(et.coeff(15) == Frac(-1));
+    }
+    {
+        // TEST-02 Partition: p = 1/etaq(q,1,50); coeffs 1,1,2,3,5,7,11,15,22,30,42
+        auto q = Series::q(55);
+        auto eta = etaq(q, 1, 55);
+        auto p = eta.inverse();
+        CHECK(p.coeff(0) == Frac(1));
+        CHECK(p.coeff(1) == Frac(1));
+        CHECK(p.coeff(2) == Frac(2));
+        CHECK(p.coeff(3) == Frac(3));
+        CHECK(p.coeff(4) == Frac(5));
+        CHECK(p.coeff(5) == Frac(7));
+        CHECK(p.coeff(6) == Frac(11));
+        CHECK(p.coeff(7) == Frac(15));
+        CHECK(p.coeff(8) == Frac(22));
+        CHECK(p.coeff(9) == Frac(30));
+        CHECK(p.coeff(10) == Frac(42));
     }
     {
         auto q = Series::q(25);
@@ -288,6 +313,12 @@ int main() {
         CHECK(qbin(q, 5, 5, 25).coeff(0) == Frac(1));
         auto qb = qbin(q, 1, 3, 25);
         CHECK(qb.coeff(0) == Frac(1) && qb.coeff(1) == Frac(1) && qb.coeff(2) == Frac(1));
+    }
+    {
+        auto q = Series::q(25);
+        auto et2 = etaq(q, 2, 25);
+        CHECK(et2.coeff(0) == Frac(1));
+        CHECK(et2.coeff(2) == Frac(-1));
     }
     std::cout << "--- qfuncs theta (04-02 verification) ---\n";
     {
@@ -313,6 +344,265 @@ int main() {
         CHECK(th.coeff(1) == Frac(-2));
         CHECK(th.coeff(4) == Frac(2));
     }
+    std::cout << "--- qfuncs tripleprod, quinprod, winquist (04-03) ---\n";
+    {
+        auto q = Series::q(30);
+        auto z = Series::q(30);
+        auto q3 = Series::q(30).subs_q(3);
+        auto tp = tripleprod(z, q3, 15);
+        CHECK(tp.coeff(0) == Frac(1));
+    }
+    {
+        auto q = Series::q(25);
+        auto z = Series::q(25);
+        auto q5 = q.subs_q(5);
+        auto qp = quinprod(z, q5, 15);
+        CHECK(qp.coeff(0) == Frac(1));
+    }
+    {
+        auto q = Series::q(50);
+        auto a = Series::constant(Frac(1), 50);
+        auto b = Series::constant(Frac(1), 50);
+        auto w = winquist(a, b, q, 30);
+        CHECK(w.trunc == 30);
+    }
+
+    std::cout << "--- Phase 6: sift and etamake (06-01) ---\n";
+    {
+        auto q = Series::q(50);
+        auto et = etaq(q, 1, 50);
+        auto s = sift(et, 5, 0, 49);
+        CHECK(s.coeff(0) == et.coeff(0));
+        CHECK(s.trunc == 10);  // floor((49-0)/5)+1 = 10
+    }
+    std::cout << "--- Phase 6: TEST-03 etamake theta3/theta4 ---\n";
+    {
+        auto q = Series::q(100);
+        auto t3 = theta3(q, 100);
+        auto e3 = etamake(t3, 100);
+        CHECK(!e3.empty());
+        std::map<int, Frac> m3;
+        for (const auto& p : e3) m3[p.first] = p.second;
+        // theta3 → η(2τ)^5/(η(4τ)^2 η(τ)^2): (1,-2), (2,5), (4,-2)
+        CHECK(m3[1] == Frac(-2));
+        CHECK(m3[2] == Frac(5));
+        CHECK(m3[4] == Frac(-2));
+        auto t4 = theta4(q, 100);
+        auto e4 = etamake(t4, 100);
+        CHECK(!e4.empty());
+        std::map<int, Frac> m4;
+        for (const auto& p : e4) m4[p.first] = p.second;
+        // theta4 → η(τ)^2/η(2τ): (1,2), (2,-1)
+        CHECK(m4[1] == Frac(2));
+        CHECK(m4[2] == Frac(-1));
+    }
+    std::cout << "--- Phase 6: TEST-06 Rødseth ---\n";
+    {
+        auto q = Series::q(200);
+        auto eta1 = etaq(q, 1, 200);
+        auto eta2 = etaq(q, 2, 200);
+        auto PD = (eta2 / eta1).truncTo(200);
+        auto PD1 = sift(PD, 5, 1, 199);
+        auto e6 = etamake(PD1, 38);
+        CHECK(!e6.empty());
+        std::map<int, Frac> m6;
+        for (const auto& p : e6) m6[p.first] = p.second;
+        // Rødseth: η(5τ)³·η(2τ)²/(η(10τ)·η(τ)⁴) → (1,-4), (2,2), (5,3), (10,-1)
+        CHECK(m6[1] == Frac(-4));
+        CHECK(m6[2] == Frac(2));
+        CHECK(m6[5] == Frac(3));
+        CHECK(m6[10] == Frac(-1));
+    }
+    std::cout << "--- Phase 6: etamake failure (non-eta) ---\n";
+    {
+        auto q = Series::q(25);
+        auto noneta = (Series::one(25) + (q * Frac(1, 2))).truncTo(25);  // 1+q/2 has non-integer coeff → fail
+        auto ef = etamake(noneta, 20);
+        CHECK(ef.empty());
+    }
+
+    std::cout << "--- Phase 6: TEST-07 qfactor T(8,8) ---\n";
+    {
+        auto t8 = T_rn(8, 8, 64);
+        CHECK(t8.coeff(6) != Frac(0));
+        CHECK(t8.maxExp() == 42);
+        auto qf = qfactor(t8, 50);
+        CHECK(qf.q_power == 6);
+        CHECK(qf.num_exponents[9] > Frac(0));
+        CHECK(qf.num_exponents[10] > Frac(0));
+        CHECK(qf.num_exponents[11] > Frac(0));
+        CHECK(qf.num_exponents[16] > Frac(0));
+        CHECK(qf.den_exponents[1] > Frac(0));
+        CHECK(qf.den_exponents[2] > Frac(0));
+        CHECK(qf.den_exponents[3] > Frac(0));
+        CHECK(qf.den_exponents[4] > Frac(0));
+    }
+
+    std::cout << "--- Phase 6: TEST-04 jacprodmake Rogers-Ramanujan ---\n";
+    {
+        auto q_var = Series::q(50);
+        Series rr = Series::zero(50);
+        for (int n = 0; n <= 8; ++n) {
+            rr = (rr + q_var.pow(n * n) / aqprod(q_var, q_var, n, 50)).truncTo(50);
+        }
+        rr.trunc = 50;
+        auto jp = jacprodmake(rr, 40);
+        CHECK(!jp.empty());
+        std::map<std::pair<int,int>, Frac> m;
+        for (const auto& [a, b, e] : jp) m[{a,b}] = e;
+        CHECK((m[{0,5}] == Frac(1)));
+        CHECK((m[{1,5}] == Frac(-1)));
+        std::string prod = jac2prod(jp);
+        CHECK(prod.find("(q,q^5)") != std::string::npos);
+        CHECK(prod.find("(q^4,q^5)") != std::string::npos);
+    }
+    std::cout << "--- Phase 6: TEST-09 jacprodmake Euler pentagonal ---\n";
+    {
+        auto q = Series::q(500);
+        auto EULER = etaq(q, 1, 500);
+        auto E0 = sift(EULER, 5, 0, 499);
+        auto jp = jacprodmake(E0, 50);
+        CHECK(!jp.empty());
+        std::map<std::pair<int,int>, Frac> m;
+        for (const auto& [a, b, e] : jp) m[{a,b}] = e;
+        CHECK((m[{2,5}] == Frac(1)));
+        CHECK((m[{0,5}] == Frac(1)));
+        CHECK((m[{1,5}] == Frac(-1)));
+    }
+
+    std::cout << "--- Phase 8: TEST-05 findhom (Gauss AGM) ---\n";
+    {
+        auto q = Series::q(100);
+        auto t3 = theta3(q, 100);
+        auto t4 = theta4(q, 100);
+        auto t3q2 = theta3(q, 100).subs_q(2).truncTo(100);
+        auto t4q2 = theta4(q, 100).subs_q(2).truncTo(100);
+        std::vector<Series> L = {t3, t4, t3q2, t4q2};
+        auto rels = findhom(L, 2, 0);
+        CHECK(rels.size() >= 2u);
+        // Monomial order (reverse lex): indices 0..9 = X3²,X3X4,X4²,X2X3,X2X4,X2²,X1X3,X1X4,X1X2,X1²
+        // Expected (Garvan): X1²+X2²-2X3² and -X1*X2+X4². Kernel basis may differ; verify we span correct relations.
+        // Check: (1) X1²+X2² proportional to X3² or X4² (Gauss AGM), (2) X1*X2 proportional to X3² or X4²
+        bool has_sum_sq = false;   // relation involving X1²+X2² and X3² or X4²
+        bool has_product = false;  // relation involving X1*X2 and X3² or X4²
+        for (const auto& r : rels) {
+            if (r.size() != 10u) continue;
+            // X1² index 9, X2² index 5, X3² index 0, X4² index 2, X1*X2 index 8
+            if (!r[9].isZero() && !r[5].isZero() && r[9] == r[5] && (r[0] != Frac(0) || r[2] != Frac(0)))
+                has_sum_sq = true;  // X1²+X2²-2X3² or X1²+X2²-2X4²
+            if (!r[8].isZero() && (r[0] != Frac(0) || r[2] != Frac(0)) && (r[8] == -r[0] || r[8] == -r[2]))
+                has_product = true;  // X1*X2 = X3² or X1*X2 = X4²
+        }
+        CHECK(has_sum_sq);
+        CHECK(has_product);
+    }
+
+    std::cout << "--- Phase 8: solve (linalg) ---\n";
+    {
+        std::vector<std::vector<Frac>> M2 = {{Frac(1), Frac(0)}, {Frac(0), Frac(1)}};
+        std::vector<Frac> b2 = {Frac(1), Frac(2)};
+        auto x2 = solve(M2, b2);
+        CHECK(x2 && x2->size() == 2u && (*x2)[0] == Frac(1) && (*x2)[1] == Frac(2));
+        std::vector<std::vector<Frac>> Mbad = {{Frac(1), Frac(0)}, {Frac(1), Frac(0)}};
+        std::vector<Frac> bbad = {Frac(1), Frac(2)};  // inconsistent: x1=1 and x1=2
+        auto xbad = solve(Mbad, bbad);
+        CHECK(!xbad);
+    }
+
+    std::cout << "--- Phase 8: findnonhom and findpoly ---\n";
+    {
+        auto q = Series::q(30);
+        auto f1 = Series::one(30) + q;
+        auto f2 = Series::one(30) - q;
+        std::vector<Series> L2 = {f1, f2};
+        auto rels_nh = findnonhom(L2, 1, 0);
+        for (const auto& r : rels_nh) CHECK(r.size() == 3u);  // 3 monomials for k=2,n=1
+        auto x = Series::one(20) + Series::q(20);
+        auto y = Series::one(20) - Series::q(20);
+        auto rels_poly = findpoly(x, y, 2, 2);
+        for (const auto& r : rels_poly) CHECK(r.size() == 9u);  // (deg1+1)*(deg2+1)=9
+    }
+
+    std::cout << "--- Phase 8: TEST-08 findnonhomcombo (Watson) ---\n";
+    {
+        auto q = Series::q(100);
+        auto eta1 = etaq(q, 1, 100);
+        auto eta7 = etaq(q, 7, 100);
+        auto eta49 = etaq(q, 49, 100);
+        auto xi = (q * q * (eta49 / eta1)).truncTo(100);
+        auto T = (q * (eta7 / eta1).pow(4)).truncTo(100);
+        auto T2 = (T * T).truncTo(100);
+        std::vector<Series> L = {T, xi};
+        std::vector<int> n_list = {1, 7};
+        auto sol = findnonhomcombo(T2, L, n_list, 0, false);
+        CHECK(sol);
+        // Monomial order: (0,0),(1,0),(0,1),(1,1),(0,2),(1,2),...,(0,7),(1,7) — 16 monomials
+        // Expected: T² = (49ξ³+35ξ²+7ξ)T + 343ξ⁷+343ξ⁶+147ξ⁵+49ξ⁴+21ξ³+7ξ²+ξ
+        // Index map: (0,0)→0, (1,0)→1, (0,1)→2, (1,1)→3, (0,2)→4, (1,2)→5, ..., (0,7)→14, (1,7)→15
+        // (1,1)→3: coeff 7, (1,2)→5: coeff 35, (1,3)→7: coeff 49
+        // (0,1)→2: coeff 1, (0,2)→4: coeff 7, (0,3)→6: coeff 21, (0,4)→8: coeff 49, (0,5)→10: coeff 147, (0,6)→12: coeff 343, (0,7)→14: coeff 343
+        auto& c = *sol;
+        CHECK(c.size() == 16u);
+        // Watson: T² = (49ξ³+35ξ²+7ξ)T + 343ξ⁷+...+ξ. Monomial order: 1,ξ,ξ²,..,ξ⁷,T,Tξ,..,Tξ⁷
+        CHECK(c[1] == Frac(1));   // ξ
+        CHECK(c[2] == Frac(7));   // ξ²
+        CHECK(c[3] == Frac(21));  // ξ³
+        CHECK(c[4] == Frac(49));  // ξ⁴
+        CHECK(c[9] == Frac(7));   // T·ξ
+        CHECK(c[10] == Frac(35)); // T·ξ²
+        CHECK(c[11] == Frac(49)); // T·ξ³
+    }
+
+    std::cout << "--- Phase 7: linalg kernel ---\n";
+    {
+        auto Mv_is_zero = [](const std::vector<std::vector<Frac>>& M, const std::vector<Frac>& v) {
+            if (M.empty() || v.size() != M[0].size()) return false;
+            for (const auto& row : M) {
+                Frac sum(0);
+                for (size_t j = 0; j < row.size(); ++j) sum = sum + row[j] * v[j];
+                if (!sum.isZero()) return false;
+            }
+            return true;
+        };
+
+        std::vector<std::vector<Frac>> M23 = {{Frac(1), Frac(1), Frac(0)}, {Frac(2), Frac(2), Frac(0)}};
+        auto k23 = kernel(M23);
+        CHECK(k23.size() == 2u);
+        for (const auto& v : k23) CHECK(Mv_is_zero(M23, v));
+
+        std::vector<std::vector<Frac>> M2id = {{Frac(1), Frac(0)}, {Frac(0), Frac(1)}};
+        auto k2id = kernel(M2id);
+        CHECK(k2id.empty());
+
+        std::vector<std::vector<Frac>> Mz = {{Frac(0), Frac(0), Frac(0)}, {Frac(0), Frac(0), Frac(0)}};
+        auto kz = kernel(Mz);
+        CHECK(kz.size() == 3u);
+        for (const auto& v : kz) CHECK(Mv_is_zero(Mz, v));
+
+        std::vector<std::vector<Frac>> M1 = {{Frac(1), Frac(2), Frac(3)}};
+        auto k1 = kernel(M1);
+        CHECK(k1.size() == 2u);
+        for (const auto& v : k1) CHECK(Mv_is_zero(M1, v));
+    }
+
+    std::cout << "--- Phase 5: Rogers-Ramanujan (TEST-01) ---\n";
+    {
+        auto q_var = Series::q(50);
+        Series rr = Series::zero(50);
+        for (int n = 0; n <= 8; ++n) {
+            Series term = q_var.pow(n * n) / aqprod(q_var, q_var, n, 50);
+            rr = (rr + term).truncTo(50);
+        }
+        rr.trunc = 50;
+        auto a = prodmake(rr, 50);
+        for (int n = 1; n <= 49; ++n) {
+            Frac expected = (n % 5 == 1 || n % 5 == 4) ? Frac(1) : Frac(0);
+            Frac got = Frac(0);
+            auto it = a.find(n);
+            if (it != a.end()) got = it->second;
+            CHECK(got == expected);
+        }
+    }
 
     std::cout << "--- Series str ---\n";
     {
@@ -323,6 +613,60 @@ int main() {
     {
         std::string s = Series::q(5).str();
         CHECK(s.find("q") != std::string::npos);
+    }
+
+    std::cout << "--- Phase 9: parser ---\n";
+    {
+        Tokenizer tok("x := 42 + q # comment");
+        auto t1 = tok.next(); CHECK(t1.kind == Token::Kind::IDENT && t1.text == "x");
+        auto t2 = tok.next(); CHECK(t2.kind == Token::Kind::ASSIGN);
+        auto t3 = tok.next(); CHECK(t3.kind == Token::Kind::INT && t3.text == "42");
+        auto t4 = tok.next(); CHECK(t4.kind == Token::Kind::PLUS);
+        auto t5 = tok.next(); CHECK(t5.kind == Token::Kind::Q);
+        auto t6 = tok.next(); CHECK(t6.kind == Token::Kind::END);
+    }
+    {
+        auto st = parse("1 + 2 * 3");
+        CHECK(st && st->tag == Stmt::Tag::Expr && st->expr);
+        CHECK(st->expr->tag == Expr::Tag::BinOp && st->expr->binOp == BinOp::Add);
+        CHECK(st->expr->left->tag == Expr::Tag::IntLit && st->expr->left->intVal == 1);
+        CHECK(st->expr->right->tag == Expr::Tag::BinOp && st->expr->right->binOp == BinOp::Mul);
+    }
+    {
+        auto st = parse("a := etaq(q, 1, 50)");
+        CHECK(st && st->tag == Stmt::Tag::Assign && st->assignName == "a");
+        CHECK(st->assignRhs && st->assignRhs->tag == Expr::Tag::Call && st->assignRhs->callName == "etaq");
+    }
+    {
+        auto st = parse("-q");
+        CHECK(st && st->expr && st->expr->tag == Expr::Tag::UnOp && st->expr->operand->tag == Expr::Tag::Q);
+    }
+    {
+        auto st = parse("a ^ b ^ c");
+        CHECK(st && st->expr->tag == Expr::Tag::BinOp && st->expr->binOp == BinOp::Pow);
+        CHECK(st->expr->right->tag == Expr::Tag::BinOp && st->expr->right->binOp == BinOp::Pow);
+    }
+    {
+        auto st = parse("sum(q^n, n, 0, 10)");
+        CHECK(st && st->expr->tag == Expr::Tag::Sum && st->expr->sumVar == "n");
+        CHECK(st->expr->lo->intVal == 0 && st->expr->hi->intVal == 10);
+    }
+    {
+        auto st = parse("add(1, k, 1, 5)");
+        CHECK(st && st->expr->tag == Expr::Tag::Sum && st->expr->sumVar == "k");
+    }
+    {
+        auto st = parse("[theta3(q,100), theta4(q,100)]");
+        CHECK(st && st->expr->tag == Expr::Tag::List && st->expr->elements.size() == 2u);
+        CHECK(st->expr->elements[0]->tag == Expr::Tag::Call && st->expr->elements[0]->callName == "theta3");
+        CHECK(st->expr->elements[1]->tag == Expr::Tag::Call && st->expr->elements[1]->callName == "theta4");
+    }
+    {
+        auto st = parse("# comment\nx := 1");
+        CHECK(st && st->tag == Stmt::Tag::Assign && st->assignName == "x" && st->assignRhs->intVal == 1);
+    }
+    {
+        parse("sum(q^(n^2)/aqprod(q,q,n,50), n, 0, 8)");  // Rogers-Ramanujan pattern — must not throw
     }
 
     // --- Frac: Long-chain growth test (no exponential BigInt growth) ---
@@ -344,4 +688,11 @@ int main() {
 
     std::cout << "\n=== " << (fail_count == 0 ? "All PASS" : "FAILURES") << " (fail_count=" << fail_count << ") ===\n";
     return fail_count;
+}
+
+int main(int argc, char** argv) {
+    if (argc > 1 && std::string(argv[1]) == "--test")
+        return runUnitTests();
+    runRepl();
+    return 0;
 }
