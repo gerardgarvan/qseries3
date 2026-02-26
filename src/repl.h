@@ -738,7 +738,7 @@ inline void handleTabCompletion(std::string& line, const Environment& env) {
             break;
     }
     std::string prefix = line.substr(start, end - start);
-    if (prefix.empty()) return;
+    if (prefix.empty()) return;  // Tab at start or after non-identifier: no change
     auto candidates = getCompletionCandidates(env);
     std::vector<std::string> matches;
     for (const auto& cand : candidates) {
@@ -771,7 +771,7 @@ inline std::optional<std::string> readLineRaw(Environment& env) {
             if (line.empty()) return std::nullopt;
             return line;
         }
-        if (c == '\n' || c == '\r') return line;
+        if (c == '\n' || c == '\r') return line;  // \r for Windows CR/LF
         if (c == '\t') {
             handleTabCompletion(line, env);
             continue;
