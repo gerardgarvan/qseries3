@@ -847,6 +847,15 @@ inline std::string trim(const std::string& s) {
     return s.substr(i, j - i);
 }
 
+// Redraw prompt + line with cursor at pos (0 = before first char, line.size() = after last)
+inline void redrawLineRaw(const std::string& line, size_t pos) {
+    std::cout << "\r\033[Kqseries> " << line << std::flush;
+    if (pos < line.size()) {
+        size_t count = line.size() - pos;
+        std::cout << "\033[" << std::to_string(count) << "D" << std::flush;
+    }
+}
+
 inline std::set<std::string> getCompletionCandidates(const Environment& env) {
     std::set<std::string> out;
     for (const auto& [k, _] : getHelpTable())
@@ -894,6 +903,7 @@ inline void handleTabCompletion(std::string& line, const Environment& env) {
 inline std::optional<std::string> readLineRaw(Environment& env) {
     RawModeGuard guard;
     std::string line;
+    size_t pos = 0;
     for (;;) {
         int c = readOneChar();
         if (c < 0) {
@@ -901,20 +911,36 @@ inline std::optional<std::string> readLineRaw(Environment& env) {
             return line;
         }
         if (c == '\n' || c == '\r') return line;  // \r for Windows CR/LF
+        if (c == 27) {  // ESC
+            int c2 = readOneChar();
+            if (c2 == '[') {
+                int c3 = readOneChar();
+                if (c3 == 68) {  // left
+                    if (pos > 0) { --pos; redrawLineRaw(line, pos); }
+                } else if (c3 == 67) {  // right
+                    if (pos < line.size()) { ++pos; redrawLineRaw(line, pos); }
+                }
+                // Consume and ignore other ESC [ X (e.g. Home/End/Delete)
+            }
+            // If first char after ESC is not '[', treat as standalone; do nothing
+            continue;
+        }
         if (c == '\t') {
             handleTabCompletion(line, env);
             continue;
         }
         if (c == 8 || c == 127) {  // Backspace / DEL
-            if (!line.empty()) {
-                line.pop_back();
-                std::cout << "\b \b" << std::flush;
+            if (pos > 0) {
+                line.erase(pos - 1, 1);
+                --pos;
+                redrawLineRaw(line, pos);
             }
             continue;
         }
         if (c >= 32 && c <= 126) {
-            line += static_cast<char>(c);
-            std::cout << static_cast<char>(c) << std::flush;
+            line.insert(pos, 1, static_cast<char>(c));
+            ++pos;
+            redrawLineRaw(line, pos);
         }
     }
 }
