@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 # Garvan demo — runs qseries commands from qseriesdoc (human demonstration).
 # Phases 12–15 append sections below.
-# Run from dist/ (e.g. cd dist && ./demo/garvan-demo.sh) or via make demo.
+# Run from dist/ (cd dist && ./demo/garvan-demo.sh) or qseries-demo/ (cd qseries-demo && bash garvan-demo.sh).
 set -e
-BIN="./qseries.exe"
-[ -f qseries.exe ] || BIN="./qseries"
-[ -f "$BIN" ] || BIN="../qseries.exe"
-[ -f "$BIN" ] || BIN="../qseries"
-[ -f "$BIN" ] || BIN="../dist/qseries.exe"
-[ -f "$BIN" ] || BIN="../dist/qseries"
-[ -f "$BIN" ] || { echo "error: qseries binary not found (run from dist/ or: cd dist && bash demo/garvan-demo.sh)"; exit 1; }
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BIN="$DIR/qseries.exe"
+[ -f "$BIN" ] || BIN="$DIR/qseries"
+[ -f "$BIN" ] || BIN="$DIR/../qseries.exe"
+[ -f "$BIN" ] || BIN="$DIR/../qseries"
+[ -f "$BIN" ] || { echo "error: qseries not found"; exit 1; }
 
-run() { printf '%s\n' "$@" | "$BIN" 2>&1; }
+run() {
+  for cmd in "$@"; do echo "qseries> $cmd"; done
+  printf '%s\n' "$@" | "$BIN" 2>&1
+}
 
 # === Rogers-Ramanujan (qseriesdoc §3.1) ===
 echo ""
@@ -49,3 +51,18 @@ echo "--- findnonhomcombo: Watson modular equation (qseriesdoc §4.4) ---"
 run "set_trunc(100)" "xi := q^2*etaq(49,100)/etaq(1,100)" "T := q*(etaq(7,100)/etaq(1,100))^4" "findnonhomcombo(T^2, [T, xi], [1, 7], 0)"
 
 # === Sifting and product identities (qseriesdoc §5, §6) ===
+echo ""
+echo "--- Sifting: Rødseth (qseriesdoc §5) ---"
+run "set_trunc(200)" "PD := etaq(2,200)/etaq(1,200)" "PD1 := sift(PD,5,1,199)" "etamake(PD1, 30)"
+
+echo ""
+echo "--- Triple product: Euler pentagonal (qseriesdoc §6.1) ---"
+run "set_trunc(60)" "series(tripleprod(q,q^3,10), 60)"
+
+echo ""
+echo "--- Quintuple product and Euler dissection (qseriesdoc §6.2) ---"
+run "set_trunc(500)" "EULER := etaq(1,500)" "E0 := sift(EULER,5,0,499)" "jp := jacprodmake(E0,50)" "jac2prod(jp)" "series(quinprod(q,q^5,20), 100)"
+
+echo ""
+echo "--- Winquist identity (qseriesdoc §6.3) ---"
+run "set_trunc(200)" "series(winquist(q^5,q^3,q^11,20), 60)"
