@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v1.5 (REPL improvements) — Phase 28 complete
+**Current focus:** Milestone v1.5 (REPL improvements) — Phase 29 complete
 
 ## Current Position
 
-Phase: 28 (Arrow-key line navigation)
+Phase: 29 (Optional-arg audit)
 Plan: 01 complete
-Status: Plan 28-01 executed; left/right arrow navigation and cursor-aware editing shipped
-Last activity: 2026-02-26 — Phase 28 Plan 01 complete (REPL-OPTS-02)
+Status: Plan 29-01 executed; etaq(k), checkprod(f), checkmult(f), findmaxind(L) 1-arg forms
+Last activity: 2026-02-26 — Phase 29 Plan 01 complete (REPL-OPTS-03)
 
 Progress: [██░░░░░░░░] ~21%
 
@@ -32,6 +32,7 @@ Progress: [██░░░░░░░░] ~21%
 
 **Recent Trend:** Phase 10 complete — REPL with findhom/findnonhomcombo, subs_q, tests/acceptance.sh; all 9 SPEC tests pass
 | Phase 28-arrow-key-line-navigation P01 | 20 | 3 tasks | 3 files |
+| Phase 29-optional-arg-audit P01 | ~12 | 4 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -62,6 +63,7 @@ Progress: [██░░░░░░░░] ~21%
 - [Phase 23-quick-wins]: Plan 23-01: acceptance-wins.sh for version, qdegree, lqdegree, jac2series, findlincombo; Makefile acceptance-wins target; MANUAL.md updates; implementation was pre-existing
 - [Phase 27-suppress-output-semicolon]: Plan 27-01: Trailing colon suppresses output; REPL-layer only; strip before parse; display and timing skipped; acceptance-suppress-output.sh
 - [Phase 28-arrow-key-line-navigation]: Plan 28-01: readLineRaw cursor pos, redrawLineRaw, ESC left/right, handleTabCompletion(line,pos,env); acceptance-arrow-keys.sh via script/PTY
+- [Phase 29-optional-arg-audit]: Plan 29-01: etaq(k), checkprod(f), checkmult(f), findmaxind(L) 1-arg forms; acceptance-optional-args.sh; getHelpTable updates
 
 ### Pending Todos
 
@@ -74,7 +76,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 28-01-PLAN.md (arrow-key line navigation)
+Stopped at: Completed 29-01-PLAN.md (optional-arg audit)
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
