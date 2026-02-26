@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v1.2 (more qol) — Phase 21
+**Current focus:** Milestone v1.4 (close-more-gaps) — defining requirements
 
 ## Current Position
 
-Phase: 22 of 22 (Demo packaging)
-Plan: 22-01 complete
-Status: Phase 22 complete
-Last activity: 2026-02-25 — Plan 22-01 executed (package-demo with binary, script, README)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-25 — Milestone v1.4 started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [██████████] 100%
 - [Phase 21-error-messages]: Plan 21-01: Token.offset, offsetToLineCol, kindToExpected; Tokenizer and Parser throw sites include "parser: line L, col C: message"
 - [Phase 21-error-messages]: Plan 21-02: runtimeErr + ev/evi wrappers; inputLineNum in runRepl; script mode "error: line N: message"
 - [Phase 22-demo-packaging]: Plan 22-01: package-demo copies binary, garvan-demo.sh, README-dist.md; DIR-based BIN resolution for flat and nested layouts; QOL-08 satisfied
+- [Phase 23-quick-wins]: Plan 23-01: acceptance-wins.sh for version, qdegree, lqdegree, jac2series, findlincombo; Makefile acceptance-wins target; MANUAL.md updates; implementation was pre-existing
 
 ### Pending Todos
 
@@ -79,6 +80,14 @@ Stopped at: Completed 22-01-PLAN.md (package-demo distributable folder)
 ### Milestone v1.2 Roadmap (2026-02-25)
 
 - Phases 16–22 derived from QOL-01 through QOL-08
+
+### Milestone v1.3 Roadmap (2026-02-25)
+
+- Phase 23: Quick wins — version, qdegree, lqdegree, jac2series, findlincombo
+
+### Milestone v1.4 Roadmap (2026-02-25)
+
+- Phases 24–26 derived from GAP-01 through GAP-04 (mprodmake, checkprod, checkmult, findmaxind)
 - Phase 16: Script mode — qseries < script.qs
 - Phase 17: help + help(func)
 - Phase 18: Timing
