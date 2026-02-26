@@ -63,7 +63,7 @@ Each task was committed atomically:
 1. **Task 1+2: Position infrastructure and throw site updates** - `3a18005` (feat)
    - Both tasks implemented together in src/parser.h (tightly coupled)
 
-**Plan metadata:** `79e3a04` (docs: complete 21-01 plan)
+**Plan metadata:** `ce168d8` (docs: complete 21-01 plan)
 
 ## Files Created/Modified
 

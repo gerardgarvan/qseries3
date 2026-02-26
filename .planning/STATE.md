@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 ## Current Position
 
 Phase: 21 of 22 (Error messages)
-Plan: 21-01 complete
-Status: Phase 21 in progress
-Last activity: 2026-02-25 — Plan 21-01 executed (parser position tracking for parse errors)
+Plan: 21-02 complete
+Status: Phase 21 complete
+Last activity: 2026-02-25 — Plan 21-02 executed (runtime error prefix + script line number)
 
 Progress: [███░░░░░░░] ~14%
 
@@ -56,6 +56,7 @@ Progress: [███░░░░░░░] ~14%
 - [Phase 19-multi-line-input]: Plan 19-01: Backslash continuation in runRepl(); prompt "  > "; max 100 lines; script mode echo
 - [Phase 20-tab-completion]: Plan 20-01: Raw terminal (termios/SetConsoleMode); readLineRaw; Tab completion (getHelpTable+env); unique replace, multiple list; script mode getline unchanged
 - [Phase 21-error-messages]: Plan 21-01: Token.offset, offsetToLineCol, kindToExpected; Tokenizer and Parser throw sites include "parser: line L, col C: message"
+- [Phase 21-error-messages]: Plan 21-02: runtimeErr + ev/evi wrappers; inputLineNum in runRepl; script mode "error: line N: message"
 
 ### Pending Todos
 
@@ -68,7 +69,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 21-01-PLAN.md (parser position tracking)
+Stopped at: Completed 21-02-PLAN.md (runtime error prefix + script line number)
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
