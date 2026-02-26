@@ -865,8 +865,8 @@ inline std::set<std::string> getCompletionCandidates(const Environment& env) {
     return out;
 }
 
-inline void handleTabCompletion(std::string& line, const Environment& env) {
-    size_t end = line.size();
+inline void handleTabCompletion(std::string& line, size_t& pos, const Environment& env) {
+    size_t end = pos;
     size_t start = end;
     while (start > 0) {
         unsigned char c = static_cast<unsigned char>(line[start - 1]);
@@ -886,10 +886,9 @@ inline void handleTabCompletion(std::string& line, const Environment& env) {
     if (matches.empty()) return;
     if (matches.size() == 1) {
         const std::string& match = matches[0];
-        for (size_t i = 0; i < prefix.size(); ++i)
-            std::cout << "\b \b" << std::flush;
-        line = line.substr(0, start) + match;
-        std::cout << match.substr(prefix.size()) << std::flush;
+        line = line.substr(0, start) + match + line.substr(end);
+        pos = start + match.size();
+        redrawLineRaw(line, pos);
         return;
     }
     std::cout << "\n";
@@ -897,7 +896,8 @@ inline void handleTabCompletion(std::string& line, const Environment& env) {
         if (i) std::cout << " ";
         std::cout << matches[i];
     }
-    std::cout << "\nqseries> " << line << std::flush;
+    std::cout << "\n";
+    redrawLineRaw(line, pos);
 }
 
 inline std::optional<std::string> readLineRaw(Environment& env) {
@@ -926,7 +926,7 @@ inline std::optional<std::string> readLineRaw(Environment& env) {
             continue;
         }
         if (c == '\t') {
-            handleTabCompletion(line, env);
+            handleTabCompletion(line, pos, env);
             continue;
         }
         if (c == 8 || c == 127) {  // Backspace / DEL
