@@ -13,13 +13,47 @@ Build a zero-dependency C++20 REPL for q-series computation bottom-up: BigInt �
 - [x] **Phase 1: BigInt** - Arbitrary precision integers, base 10⁹, signed (completed 2026-02-25)
 - [x] **Phase 2: Frac** - Exact rationals with auto-reduce via GCD (completed 2026-02-25)
 - [x] **Phase 3: Series** - Truncated power series with inverse, truncation propagation (completed 2026-02-25)
-- [ ] **Phase 4: qfuncs** - aqprod, etaq, theta, qbin, products; number theory helpers
-- [ ] **Phase 5: prodmake** - Andrews' algorithm; Rogers-Ramanujan canary test
-- [ ] **Phase 6: convert-extended** - etamake, jacprodmake, qfactor, sift
-- [ ] **Phase 7: linalg** - Gaussian elimination over Q, kernel computation
-- [ ] **Phase 8: relations** - findhom, findnonhom, findpoly family
-- [ ] **Phase 9: parser** - Tokenizer + recursive-descent expression parser
-- [ ] **Phase 10: repl** - REPL loop, variables, dispatch, display; all 9 SPEC tests pass
+- [x] **Phase 4: qfuncs** - aqprod, etaq, theta, qbin, products; number theory helpers (completed 2025-02-24)
+- [x] **Phase 5: prodmake** - Andrews' algorithm; Rogers-Ramanujan canary (completed 2025-02-24)
+- [x] **Phase 6: convert-extended** - etamake, jacprodmake, qfactor, sift (completed 2025-02-24)
+- [x] **Phase 7: linalg** - Gaussian elimination over Q, kernel computation (completed 2025-02-24)
+- [x] **Phase 8: relations** - findhom, findnonhom, findpoly family (completed 2025-02-25)
+- [x] **Phase 9: parser** - Tokenizer + recursive-descent expression parser (completed 2025-02-25)
+- [x] **Phase 10: repl** - REPL loop, variables, dispatch, display; all 9 SPEC tests pass (completed 2026-02-25)
+
+**Milestone v1.1 (Garvan Demo) — phases 11–15:**
+
+- [x] **Phase 11: Demo artifact** - Script or doc that runs qseries commands (completed 2026-02-26)
+- [x] **Phase 12: Rogers-Ramanujan demo** - sum + prodmake, qseriesdoc §3.1 style (completed 2026-02-25)
+- [x] **Phase 13: Product conversion demo** - qfactor, etamake, jacprodmake (§3.2–3.4) (completed 2026-02-25)
+- [x] **Phase 14: Relations demo** - findhom, findhomcombo, findnonhomcombo (§4) (completed 2026-02-25)
+- [x] **Phase 15: Sifting and product identities demo** - sift, triple/quin/winquist (§5, §6) (completed 2026-02-25)
+
+**Milestone v1.2 (More QoL) — phases 16–22:**
+
+- [x] **Phase 16: Script mode** - Run qseries < script.qs non-interactively (completed 2026-02-26)
+- [x] **Phase 17: help + help(func)** - General help and per-function documentation (completed 2026-02-26)
+- [x] **Phase 18: Timing** - Elapsed time per command (ms or s) (completed 2026-02-26)
+- [x] **Phase 19: Multi-line input** - Backslash continuation for long expressions (completed 2026-02-24)
+- [x] **Phase 20: Tab completion** - Autocomplete identifiers and built-in names (completed 2026-02-26)
+- [x] **Phase 21: Error messages** - Clearer parse/runtime diagnostics (completed 2026-02-26)
+- [x] **Phase 22: Demo packaging** - Single folder (binary + demo + README) for distribution (completed 2026-02-26)
+
+**Milestone v1.3 (Quick wins) — phase 23:**
+
+- [x] **Phase 23: Quick wins** - version, qdegree, lqdegree, jac2series, findlincombo, Makefile CXX default (completed 2026-02-25)
+
+**Milestone v1.4 (Close more gaps) — phases 24–26:**
+
+- [x] **Phase 24: mprodmake** - Convert q-series to product (1+q^n1)*(1+q^n2)*... (completed 2026-02-26)
+- [x] **Phase 25: checkprod and checkmult** - Validation utilities (completed 2026-02-26)
+- [x] **Phase 26: findmaxind** - Maximal independent subset of q-series (completed 2026-02-26)
+
+**Milestone v1.5 (REPL improvements) — phases 27–29:**
+
+- [x] **Phase 27: Suppress output (semicolon)** - Trailing semicolon prevents printing result (completed 2026-02-26)
+- [x] **Phase 28: Arrow-key line navigation** - Left/right keys move cursor within input (TTY) (completed 2026-02-26)
+- [x] **Phase 29: Optional-arg audit** - 2/3-arg variants work; omitted args use defaults (completed 2026-02-26)
 
 ## Phase Details
 
@@ -80,8 +114,8 @@ Plans:
 Plans:
 - [ ] 04-01-PLAN.md — qfuncs.h: nthelpers, etaq, aqprod, qbin
 - [ ] 04-02-PLAN.md — theta2, theta3, theta4, theta
-- [ ] 04-03-PLAN.md — tripleprod, quinprod, winquist
-- [ ] 04-04-PLAN.md — main.cpp qfuncs test suite (pentagonal, partition TEST-02)
+- [x] 04-03-PLAN.md — tripleprod, quinprod, winquist
+- [x] 04-04-PLAN.md — main.cpp qfuncs test suite (pentagonal, partition TEST-02)
 
 ### Phase 5: prodmake
 **Goal**: Andrews' algorithm recovers infinite product from series; Rogers-Ramanujan works
@@ -91,10 +125,10 @@ Plans:
   1. prodmake on Σ q^(n²)/(q;q)_n yields product with denominators only at exponents ≡ ±1 (mod 5)
   2. Divisor sum in step 3 excludes d=n; recurrence step 2 correct
   3. Rogers-Ramanujan is the canary — if this passes, core math is correct
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 05-01: TBD
+- [x] 05-01-PLAN.md — convert.h prodmake + Rogers-Ramanujan TEST-01
 
 ### Phase 6: convert-extended
 **Goal**: Product identification and coefficient extraction
@@ -106,10 +140,12 @@ Plans:
   3. sift extracts coefficients a_{ni+k}; Rødseth identity holds (TEST-06)
   4. qfactor factorizes T(8,8) correctly (TEST-07)
   5. jacprodmake on sifted etaq(1) yields Euler pentagonal dissection (TEST-09)
-**Plans**: TBD
+**Plans**: 3 plans (all complete)
 
 Plans:
-- [ ] 06-01: TBD
+- [x] 06-01-PLAN.md — sift + etamake (TEST-03, TEST-06)
+- [x] 06-02-PLAN.md — jacprodmake + jac2prod + jac2series (TEST-04, TEST-09)
+- [x] 06-03-PLAN.md — qfactor + T(r,n) (TEST-07)
 
 ### Phase 7: linalg
 **Goal**: Linear algebra over Q for relation finding
@@ -118,10 +154,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Gaussian elimination over vector<vector<Frac>> returns correct reduced form
   2. Kernel computation returns basis for null space of rational matrices
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 07-01: TBD
+- [ ] 07-01-PLAN.md — linalg.h kernel(M) + main.cpp tests (2×3, full rank, all-zero, single row)
 
 ### Phase 8: relations
 **Goal**: Polynomial relation discovery between series
@@ -131,23 +167,24 @@ Plans:
   1. findhom yields X₁²+X₂²-2X₃², -X₁X₂+X₄² for Gauss AGM (TEST-05)
   2. findnonhom, findhomcombo, findnonhomcombo, findpoly work per SPEC
   3. Watson's modular equation recovered via findnonhomcombo (TEST-08)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 08-01: TBD
+- [x] 08-01-PLAN.md — findhom, findnonhom, findpoly + TEST-05 (Gauss AGM)
+- [x] 08-02-PLAN.md — solve in linalg; findhomcombo, findnonhomcombo + TEST-08 (Watson)
 
 ### Phase 9: parser
-**Goal**: Parse Maple-like expressions into evaluable form
-**Depends on**: Nothing (can develop in parallel with math layers)
+**Goal**: Tokenizer + recursive-descent expression parser
+**Depends on**: Nothing (standalone; produces AST)
 **Requirements**: REPL-01
 **Success Criteria** (what must be TRUE):
-  1. Tokenizer handles identifiers, numbers, operators, := assignment
+  1. Tokenizer handles identifiers, numbers, operators, := assignment, # comments
   2. Recursive-descent parser produces AST for expressions, assignments, function calls
-  3. sum/add summation constructs parse correctly
-**Plans**: TBD
+  3. sum/add summation constructs and list literals parse correctly
+**Plans**: 1 plan
 
 Plans:
-- [ ] 09-01: TBD
+- [x] 09-01-PLAN.md — Tokenizer + parser + AST; sum/add, list literals; main.cpp tests
 
 ### Phase 10: repl
 **Goal**: Full REPL with variable environment; all 9 SPEC acceptance tests pass
@@ -158,10 +195,262 @@ Plans:
   2. sum/add dispatches correctly; set_trunc and series/coeffs display work
   3. REPL loop runs with basic history
   4. All 9 SPEC acceptance tests pass when run through the REPL
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 10-01: TBD
+- [x] 10-01-PLAN.md — repl.h foundation (env, eval, display, runRepl loop)
+- [x] 10-02-PLAN.md — Built-in dispatch (qfuncs, convert, sum/add)
+- [x] 10-03-PLAN.md — Relation built-ins, subs_q, 9 SPEC acceptance tests
+
+### Phase 11: Demo artifact
+**Goal**: Runnable demo artifact exists that can execute qseries commands
+**Depends on**: Phase 10 (REPL)
+**Requirements**: DEMO-01
+**Success Criteria** (what must be TRUE):
+  1. A script or doc file exists (e.g., demo.qs or DEMO.md with runnable commands)
+  2. User can pipe commands to qseries binary (or run interactively) and get output
+  3. Artifact structure supports appending subsequent Garvan examples
+**Plans**: 1 plan
+
+Plans:
+- [ ] 11-01-PLAN.md — demo/garvan-demo.sh + Makefile demo target + README
+
+### Phase 12: Rogers-Ramanujan demo
+**Goal**: Rogers-Ramanujan example reproduces qseriesdoc §3.1 Output (1) and (2)
+**Depends on**: Phase 11
+**Requirements**: DEMO-02
+**Success Criteria** (what must be TRUE):
+  1. Sum Σ q^(n²)/(q;q)_n is computed and displayed in demo artifact
+  2. prodmake on that sum yields infinite product form
+  3. Output format matches Output (1) and (2) style from qseriesdoc §3.1
+**Plans**: 1 plan
+
+Plans:
+- [ ] 12-01-PLAN.md — REPL format fixes (series honors T, O-term Unicode, Maple factor) + demo script update
+
+### Phase 13: Product conversion demo
+**Goal**: Product conversion examples reproduce qseriesdoc §3.2, §3.3, §3.4
+**Depends on**: Phase 12
+**Requirements**: DEMO-03
+**Success Criteria** (what must be TRUE):
+  1. qfactor T(8,8) produces expected factorization in demo
+  2. etamake on theta2, theta3, theta4 identifies eta products
+  3. jacprodmake on Rogers-Ramanujan yields Jacobi product form (JAC notation)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 13-01-PLAN.md — Replace Product conversion placeholder with three run blocks (qfactor, etamake, jacprodmake)
+
+### Phase 14: Relations demo
+**Goal**: Relation-finding examples reproduce qseriesdoc §4
+**Depends on**: Phase 13
+**Requirements**: DEMO-04
+**Success Criteria** (what must be TRUE):
+  1. findhom yields Gauss AGM relations (X₁²+X₂²-2X₃², -X₁X₂+X₄²) in demo
+  2. findhomcombo example runs and produces expected polynomial
+  3. findnonhomcombo example runs and produces expected output
+**Plans**: 1 plan
+
+Plans:
+- [ ] 14-01-PLAN.md — Replace Relations placeholder with three run blocks (findhom, findhomcombo, findnonhomcombo)
+
+### Phase 15: Sifting and product identities demo
+**Goal**: Sifting and product identity examples reproduce qseriesdoc §5, §6
+**Depends on**: Phase 14
+**Requirements**: DEMO-05
+**Success Criteria** (what must be TRUE):
+  1. sift example runs and extracts coefficients as in qseriesdoc §5
+  2. triple product identity demonstrated
+  3. quintuple product and Winquist identity demonstrated
+**Plans**: 1 plan
+
+Plans:
+- [x] 15-01-PLAN.md — Add four run blocks (sift+etamake, tripleprod, quinprod+Euler, winquist)
+
+### Phase 16: Script mode
+**Goal**: User can run qseries non-interactively from a file
+**Depends on**: Phase 10 (REPL)
+**Requirements**: QOL-01
+**Success Criteria** (what must be TRUE):
+  1. User can run `qseries < script.qs` and see output from each command
+  2. Commands are executed sequentially; process exits when file ends
+  3. Script mode is detected when stdin is not a TTY (no interactive prompt)
+**Plans**: 1 plan
+
+Plans:
+- [x] 16-01-PLAN.md — Guard banner with stdin_is_tty(); suppress in script mode
+
+### Phase 17: help + help(func)
+**Goal**: User can access built-in documentation
+**Depends on**: Phase 10 (REPL)
+**Requirements**: QOL-02, QOL-03
+**Success Criteria** (what must be TRUE):
+  1. User can type `help` and see general usage and list of built-ins
+  2. User can type `help(etaq)` or `help(prodmake)` and see per-function documentation
+  3. `help(unknown)` gives helpful feedback (e.g., "unknown function")
+**Plans**: 1 plan
+
+Plans:
+- [x] 17-01-PLAN.md — Add help table and help/help(func) built-in in dispatchBuiltin
+
+### Phase 18: Timing
+**Goal**: User sees elapsed time for each command
+**Depends on**: Phase 10 (REPL)
+**Requirements**: QOL-04
+**Success Criteria** (what must be TRUE):
+  1. After each command evaluation, elapsed time is shown (ms or s)
+  2. Time includes parse + eval (full evaluation)
+  3. Format is readable (e.g., "0.123s" or "42ms")
+**Plans**: 1 plan
+
+Plans:
+- [x] 18-01-PLAN.md — Add timing to runRepl (steady_clock, next line, interactive only)
+
+### Phase 19: Multi-line input
+**Goal**: User can split long expressions across lines
+**Depends on**: Phase 10 (REPL)
+**Requirements**: QOL-05
+**Success Criteria** (what must be TRUE):
+  1. User can end a line with backslash to continue on next line
+  2. REPL prompts for continuation until expression is complete
+  3. Backslash-newline treated as whitespace; expression parses as single unit
+**Plans**: 1 plan
+
+Plans:
+- [x] 19-01-PLAN.md — Backslash continuation loop in runRepl; prompt "  > "; max 100 lines
+
+### Phase 20: Tab completion
+**Goal**: User can autocomplete identifiers and function names
+**Depends on**: Phase 10 (REPL)
+**Requirements**: QOL-06
+**Success Criteria** (what must be TRUE):
+  1. User can press Tab to complete partial identifier (variable or function)
+  2. Unique match: completes; multiple matches: shows options; no match: no change
+  3. Completion works for built-ins and user-defined variables
+**Plans**: 1 plan
+
+Plans:
+- [x] 20-01-PLAN.md — Raw readline + Tab completion (TTY); script mode getline unchanged
+
+### Phase 21: Error messages
+**Goal**: Parse and runtime errors show clearer diagnostics
+**Depends on**: Phase 9 (parser), Phase 10 (REPL)
+**Requirements**: QOL-07
+**Success Criteria** (what must be TRUE):
+  1. Parse errors show line/column (or offset) and expected token
+  2. Runtime errors show function name and brief context
+  3. Error messages are actionable (user can locate and fix the problem)
+**Plans**: 2 plans
+
+Plans:
+- [ ] 21-01-PLAN.md — Parse error diagnostics: Token offset, offsetToLineCol, position in all parser throws
+- [ ] 21-02-PLAN.md — Runtime errors: runtimeErr helper, ev/evi wrap, REPL format with script line number
+
+### Phase 22: Demo packaging
+**Goal**: Single distributable folder for sharing
+**Depends on**: Phase 15 (demo content)
+**Requirements**: QOL-08
+**Success Criteria** (what must be TRUE):
+  1. User can obtain a folder containing: qseries binary, demo script, README
+  2. Folder is self-contained (runnable without external dependencies)
+  3. README explains how to run the demo
+**Plans**: 1 plan
+
+Plans:
+- [ ] 22-01-PLAN.md — Extend package-demo: DIR-based script, README-dist.md, Makefile copies all three into qseries-demo/
+
+### Phase 23: Quick wins
+**Goal**: Add Maple qseries gap-closure features (version, qdegree, lqdegree, jac2series, findlincombo) and improve build default
+**Depends on**: Phase 22
+**Requirements**: (from FEATURE-GAPS.md quick wins)
+**Success Criteria** (what must be TRUE):
+  1. User can run `qseries --version` or type `version` in REPL to get version
+  2. User can call `qdegree(f)` and `lqdegree(f)` for series degree inspection
+  3. User can call `jac2series(var)` or `jac2series(var,T)` to convert Jacobi product to series
+  4. User can call `findlincombo(f,L,topshift)` to express f as linear combination of L
+  5. `make` uses g++ by default (CXX ?= g++); MinGW override via CXX=...
+**Plans**: 1 plan
+
+Plans:
+- [x] 23-01-PLAN.md — version, qdegree, lqdegree, jac2series, findlincombo, Makefile CXX; acceptance-wins.sh
+
+### Phase 24: mprodmake
+**Goal**: Convert q-series to product of form (1+q^n1)*(1+q^n2)*...
+**Depends on**: Phase 23
+**Requirements**: GAP-01
+**Success Criteria** (what must be TRUE):
+  1. User can call `mprodmake(f,T)` to attempt conversion of f to m-product form
+  2. Output is product of factors (1+q^j) or indicates failure
+**Plans**: 1 plan
+
+Plans:
+- [x] 24-01-PLAN.md — mprodmake in convert.h; formatMprodmake; REPL dispatch; help; acceptance test
+
+### Phase 25: checkprod and checkmult
+**Goal**: Validation utilities for q-series
+**Depends on**: Phase 24
+**Requirements**: GAP-02, GAP-03
+**Success Criteria** (what must be TRUE):
+  1. User can call `checkprod(f,T)` to check if f is a "nice" product
+  2. User can call `checkmult(f,T)` to check if coefficients are multiplicative
+**Plans**: 1 plan
+
+Plans:
+- [x] 25-01-PLAN.md — checkprod, checkmult in convert.h or relations.h; REPL dispatch; help table
+
+### Phase 26: findmaxind
+**Goal**: Find maximal independent subset of q-series
+**Depends on**: Phase 8 (relations), Phase 7 (linalg)
+**Requirements**: GAP-04
+**Success Criteria** (what must be TRUE):
+  1. User can call `findmaxind(L, topshift)` to get maximal independent subset and 1-based indices
+**Plans**: 1 plan
+
+Plans:
+- [x] 26-01-PLAN.md — findmaxind in relations.h (RREF on M^T, pivot cols = indices); REPL dispatch; help; acceptance test
+
+### Phase 27: Suppress output (semicolon)
+**Goal**: User can suppress result printing by ending a statement with semicolon
+**Depends on**: Phase 10 (REPL)
+**Requirements**: REPL-OPTS-01
+**Success Criteria** (what must be TRUE):
+  1. User can type `rr := sum(...);` and the result is stored but not printed
+  2. Without semicolon, result is printed as before
+  3. Semicolon works for assignments and expression statements
+  4. Semicolon does not cause parse errors; parser treats it as optional statement terminator
+**Plans**: 1 plan
+
+Plans:
+- [ ] 27-01-PLAN.md — REPL: trailing colon detection; skip display and timing when suppress_output
+
+### Phase 28: Arrow-key line navigation
+**Goal**: User can move cursor left/right within input line using arrow keys
+**Depends on**: Phase 10 (REPL)
+**Requirements**: REPL-OPTS-02
+**Success Criteria** (what must be TRUE):
+  1. When stdin is TTY, left/right arrow keys move cursor within the current input line
+  2. Cursor position is correct; editing (typing, backspace) works at cursor
+  3. When stdin is not TTY (script mode), input behavior unchanged (no arrow handling needed)
+  4. History navigation (up/down) and line editing remain functional together
+**Plans**: 1 plan
+
+Plans:
+- [ ] 28-01-PLAN.md — readLineRaw: pos, ESC [ D/C, redrawLine, cursor-aware backspace/typing/Tab; acceptance-arrow-keys
+
+### Phase 29: Optional-arg audit
+**Goal**: All 2-arg and 3-arg function variants work with omitted optional args
+**Depends on**: Phase 10 (REPL)
+**Requirements**: REPL-OPTS-03
+**Success Criteria** (what must be TRUE):
+  1. series(f) and series(f,T) work; omitted T uses env.T
+  2. etaq(k) and etaq(k,T) work; omitted T uses env.T
+  3. qfactor(f), qfactor(f,T), jac2series(var), jac2series(var,T) work with optional T
+  4. checkprod(f), checkprod(f,T), checkmult(f), checkmult(f,T) work; omitted T uses env.T
+  5. findmaxind(L), findmaxind(L,n), findmaxind(L,n,topshift) work; omitted args use defaults
+**Plans**: 1 plan
+
+Plans:
+- [ ] 29-01-PLAN.md — Add etaq(k), checkprod(f), checkmult(f), findmaxind(L) 1-arg; acceptance-optional-args
 
 ## Progress
 
@@ -170,10 +459,47 @@ Plans:
 | 1. BigInt | 0/3 | Complete    | 2026-02-25 |
 | 2. Frac | 0/? | Complete    | 2026-02-25 |
 | 3. Series | 2/2 | Complete | 2026-02-25 |
-| 4. qfuncs | 0/? | Not started | - |
-| 5. prodmake | 0/? | Not started | - |
-| 6. convert-extended | 0/? | Not started | - |
-| 7. linalg | 0/? | Not started | - |
+| 4. qfuncs | 4/4 | Complete | 2025-02-24 |
+| 5. prodmake | 1/1 | Complete | 2025-02-24 |
+| 6. convert-extended | 3/3 | Complete | 2025-02-24 |
+| 7. linalg | 1/1 | Complete | 2025-02-24 |
 | 8. relations | 0/? | Not started | - |
 | 9. parser | 0/? | Not started | - |
-| 10. repl | 0/? | Not started | - |
+| 10. repl | 3/3 | Complete | 2026-02-25 |
+| 11. Demo artifact | 0/? | Complete    | 2026-02-26 |
+| 12. Rogers-Ramanujan demo | 0/? | Complete    | 2026-02-25 |
+| 13. Product conversion demo | 0/? | Complete    | 2026-02-25 |
+| 14. Relations demo | 0/? | Complete    | 2026-02-25 |
+| 15. Sifting and product identities demo | 1/1 | Complete | 2026-02-25 |
+| 16. Script mode | 1/1 | Complete    | 2026-02-26 |
+| 17. help + help(func) | 1/1 | Complete    | 2026-02-26 |
+| 18. Timing | 1/1 | Complete    | 2026-02-26 |
+| 19. Multi-line input | 1/1 | Complete | 2026-02-24 |
+| 20. Tab completion | 0/? | Complete    | 2026-02-26 |
+| 21. Error messages | 0/? | Complete    | 2026-02-26 |
+| 22. Demo packaging | 0/? | Complete    | 2026-02-26 |
+| 23. Quick wins | 1/1 | Complete | 2026-02-25 |
+| 24. mprodmake | 1/1 | Complete | 2026-02-26 |
+| 25. checkprod/checkmult | 1/1 | Complete | 2026-02-26 |
+| 26. findmaxind | 1/1 | Complete | 2026-02-26 |
+| 27. Suppress output (semicolon) | 0/? | Complete    | 2026-02-26 |
+| 28. Arrow-key line navigation | 0/? | Complete    | 2026-02-26 |
+| 29. Optional-arg audit | 0/? | Complete    | 2026-02-26 |
+
+### Phase 30: Output on next line after input
+
+**Goal:** [To be planned]
+**Depends on:** Phase 29
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 30 to break down)
+
+### Phase 31: up-down arrows for history
+
+**Goal:** Up/down arrow keys navigate command history in the REPL
+**Depends on:** Phase 30
+**Plans:** 1 plan
+
+Plans:
+- [ ] 31-01-PLAN.md — Add history parameter to readLineRaw, up/down ESC handlers, acceptance test
