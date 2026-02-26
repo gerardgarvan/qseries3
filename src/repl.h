@@ -131,6 +131,8 @@ using EvalResult = std::variant<
     RelationKernelResult,                             // findhom/findnonhom
     RelationComboResult,                              // findhomcombo/findnonhomcombo
     QFactorResult,                                    // qfactor
+    CheckprodResult,                                  // checkprod
+    CheckmultResult,                                  // checkmult
     int64_t,                                          // legendre/sigma
     DisplayOnly,
     std::monostate                                    // set_trunc
@@ -154,6 +156,8 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"legendre", {"legendre(a,p)", "Legendre symbol (a/p)"}},
         {"prodmake", {"prodmake(f,T)", "Andrews' algorithm: series → infinite product"}},
         {"mprodmake", {"mprodmake(f,T)", "convert series to product (1+q^n1)(1+q^n2)..."}},
+        {"checkprod", {"checkprod(f,T) or checkprod(f,M,T)", "check if f is a nice product (exponents |a[n]| < M)"}},
+        {"checkmult", {"checkmult(f,T) or checkmult(f,T,1)", "check if coefficients are multiplicative"}},
         {"qbin", {"qbin(m,n,T) or qbin(q,m,n,T)", "Gaussian polynomial [m;n]_q"}},
         {"qfactor", {"qfactor(f) or qfactor(f,T)", "factorize finite q-product"}},
         {"quinprod", {"quinprod(z,q,T)", "quintuple product"}},
@@ -334,6 +338,20 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         if (args.size() != 2)
             throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
         return mprodmake(ev(0), static_cast<int>(evi(1)));
+    }
+    if (name == "checkprod") {
+        if (args.size() == 2)
+            return checkprod(ev(0), static_cast<int>(evi(1)));
+        if (args.size() == 3)
+            return checkprod(ev(0), static_cast<int>(evi(1)), static_cast<int>(evi(2)));
+        throw std::runtime_error(runtimeErr(name, "expects 2 or 3 arguments"));
+    }
+    if (name == "checkmult") {
+        if (args.size() == 2)
+            return checkmult(ev(0), static_cast<int>(evi(1)), false);
+        if (args.size() == 3)
+            return checkmult(ev(0), static_cast<int>(evi(1)), evi(2) != 0);
+        throw std::runtime_error(runtimeErr(name, "expects 2 or 3 arguments"));
     }
     if (name == "etamake") {
         if (args.size() != 2)
@@ -777,6 +795,20 @@ inline std::string formatRelation(const std::vector<Frac>& coeffs,
     return out.empty() ? "0" : out;
 }
 
+inline std::string formatCheckprod(const CheckprodResult& r) {
+    if (r.nice)
+        return "nice product (minExp=" + std::to_string(r.minExp) + ")";
+    return "not a nice product (bound M=" + std::to_string(r.M) + "), minExp=" + std::to_string(r.minExp);
+}
+
+inline std::string formatCheckmult(const CheckmultResult& r) {
+    if (r.multiplicative) return "MULTIPLICATIVE";
+    std::string s = "NOT MULTIPLICATIVE";
+    for (const auto& [m, n] : r.failures)
+        s += " (m=" + std::to_string(m) + ",n=" + std::to_string(n) + ")";
+    return s;
+}
+
 inline std::string formatMprodmake(const std::vector<int>& S) {
     if (S.empty()) return "1";
     std::string out;
@@ -889,6 +921,10 @@ inline void display(const EvalResult& res, Environment& env, int /*T*/) {
             else std::cout << "(no solution)" << std::endl;
         } else if constexpr (std::is_same_v<T, QFactorResult>) {
             std::cout << formatQfactor(arg) << std::endl;
+        } else if constexpr (std::is_same_v<T, CheckprodResult>) {
+            std::cout << formatCheckprod(arg) << std::endl;
+        } else if constexpr (std::is_same_v<T, CheckmultResult>) {
+            std::cout << formatCheckmult(arg) << std::endl;
         } else if constexpr (std::is_same_v<T, int64_t>) {
             std::cout << arg << std::endl;
         } else if constexpr (std::is_same_v<T, DisplayOnly>) {
