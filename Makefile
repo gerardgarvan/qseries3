@@ -1,9 +1,10 @@
-# Use g++ by default (Cygwin/Linux). Override for MinGW: make CXX=x86_64-w64-mingw32-g++
+# Use g++ by default (Cygwin/Linux). Override: make CXX=x86_64-w64-mingw32-g++
+# LDFLAGS: -static for static linking (add make LDFLAGS=-static if needed)
 CXX ?= g++
 CXXFLAGS = -std=c++20 -O2 -Wall -Wextra -Wpedantic
-LDFLAGS = -static
+LDFLAGS ?= 
 
-.PHONY: all clean test acceptance acceptance-qol acceptance-wins demo test-package
+.PHONY: all clean test acceptance acceptance-qol acceptance-wins acceptance-suppress-output demo test-package
 
 all: dist/qseries.exe dist-demo
 
@@ -47,6 +48,10 @@ acceptance-mprodmake: dist/qseries.exe
 # Run Phase 25 checkprod/checkmult acceptance tests
 acceptance-checkprod-checkmult: dist/qseries.exe
 	./tests/acceptance-checkprod-checkmult.sh
+
+# Run Phase 27 suppress-output acceptance tests
+acceptance-suppress-output: dist/qseries.exe
+	./tests/acceptance-suppress-output.sh
 
 # Run Garvan demo (human demonstration, no assertions)
 demo: dist/qseries.exe dist-demo
