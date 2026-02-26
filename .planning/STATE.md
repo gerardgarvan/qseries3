@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v1.1 (Garvan demo) — Phase 14 Relations demo
+**Current focus:** Milestone v1.2 (more qol) — Phase 20
 
 ## Current Position
 
-Phase: 14 (Relations demo)
-Plan: 14-01
-Status: Complete
-Last activity: 2026-02-25 — Plan 14-01 executed
+Phase: 20 of 22 (Tab completion)
+Plan: 20-01 complete
+Status: Phase 20 complete
+Last activity: 2026-02-25 — Plan 20-01 executed (raw readline + Tab completion)
 
-Progress: [██████████] 100%
+Progress: [███░░░░░░░] ~14%
 
 ## Performance Metrics
 
@@ -50,6 +50,11 @@ Progress: [██████████] 100%
 - Plan 12-01: series(f,T) honors T; O-term uses expToUnicode; formatProdmake mapleStyle (1-q), (-q^n+1); demo series(rr,50)
 - [Phase 13-product-conversion-demo]: Plan 13-01: theta2(100) without /q^(1/4); rr redefined in jacprodmake block
 - [Phase 14-relations-demo]: Plan 14-01: findhomcombo theta fallback (nested sum unsupported); Relations section with findhom, findhomcombo, findnonhomcombo
+- [Phase 16-script-mode]: Plan 16-01: Banner suppressed when stdin not TTY; wrap banner in if(stdin_is_tty()) in runRepl()
+- [Phase 17-help-help-func]: Plan 17-01: help and help(func) built-in with getHelpTable(), 28 built-ins
+- [Phase 18-timing]: Plan 18-01: Elapsed time after output on next line (X.XXXs), interactive only
+- [Phase 19-multi-line-input]: Plan 19-01: Backslash continuation in runRepl(); prompt "  > "; max 100 lines; script mode echo
+- [Phase 20-tab-completion]: Plan 20-01: Raw terminal (termios/SetConsoleMode); readLineRaw; Tab completion (getHelpTable+env); unique replace, multiple list; script mode getline unchanged
 
 ### Pending Todos
 
@@ -62,13 +67,19 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 14-01-PLAN.md (Relations run blocks)
+Stopped at: Completed 20-01-PLAN.md (Tab completion)
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
 - Phases 11–15 derived from DEMO-01 through DEMO-05
-- Phase 11: Demo artifact (script/doc)
-- Phase 12: Rogers-Ramanujan demo (§3.1)
-- Phase 13: Product conversion demo (§3.2–3.4)
-- Phase 14: Relations demo (§4)
-- Phase 15: Sifting and product identities demo (§5, §6)
+
+### Milestone v1.2 Roadmap (2026-02-25)
+
+- Phases 16–22 derived from QOL-01 through QOL-08
+- Phase 16: Script mode — qseries < script.qs
+- Phase 17: help + help(func)
+- Phase 18: Timing
+- Phase 19: Multi-line input
+- Phase 20: Tab completion
+- Phase 21: Error messages
+- Phase 22: Demo packaging
