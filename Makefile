@@ -44,6 +44,10 @@ acceptance-wins: dist/qseries.exe
 acceptance-mprodmake: dist/qseries.exe
 	./tests/acceptance-mprodmake.sh
 
+# Run Phase 25 checkprod/checkmult acceptance tests
+acceptance-checkprod-checkmult: dist/qseries.exe
+	./tests/acceptance-checkprod-checkmult.sh
+
 # Run Garvan demo (human demonstration, no assertions)
 demo: dist/qseries.exe dist-demo
 	cd dist && ./demo/garvan-demo.sh
