@@ -133,6 +133,7 @@ using EvalResult = std::variant<
     QFactorResult,                                    // qfactor
     CheckprodResult,                                  // checkprod
     CheckmultResult,                                  // checkmult
+    FindmaxindResult,                                 // findmaxind
     int64_t,                                          // legendre/sigma
     DisplayOnly,
     std::monostate                                    // set_trunc
@@ -179,6 +180,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"lqdegree", {"lqdegree(f)", "lowest exponent with nonzero coefficient"}},
         {"jac2series", {"jac2series(var) or jac2series(var,T)", "convert Jacobi product (in var) to series"}},
         {"findlincombo", {"findlincombo(f,L,topshift)", "express f as linear combination of series in L"}},
+        {"findmaxind", {"findmaxind(L, topshift)", "maximal linearly independent subset of q-series in L; returns indices (1-based)"}},
     };
     return table;
 }
@@ -535,6 +537,13 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         enumerate_nlist_exponents(n_list, {}, 0, exps);
         return RelationComboResult{std::move(coeffs), std::move(exps)};
     }
+    if (name == "findmaxind") {
+        if (args.size() != 2)
+            throw std::runtime_error(runtimeErr(name, "expects 2 arguments: findmaxind(L, topshift)"));
+        auto L = evalListToSeries(args[0].get());
+        int topshift = static_cast<int>(evi(1));
+        return findmaxind(L, topshift);
+    }
     if (name == "findpoly") {
         if (args.size() < 4 || args.size() > 5)
             throw std::runtime_error(runtimeErr(name, "expects 4 or 5 arguments"));
@@ -801,6 +810,16 @@ inline std::string formatCheckprod(const CheckprodResult& r) {
     return "not a nice product (bound M=" + std::to_string(r.M) + "), minExp=" + std::to_string(r.minExp);
 }
 
+inline std::string formatFindmaxind(const FindmaxindResult& r) {
+    std::string out = "indices: [";
+    for (size_t i = 0; i < r.indices.size(); ++i) {
+        if (i) out += ", ";
+        out += std::to_string(r.indices[i]);
+    }
+    out += "]";
+    return out;
+}
+
 inline std::string formatCheckmult(const CheckmultResult& r) {
     if (r.multiplicative) return "MULTIPLICATIVE";
     std::string s = "NOT MULTIPLICATIVE";
@@ -925,6 +944,8 @@ inline void display(const EvalResult& res, Environment& env, int /*T*/) {
             std::cout << formatCheckprod(arg) << std::endl;
         } else if constexpr (std::is_same_v<T, CheckmultResult>) {
             std::cout << formatCheckmult(arg) << std::endl;
+        } else if constexpr (std::is_same_v<T, FindmaxindResult>) {
+            std::cout << formatFindmaxind(arg) << std::endl;
         } else if constexpr (std::is_same_v<T, int64_t>) {
             std::cout << arg << std::endl;
         } else if constexpr (std::is_same_v<T, DisplayOnly>) {
