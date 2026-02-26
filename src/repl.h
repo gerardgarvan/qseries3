@@ -16,8 +16,82 @@
 #include <cstdint>
 #include <iostream>
 #include <deque>
+#ifdef _WIN32
+#include <io.h>
+#define stdin_is_tty() _isatty(_fileno(stdin))
+#else
+#include <unistd.h>
+#define stdin_is_tty() isatty(STDIN_FILENO)
+#endif
 #include <algorithm>
 #include <sstream>
+#include <chrono>
+#include <iomanip>
+#include <set>
+#include <cctype>
+#include <cstdlib>
+
+#if defined(__CYGWIN__) || !defined(_WIN32)
+#include <termios.h>
+#include <unistd.h>
+#else
+#include <windows.h>
+#endif
+
+// Raw terminal mode: read char-by-char for Tab completion
+#if defined(__CYGWIN__) || !defined(_WIN32)
+struct RawModeGuard {
+    struct termios orig;
+    bool active = false;
+    RawModeGuard() {
+        if (tcgetattr(STDIN_FILENO, &orig) == 0) {
+            struct termios raw = orig;
+            raw.c_lflag &= ~(static_cast<tcflag_t>(ICANON | ECHO));
+            raw.c_cc[VMIN] = 1;
+            raw.c_cc[VTIME] = 0;
+            if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == 0)
+                active = true;
+        }
+    }
+    ~RawModeGuard() {
+        if (active)
+            tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig);
+    }
+};
+inline int readOneChar() {
+    unsigned char c;
+    if (read(STDIN_FILENO, &c, 1) == 1)
+        return static_cast<int>(c);
+    return -1;
+}
+#else
+struct RawModeGuard {
+    HANDLE hStdin = nullptr;
+    DWORD origMode = 0;
+    bool active = false;
+    RawModeGuard() {
+        hStdin = GetStdHandle(STD_INPUT_HANDLE);
+        if (hStdin != INVALID_HANDLE_VALUE && GetConsoleMode(hStdin, &origMode)) {
+            DWORD mode = origMode;
+            mode &= ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+            if (SetConsoleMode(hStdin, mode))
+                active = true;
+        }
+    }
+    ~RawModeGuard() {
+        if (active && hStdin != INVALID_HANDLE_VALUE)
+            SetConsoleMode(hStdin, origMode);
+    }
+};
+inline int readOneChar() {
+    HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
+    unsigned char c;
+    DWORD readCount = 0;
+    if (ReadFile(h, &c, 1, &readCount, nullptr) && readCount == 1)
+        return static_cast<int>(c);
+    return -1;
+}
+#endif
 
 // EnvValue: variable can hold Series or Jacobi product
 using EnvValue = std::variant<Series, std::vector<JacFactor>>;
@@ -55,6 +129,43 @@ using EvalResult = std::variant<
     DisplayOnly,
     std::monostate                                    // set_trunc
 >;
+
+// Help table: name -> (signature, description)
+inline const std::map<std::string, std::pair<std::string, std::string>>& getHelpTable() {
+    static const std::map<std::string, std::pair<std::string, std::string>> table = {
+        {"add", {"add(expr, var, lo, hi)", "summation over index var from lo to hi"}},
+        {"aqprod", {"aqprod(a,q,n,T)", "rising q-factorial (a;q)_n"}},
+        {"coeffs", {"coeffs(f,from,to)", "list coefficients from exponent from to to"}},
+        {"etaq", {"etaq(k,T) or etaq(q,k,T)", "eta product Π(1-q^{kn})"}},
+        {"etamake", {"etamake(f,T)", "identify f as eta product"}},
+        {"findhom", {"findhom(L,n,topshift)", "homogeneous polynomial relations between series in L"}},
+        {"findhomcombo", {"findhomcombo(f,L,n,topshift[,etaopt])", "express f as polynomial in L"}},
+        {"findnonhom", {"findnonhom(L,n,topshift)", "nonhomogeneous polynomial relations"}},
+        {"findnonhomcombo", {"findnonhomcombo(f,L,n_list,topshift[,etaopt])", "express f as polynomial in L (nonhom)"}},
+        {"findpoly", {"findpoly(x,y,deg1,deg2[,check])", "polynomial relation between two series"}},
+        {"jac2prod", {"jac2prod(var)", "display Jacobi product stored in variable"}},
+        {"jacprodmake", {"jacprodmake(f,T)", "identify f as Jacobi product"}},
+        {"legendre", {"legendre(a,p)", "Legendre symbol (a/p)"}},
+        {"prodmake", {"prodmake(f,T)", "Andrews' algorithm: series → infinite product"}},
+        {"qbin", {"qbin(m,n,T) or qbin(q,m,n,T)", "Gaussian polynomial [m;n]_q"}},
+        {"qfactor", {"qfactor(f) or qfactor(f,T)", "factorize finite q-product"}},
+        {"quinprod", {"quinprod(z,q,T)", "quintuple product"}},
+        {"series", {"series(f) or series(f,T)", "display series coefficients"}},
+        {"set_trunc", {"set_trunc(N)", "set default truncation"}},
+        {"sigma", {"sigma(n) or sigma(n,k)", "divisor sum σ_k(n)"}},
+        {"sift", {"sift(f,n,k,T)", "extract coefficients a_{ni+k}"}},
+        {"subs_q", {"subs_q(f,k)", "substitute q^k for q"}},
+        {"sum", {"sum(expr, var, lo, hi)", "summation over index var from lo to hi"}},
+        {"T", {"T(r,n) or T(r,n,T)", "finite q-product T_{r,n}"}},
+        {"theta", {"theta(z,T) or theta(z,q,T)", "generalized theta function"}},
+        {"theta2", {"theta2(T) or theta2(q,T)", "theta_2"}},
+        {"theta3", {"theta3(T) or theta3(q,T)", "theta_3"}},
+        {"theta4", {"theta4(T) or theta4(q,T)", "theta_4"}},
+        {"tripleprod", {"tripleprod(z,q,T)", "Jacobi triple product"}},
+        {"winquist", {"winquist(a,b,q,T)", "Winquist identity"}},
+    };
+    return table;
+}
 
 // Helper: get Series from EnvValue (for variable lookup in arithmetic)
 inline Series getSeriesFromEnv(const EnvValue& v) {
@@ -372,6 +483,32 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         return ev(0).subs_q(static_cast<int>(evi(1)));
     }
 
+    if (name == "help") {
+        const auto& table = getHelpTable();
+        if (args.size() == 0) {
+            std::cout << "q-series REPL. Commands: expr, var := expr, help, help(func).\nBuilt-ins: ";
+            bool first = true;
+            for (const auto& [n, _] : table) {
+                if (!first) std::cout << ", ";
+                std::cout << n;
+                first = false;
+            }
+            std::cout << std::endl;
+            return DisplayOnly{};
+        }
+        if (args.size() == 1 && args[0]->tag == Expr::Tag::Var) {
+            const std::string& fn = args[0]->varName;
+            auto it = table.find(fn);
+            if (it != table.end()) {
+                std::cout << it->second.first << " — " << it->second.second << std::endl;
+            } else {
+                std::cout << "unknown function: " << fn << std::endl;
+            }
+            return DisplayOnly{};
+        }
+        throw std::runtime_error("help or help(func) expects 0 or 1 argument");
+    }
+
     throw std::runtime_error("unknown built-in: " + name);
 }
 
@@ -627,7 +764,8 @@ inline EvalResult evalStmt(const Stmt* s, Environment& env) {
 }
 
 inline void runRepl() {
-    std::cout << R"banner(
+    if (stdin_is_tty()) {
+        std::cout << R"banner(
      (\-"""-/)
         | |
      \ ^ ^ / .-.
@@ -645,15 +783,44 @@ inline void runRepl() {
 
  q-series REPL (Maple-like), version 1.0
 )banner" << std::endl;
+    }
 
     Environment env;
     std::deque<std::string> history;
     const size_t maxHistory = 100;
 
+    constexpr size_t maxContinuations = 100;
+
     for (;;) {
-        std::cout << "qseries> " << std::flush;
         std::string line;
+        if (stdin_is_tty())
+            std::cout << "qseries> " << std::flush;
         if (!std::getline(std::cin, line)) break;
+        if (!stdin_is_tty())
+            std::cout << "qseries> " << line << std::endl;
+
+        // Backslash continuation: while line ends with \, read more lines
+        size_t contCount = 0;
+        for (;;) {
+            // Rtrim to find last char
+            while (!line.empty() && (line.back() == ' ' || line.back() == '\t'))
+                line.pop_back();
+            if (line.empty() || line.back() != '\\')
+                break;
+            line.pop_back();  // remove trailing backslash
+            if (contCount >= maxContinuations)
+                break;
+            if (stdin_is_tty())
+                std::cout << "  > " << std::flush;
+            std::string next;
+            if (!std::getline(std::cin, next))
+                break;
+            if (!stdin_is_tty())
+                std::cout << "  > " << next << std::endl;
+            line += " " + next;
+            ++contCount;
+        }
+
         std::string trimmed = trim(line);
         if (trimmed.empty()) continue;
 
@@ -661,11 +828,17 @@ inline void runRepl() {
         if (history.size() > maxHistory) history.pop_front();
 
         try {
+            auto t0 = std::chrono::steady_clock::now();
             StmtPtr stmt = parse(trimmed);
             EvalResult res = evalStmt(stmt.get(), env);
             if (std::holds_alternative<std::monostate>(res))
                 continue;
             display(res, env, env.T);
+            auto t1 = std::chrono::steady_clock::now();
+            if (stdin_is_tty()) {
+                double secs = std::chrono::duration<double>(t1 - t0).count();
+                std::cout << std::fixed << std::setprecision(3) << secs << "s" << std::endl;
+            }
         } catch (const std::exception& e) {
             std::cerr << "error: " << e.what() << std::endl;
         }
