@@ -31,6 +31,10 @@
 #include <cctype>
 #include <cstdlib>
 
+inline std::string runtimeErr(const std::string& func, const std::string& msg) {
+    return func.empty() ? msg : (func + ": " + msg);
+}
+
 #if defined(__CYGWIN__) || !defined(_WIN32)
 #include <termios.h>
 #include <unistd.h>
@@ -234,12 +238,18 @@ inline EvalResult dispatchBuiltin(const std::string& name,
     Series q = getSeriesFromEnv(env.env.at("q"));
     int T = env.T;
 
-    auto ev = [&](size_t i) { return evalAsSeries(args[i].get(), env, sumIndices); };
-    auto evi = [&](size_t i) { return evalToInt(args[i].get(), env, sumIndices); };
+    auto ev = [&](size_t i) {
+        try { return evalAsSeries(args[i].get(), env, sumIndices); }
+        catch (const std::exception& e) { throw std::runtime_error(runtimeErr(name, e.what())); }
+    };
+    auto evi = [&](size_t i) {
+        try { return evalToInt(args[i].get(), env, sumIndices); }
+        catch (const std::exception& e) { throw std::runtime_error(runtimeErr(name, e.what())); }
+    };
 
     if (name == "aqprod") {
         if (args.size() != 4)
-            throw std::runtime_error("aqprod(a,q,n,T) expects 4 arguments");
+            throw std::runtime_error(runtimeErr(name, "expects 4 arguments"));
         return aqprod(ev(0), ev(1), static_cast<int>(evi(2)), static_cast<int>(evi(3)));
     }
     if (name == "etaq") {
@@ -250,7 +260,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         }
         if (args.size() == 3)
             return etaq(ev(0), static_cast<int>(evi(1)), static_cast<int>(evi(2)));
-        throw std::runtime_error("etaq(k,T) or etaq(q,k,T)");
+        throw std::runtime_error(runtimeErr(name, "expected etaq(k,T) or etaq(q,k,T), got " + std::to_string(args.size()) + " arguments"));
     }
     if (name == "theta2" || name == "theta3" || name == "theta4") {
         if (args.size() == 1) {
@@ -265,40 +275,40 @@ inline EvalResult dispatchBuiltin(const std::string& name,
             if (name == "theta3") return theta3(ev(0), Tr);
             return theta4(ev(0), Tr);
         }
-        throw std::runtime_error("theta2/3/4(T) or theta2/3/4(q,T)");
+        throw std::runtime_error(runtimeErr(name, "expected theta2/3/4(T) or theta2/3/4(q,T)"));
     }
     if (name == "theta") {
         if (args.size() == 2)
             return theta(ev(0), q, static_cast<int>(evi(1)));
         if (args.size() == 3)
             return theta(ev(0), ev(1), static_cast<int>(evi(2)));
-        throw std::runtime_error("theta(z,T) or theta(z,q,T)");
+        throw std::runtime_error(runtimeErr(name, "expected theta(z,T) or theta(z,q,T)"));
     }
     if (name == "qbin") {
         if (args.size() == 3)
             return qbin(q, static_cast<int>(evi(0)), static_cast<int>(evi(1)), static_cast<int>(evi(2)));
         if (args.size() == 4)
             return qbin(ev(0), static_cast<int>(evi(1)), static_cast<int>(evi(2)), static_cast<int>(evi(3)));
-        throw std::runtime_error("qbin(m,n,T) or qbin(q,m,n,T)");
+        throw std::runtime_error(runtimeErr(name, "expected qbin(m,n,T) or qbin(q,m,n,T)"));
     }
     if (name == "tripleprod") {
         if (args.size() != 3)
-            throw std::runtime_error("tripleprod(z,q,T) expects 3 arguments");
+            throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
         return tripleprod(ev(0), ev(1), static_cast<int>(evi(2)));
     }
     if (name == "quinprod") {
         if (args.size() != 3)
-            throw std::runtime_error("quinprod(z,q,T) expects 3 arguments");
+            throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
         return quinprod(ev(0), ev(1), static_cast<int>(evi(2)));
     }
     if (name == "winquist") {
         if (args.size() != 4)
-            throw std::runtime_error("winquist(a,b,q,T) expects 4 arguments");
+            throw std::runtime_error(runtimeErr(name, "expects 4 arguments"));
         return winquist(ev(0), ev(1), ev(2), static_cast<int>(evi(3)));
     }
     if (name == "sift") {
         if (args.size() != 4)
-            throw std::runtime_error("sift(f,n,k,T) expects 4 arguments");
+            throw std::runtime_error(runtimeErr(name, "expects 4 arguments"));
         return sift(ev(0), static_cast<int>(evi(1)), static_cast<int>(evi(2)), static_cast<int>(evi(3)));
     }
     if (name == "T") {
@@ -306,43 +316,43 @@ inline EvalResult dispatchBuiltin(const std::string& name,
             return T_rn(static_cast<int>(evi(0)), static_cast<int>(evi(1)), T);
         if (args.size() == 3)
             return T_rn(static_cast<int>(evi(0)), static_cast<int>(evi(1)), static_cast<int>(evi(2)));
-        throw std::runtime_error("T(r,n) or T(r,n,T)");
+        throw std::runtime_error(runtimeErr(name, "expected T(r,n) or T(r,n,T)"));
     }
     if (name == "prodmake") {
         if (args.size() != 2)
-            throw std::runtime_error("prodmake(f,T) expects 2 arguments");
+            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
         return prodmake(ev(0), static_cast<int>(evi(1)));
     }
     if (name == "etamake") {
         if (args.size() != 2)
-            throw std::runtime_error("etamake(f,T) expects 2 arguments");
+            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
         return etamake(ev(0), static_cast<int>(evi(1)));
     }
     if (name == "jacprodmake") {
         if (args.size() != 2)
-            throw std::runtime_error("jacprodmake(f,T) expects 2 arguments");
+            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
         return jacprodmake(ev(0), static_cast<int>(evi(1)));
     }
     if (name == "jac2prod") {
         if (args.size() != 1)
-            throw std::runtime_error("jac2prod(var) expects 1 argument");
+            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
         if (args[0]->tag != Expr::Tag::Var)
-            throw std::runtime_error("jac2prod expects variable name");
+            throw std::runtime_error(runtimeErr(name, "expects variable name"));
         auto it = env.env.find(args[0]->varName);
         if (it == env.env.end())
-            throw std::runtime_error("undefined variable: " + args[0]->varName);
+            throw std::runtime_error(runtimeErr(name, "undefined variable: " + args[0]->varName));
         if (std::holds_alternative<std::vector<JacFactor>>(it->second)) {
             std::cout << jac2prod(std::get<std::vector<JacFactor>>(it->second)) << std::endl;
             return DisplayOnly{};
         }
-        throw std::runtime_error("jac2prod expects jacprodmake result");
+        throw std::runtime_error(runtimeErr(name, "expects jacprodmake result"));
     }
     if (name == "qfactor") {
         if (args.size() == 1)
             return qfactor(ev(0), T);
         if (args.size() == 2)
             return qfactor(ev(0), static_cast<int>(evi(1)));
-        throw std::runtime_error("qfactor(f) or qfactor(f,T)");
+        throw std::runtime_error(runtimeErr(name, "expected qfactor(f) or qfactor(f,T)"));
     }
     if (name == "series") {
         if (args.size() == 1) {
@@ -356,11 +366,11 @@ inline EvalResult dispatchBuiltin(const std::string& name,
             std::cout << f.str(std::min(Tr, 100)) << std::endl;
             return DisplayOnly{};
         }
-        throw std::runtime_error("series(f) or series(f,T)");
+        throw std::runtime_error(runtimeErr(name, "expected series(f) or series(f,T)"));
     }
     if (name == "coeffs") {
         if (args.size() != 3)
-            throw std::runtime_error("coeffs(f,from,to) expects 3 arguments");
+            throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
         Series f = ev(0);
         int from = static_cast<int>(evi(1));
         int to = static_cast<int>(evi(2));
@@ -375,10 +385,10 @@ inline EvalResult dispatchBuiltin(const std::string& name,
     }
     if (name == "set_trunc") {
         if (args.size() != 1)
-            throw std::runtime_error("set_trunc(N) expects 1 argument");
+            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
         int N = static_cast<int>(evi(0));
         if (N <= 0)
-            throw std::runtime_error("truncation must be positive");
+            throw std::runtime_error(runtimeErr(name, "truncation must be positive"));
         env.T = N;
         env.env["q"] = Series::q(N);
         return std::monostate{};
@@ -386,7 +396,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
 
     auto evalListToSeries = [&](const Expr* listExpr) {
         if (!listExpr || listExpr->tag != Expr::Tag::List)
-            throw std::runtime_error("expected list of series");
+            throw std::runtime_error(runtimeErr(name, "expected list of series"));
         std::vector<Series> out;
         for (const auto& e : listExpr->elements)
             out.push_back(evalAsSeries(e.get(), env, sumIndices));
@@ -394,7 +404,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
     };
     auto evalListToInt = [&](const Expr* listExpr) {
         if (!listExpr || listExpr->tag != Expr::Tag::List)
-            throw std::runtime_error("expected list of integers");
+            throw std::runtime_error(runtimeErr(name, "expected list of integers"));
         std::vector<int> out;
         for (const auto& e : listExpr->elements)
             out.push_back(static_cast<int>(evalToInt(e.get(), env, sumIndices)));
@@ -403,7 +413,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
 
     if (name == "findhom") {
         if (args.size() != 3)
-            throw std::runtime_error("findhom(L,n,topshift) expects 3 arguments");
+            throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
         auto L = evalListToSeries(args[0].get());
         int n = static_cast<int>(evi(1));
         int topshift = static_cast<int>(evi(2));
@@ -414,7 +424,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
     }
     if (name == "findnonhom") {
         if (args.size() != 3)
-            throw std::runtime_error("findnonhom(L,n,topshift) expects 3 arguments");
+            throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
         auto L = evalListToSeries(args[0].get());
         int n = static_cast<int>(evi(1));
         int topshift = static_cast<int>(evi(2));
@@ -425,7 +435,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
     }
     if (name == "findhomcombo") {
         if (args.size() < 4 || args.size() > 5)
-            throw std::runtime_error("findhomcombo(f,L,n,topshift[,etaopt]) expects 4 or 5 arguments");
+            throw std::runtime_error(runtimeErr(name, "expects 4 or 5 arguments"));
         Series f = ev(0);
         auto L = evalListToSeries(args[1].get());
         int n = static_cast<int>(evi(2));
@@ -439,7 +449,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
     }
     if (name == "findnonhomcombo") {
         if (args.size() < 4 || args.size() > 5)
-            throw std::runtime_error("findnonhomcombo(f,L,n_list,topshift[,etaopt]) expects 4 or 5 arguments");
+            throw std::runtime_error(runtimeErr(name, "expects 4 or 5 arguments"));
         Series f = ev(0);
         auto L = evalListToSeries(args[1].get());
         auto n_list = evalListToInt(args[2].get());
@@ -453,7 +463,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
     }
     if (name == "findpoly") {
         if (args.size() < 4 || args.size() > 5)
-            throw std::runtime_error("findpoly(x,y,deg1,deg2[,check]) expects 4 or 5 arguments");
+            throw std::runtime_error(runtimeErr(name, "expects 4 or 5 arguments"));
         Series x = ev(0);
         Series y = ev(1);
         int deg1 = static_cast<int>(evi(2));
@@ -468,7 +478,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
     }
     if (name == "legendre") {
         if (args.size() != 2)
-            throw std::runtime_error("legendre(a,p) expects 2 arguments");
+            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
         return static_cast<int64_t>(legendre(evi(0), evi(1)));
     }
     if (name == "sigma") {
@@ -476,11 +486,11 @@ inline EvalResult dispatchBuiltin(const std::string& name,
             return sigma(static_cast<int>(evi(0)), 1);
         if (args.size() == 2)
             return sigma(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
-        throw std::runtime_error("sigma(n) or sigma(n,k)");
+        throw std::runtime_error(runtimeErr(name, "expected sigma(n) or sigma(n,k)"));
     }
     if (name == "subs_q") {
         if (args.size() != 2)
-            throw std::runtime_error("subs_q(f,k) expects 2 arguments");
+            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
         return ev(0).subs_q(static_cast<int>(evi(1)));
     }
 
@@ -507,10 +517,10 @@ inline EvalResult dispatchBuiltin(const std::string& name,
             }
             return DisplayOnly{};
         }
-        throw std::runtime_error("help or help(func) expects 0 or 1 argument");
+        throw std::runtime_error(runtimeErr(name, "expects 0 or 1 argument"));
     }
 
-    throw std::runtime_error("unknown built-in: " + name);
+    throw std::runtime_error(runtimeErr(name, "unknown built-in"));
 }
 
 inline EvalResult evalExpr(const Expr* e, Environment& env,
@@ -861,6 +871,7 @@ inline void runRepl() {
     Environment env;
     std::deque<std::string> history;
     const size_t maxHistory = 100;
+    size_t inputLineNum = 0;
 
     constexpr size_t maxContinuations = 100;
 
@@ -904,6 +915,7 @@ inline void runRepl() {
         std::string trimmed = trim(line);
         if (trimmed.empty()) continue;
 
+        ++inputLineNum;
         history.push_back(trimmed);
         if (history.size() > maxHistory) history.pop_front();
 
@@ -920,7 +932,10 @@ inline void runRepl() {
                 std::cout << std::fixed << std::setprecision(3) << secs << "s" << std::endl;
             }
         } catch (const std::exception& e) {
-            std::cerr << "error: " << e.what() << std::endl;
+            std::cerr << "error: ";
+            if (!stdin_is_tty() && inputLineNum > 0)
+                std::cerr << "line " << inputLineNum << ": ";
+            std::cerr << e.what() << std::endl;
         }
     }
 }
