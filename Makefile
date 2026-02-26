@@ -1,8 +1,9 @@
-CXX = x86_64-w64-mingw32-g++
+# Use g++ by default (Cygwin/Linux). Override for MinGW: make CXX=x86_64-w64-mingw32-g++
+CXX ?= g++
 CXXFLAGS = -std=c++20 -O2 -Wall -Wextra -Wpedantic
 LDFLAGS = -static
 
-.PHONY: all clean test acceptance demo test-package
+.PHONY: all clean test acceptance acceptance-qol acceptance-wins demo test-package
 
 all: dist/qseries.exe dist-demo
 
@@ -30,6 +31,18 @@ test: dist/qseries.exe
 # Run all 9 SPEC acceptance tests via REPL
 acceptance: dist/qseries.exe
 	./tests/acceptance.sh
+
+# Run QoL acceptance tests (multi-line, error messages, demo packaging)
+acceptance-qol: dist/qseries.exe
+	./tests/qol-acceptance.sh
+
+# Run Phase 23 quick-wins acceptance tests
+acceptance-wins: dist/qseries.exe
+	./tests/acceptance-wins.sh
+
+# Run Phase 24 mprodmake acceptance tests
+acceptance-mprodmake: dist/qseries.exe
+	./tests/acceptance-mprodmake.sh
 
 # Run Garvan demo (human demonstration, no assertions)
 demo: dist/qseries.exe dist-demo
