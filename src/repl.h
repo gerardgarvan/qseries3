@@ -1036,6 +1036,14 @@ inline void runRepl() {
         std::string trimmed = trim(line);
         if (trimmed.empty()) continue;
 
+        bool suppress_output = false;
+        if (trimmed.back() == ':') {
+            trimmed.pop_back();
+            trimmed = trim(trimmed);
+            suppress_output = true;
+        }
+        if (trimmed.empty()) continue;
+
         ++inputLineNum;
         history.push_back(trimmed);
         if (history.size() > maxHistory) history.pop_front();
@@ -1046,6 +1054,7 @@ inline void runRepl() {
             EvalResult res = evalStmt(stmt.get(), env);
             if (std::holds_alternative<std::monostate>(res))
                 continue;
+            if (suppress_output) continue;
             display(res, env, env.T);
             auto t1 = std::chrono::steady_clock::now();
             if (stdin_is_tty()) {
