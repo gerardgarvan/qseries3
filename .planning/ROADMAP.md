@@ -485,21 +485,59 @@ Plans:
 | 27. Suppress output (semicolon) | 0/? | Complete    | 2026-02-26 |
 | 28. Arrow-key line navigation | 0/? | Complete    | 2026-02-26 |
 | 29. Optional-arg audit | 0/? | Complete    | 2026-02-26 |
+| 30. Output on next line | 1/1 | Complete    | 2026-02-26 |
+| 31. Up-down arrows for history | 1/1 | Complete | 2026-02-26 |
+| 32. etaq memoization | 0/? | Not started | - |
+| 33. Euler pentagonal optimization | 0/? | Not started | - |
 
 ### Phase 30: Output on next line after input
 
-**Goal:** [To be planned]
+**Goal:** REPL output appears on the line after input, not same line
 **Depends on:** Phase 29
-**Plans:** 0 plans
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 30 to break down)
+- [x] 30-01-PLAN.md — Add newline after readLineRaw returns in REPL loop
 
 ### Phase 31: up-down arrows for history
 
 **Goal:** Up/down arrow keys navigate command history in the REPL
 **Depends on:** Phase 30
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 31-01-PLAN.md — Add history parameter to readLineRaw, up/down ESC handlers, acceptance test
+- [x] 31-01-PLAN.md — Add history parameter to readLineRaw, up/down ESC handlers, acceptance test
+
+**Milestone v1.6 (etaq Performance) — phases 32–33:**
+
+- [ ] **Phase 32: etaq memoization** - Cache etaq(k,T) results so repeated calls return instantly (completed -)
+- [ ] **Phase 33: Euler pentagonal optimization** - etaq(1,T) via pentagonal number theorem recurrence O(T*sqrt(T)) (completed -)
+
+### Phase 32: etaq memoization
+**Goal**: Repeated etaq(k,T) calls return cached results without recomputation
+**Depends on**: Phase 31
+**Requirements**: PERF-01, PERF-03
+**Success Criteria** (what must be TRUE):
+  1. Second call to etaq(k,T) with same arguments returns immediately (no recomputation)
+  2. Cache is keyed on (k, T) pair; different T values for same k produce correct results
+  3. All existing acceptance tests still pass
+  4. Timing shows measurable speedup on repeated etaq calls (e.g. demo script)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 32-01-PLAN.md — Add etaq memoization cache + REPL clear_cache command + set_trunc cache clearing
+
+### Phase 33: Euler pentagonal optimization
+**Goal**: etaq(1,T) uses pentagonal number recurrence instead of naive product, achieving O(T*sqrt(T))
+**Depends on**: Phase 32
+**Requirements**: PERF-02, PERF-03
+**Success Criteria** (what must be TRUE):
+  1. etaq(1,T) for large T (e.g. T=500) is measurably faster than before
+  2. Pentagonal recurrence: p(n) = sum_{k!=0} (-1)^{k+1} * p(n - k(3k-1)/2), used for 1/eta = partition function
+  3. Coefficients match naive computation exactly (no numerical drift — exact rational)
+  4. All 10 existing acceptance tests still pass
+  5. etaq(1,200) completes well under 0.5s
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 33 to break down)
