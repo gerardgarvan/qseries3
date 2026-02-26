@@ -487,7 +487,7 @@ Plans:
 | 29. Optional-arg audit | 0/? | Complete    | 2026-02-26 |
 | 30. Output on next line | 1/1 | Complete    | 2026-02-26 |
 | 31. Up-down arrows for history | 1/1 | Complete | 2026-02-26 |
-| 32. etaq memoization | 0/? | Not started | - |
+| 32. etaq memoization | 0/? | Complete    | 2026-02-26 |
 | 33. Euler pentagonal optimization | 0/? | Not started | - |
 
 ### Phase 30: Output on next line after input
@@ -510,7 +510,7 @@ Plans:
 
 **Milestone v1.6 (etaq Performance) — phases 32–33:**
 
-- [ ] **Phase 32: etaq memoization** - Cache etaq(k,T) results so repeated calls return instantly (completed -)
+- [x] **Phase 32: etaq memoization** - Cache etaq(k,T) results so repeated calls return instantly (completed -) (completed 2026-02-26)
 - [ ] **Phase 33: Euler pentagonal optimization** - etaq(1,T) via pentagonal number theorem recurrence O(T*sqrt(T)) (completed -)
 
 ### Phase 32: etaq memoization
@@ -537,7 +537,7 @@ Plans:
   3. Coefficients match naive computation exactly (no numerical drift — exact rational)
   4. All 10 existing acceptance tests still pass
   5. etaq(1,200) completes well under 0.5s
-**Plans**: 0 plans
+**Plans**: 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 33 to break down)
+- [ ] 33-01-PLAN.md — Pentagonal fast path in etaq() + acceptance test verification
