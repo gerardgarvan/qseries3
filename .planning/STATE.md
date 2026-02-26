@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v1.2 (more qol) — Phase 20
+**Current focus:** Milestone v1.2 (more qol) — Phase 21
 
 ## Current Position
 
-Phase: 20 of 22 (Tab completion)
-Plan: 20-01 complete
-Status: Phase 20 complete
-Last activity: 2026-02-25 — Plan 20-01 executed (raw readline + Tab completion)
+Phase: 21 of 22 (Error messages)
+Plan: 21-01 complete
+Status: Phase 21 in progress
+Last activity: 2026-02-25 — Plan 21-01 executed (parser position tracking for parse errors)
 
 Progress: [███░░░░░░░] ~14%
 
@@ -55,6 +55,7 @@ Progress: [███░░░░░░░] ~14%
 - [Phase 18-timing]: Plan 18-01: Elapsed time after output on next line (X.XXXs), interactive only
 - [Phase 19-multi-line-input]: Plan 19-01: Backslash continuation in runRepl(); prompt "  > "; max 100 lines; script mode echo
 - [Phase 20-tab-completion]: Plan 20-01: Raw terminal (termios/SetConsoleMode); readLineRaw; Tab completion (getHelpTable+env); unique replace, multiple list; script mode getline unchanged
+- [Phase 21-error-messages]: Plan 21-01: Token.offset, offsetToLineCol, kindToExpected; Tokenizer and Parser throw sites include "parser: line L, col C: message"
 
 ### Pending Todos
 
@@ -67,7 +68,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 20-01-PLAN.md (Tab completion)
+Stopped at: Completed 21-01-PLAN.md (parser position tracking)
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
