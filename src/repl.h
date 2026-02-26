@@ -125,6 +125,7 @@ struct RelationComboResult {
 using EvalResult = std::variant<
     Series,
     std::map<int, Frac>,                              // prodmake
+    std::vector<int>,                                 // mprodmake
     std::vector<std::pair<int, Frac>>,                // etamake
     std::vector<JacFactor>,                           // jacprodmake
     RelationKernelResult,                             // findhom/findnonhom
@@ -152,6 +153,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"jacprodmake", {"jacprodmake(f,T)", "identify f as Jacobi product"}},
         {"legendre", {"legendre(a,p)", "Legendre symbol (a/p)"}},
         {"prodmake", {"prodmake(f,T)", "Andrews' algorithm: series → infinite product"}},
+        {"mprodmake", {"mprodmake(f,T)", "convert series to product (1+q^n1)(1+q^n2)..."}},
         {"qbin", {"qbin(m,n,T) or qbin(q,m,n,T)", "Gaussian polynomial [m;n]_q"}},
         {"qfactor", {"qfactor(f) or qfactor(f,T)", "factorize finite q-product"}},
         {"quinprod", {"quinprod(z,q,T)", "quintuple product"}},
@@ -167,7 +169,12 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"theta3", {"theta3(T) or theta3(q,T)", "theta_3"}},
         {"theta4", {"theta4(T) or theta4(q,T)", "theta_4"}},
         {"tripleprod", {"tripleprod(z,q,T)", "Jacobi triple product"}},
+        {"version", {"version", "print package version"}},
         {"winquist", {"winquist(a,b,q,T)", "Winquist identity"}},
+        {"qdegree", {"qdegree(f)", "highest exponent with nonzero coefficient"}},
+        {"lqdegree", {"lqdegree(f)", "lowest exponent with nonzero coefficient"}},
+        {"jac2series", {"jac2series(var) or jac2series(var,T)", "convert Jacobi product (in var) to series"}},
+        {"findlincombo", {"findlincombo(f,L,topshift)", "express f as linear combination of series in L"}},
     };
     return table;
 }
@@ -323,6 +330,11 @@ inline EvalResult dispatchBuiltin(const std::string& name,
             throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
         return prodmake(ev(0), static_cast<int>(evi(1)));
     }
+    if (name == "mprodmake") {
+        if (args.size() != 2)
+            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
+        return mprodmake(ev(0), static_cast<int>(evi(1)));
+    }
     if (name == "etamake") {
         if (args.size() != 2)
             throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
@@ -346,6 +358,19 @@ inline EvalResult dispatchBuiltin(const std::string& name,
             return DisplayOnly{};
         }
         throw std::runtime_error(runtimeErr(name, "expects jacprodmake result"));
+    }
+    if (name == "jac2series") {
+        if (args.size() < 1 || args.size() > 2)
+            throw std::runtime_error(runtimeErr(name, "expects jac2series(var) or jac2series(var,T)"));
+        if (args[0]->tag != Expr::Tag::Var)
+            throw std::runtime_error(runtimeErr(name, "expects variable name"));
+        auto it = env.env.find(args[0]->varName);
+        if (it == env.env.end())
+            throw std::runtime_error(runtimeErr(name, "undefined variable: " + args[0]->varName));
+        if (!std::holds_alternative<std::vector<JacFactor>>(it->second))
+            throw std::runtime_error(runtimeErr(name, "expects jacprodmake result"));
+        int Tr = (args.size() == 2) ? static_cast<int>(evi(1)) : T;
+        return jac2series(std::get<std::vector<JacFactor>>(it->second), Tr);
     }
     if (name == "qfactor") {
         if (args.size() == 1)
@@ -392,6 +417,26 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         env.T = N;
         env.env["q"] = Series::q(N);
         return std::monostate{};
+    }
+    if (name == "version") {
+        if (args.size() != 0)
+            throw std::runtime_error(runtimeErr(name, "expects no arguments"));
+        std::cout << "qseries 1.3\n";
+        return DisplayOnly{};
+    }
+    if (name == "qdegree") {
+        if (args.size() != 1)
+            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
+        Series f = ev(0);
+        return static_cast<int64_t>(f.maxExp());
+    }
+    if (name == "lqdegree") {
+        if (args.size() != 1)
+            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
+        Series f = ev(0);
+        if (f.c.empty())
+            return static_cast<int64_t>(0);
+        return static_cast<int64_t>(f.minExp());
     }
 
     auto evalListToSeries = [&](const Expr* listExpr) {
@@ -445,6 +490,17 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         auto coeffs = findhomcombo(f, L, n, topshift, false);
         std::vector<std::vector<int>> exps;
         enumerate_hom_exponents(static_cast<int>(L.size()), n, {}, exps);
+        return RelationComboResult{std::move(coeffs), std::move(exps)};
+    }
+    if (name == "findlincombo") {
+        if (args.size() != 3)
+            throw std::runtime_error(runtimeErr(name, "expects 3 arguments: findlincombo(f,L,topshift)"));
+        Series f = ev(0);
+        auto L = evalListToSeries(args[1].get());
+        int topshift = static_cast<int>(evi(2));
+        auto coeffs = findhomcombo(f, L, 1, topshift, false);
+        std::vector<std::vector<int>> exps;
+        enumerate_hom_exponents(static_cast<int>(L.size()), 1, {}, exps);
         return RelationComboResult{std::move(coeffs), std::move(exps)};
     }
     if (name == "findnonhomcombo") {
@@ -721,6 +777,18 @@ inline std::string formatRelation(const std::vector<Frac>& coeffs,
     return out.empty() ? "0" : out;
 }
 
+inline std::string formatMprodmake(const std::vector<int>& S) {
+    if (S.empty()) return "1";
+    std::string out;
+    for (int n : S) {
+        if (n == 1)
+            out += "(1+q)";
+        else
+            out += "(1+q" + Series::expToUnicode(n) + ")";
+    }
+    return out;
+}
+
 inline std::string trim(const std::string& s) {
     size_t i = 0, j = s.size();
     while (i < j && (s[i] == ' ' || s[i] == '\t')) ++i;
@@ -807,6 +875,8 @@ inline void display(const EvalResult& res, Environment& env, int /*T*/) {
             std::cout << arg.str(30) << std::endl;
         } else if constexpr (std::is_same_v<T, std::map<int, Frac>>) {
             std::cout << formatProdmake(arg, true) << std::endl;
+        } else if constexpr (std::is_same_v<T, std::vector<int>>) {
+            std::cout << formatMprodmake(arg) << std::endl;
         } else if constexpr (std::is_same_v<T, std::vector<std::pair<int, Frac>>>) {
             std::cout << formatEtamake(arg) << std::endl;
         } else if constexpr (std::is_same_v<T, std::vector<JacFactor>>) {
@@ -849,20 +919,14 @@ inline EvalResult evalStmt(const Stmt* s, Environment& env) {
 inline void runRepl() {
     if (stdin_is_tty()) {
         std::cout << R"banner(
-     (\-"""-/)
-        | |
-     \ ^ ^ / .-.
-     \_o_/ / /
-     /` `\/ |
-     / \ |
-     \ ( ) / |
-     / \_) (_/ \ /
-     | (\-/) |
-     \ --^o^-- /
-     \ '.___.' /
-     .' \-=-/ '.
-     / /` `\ \
-     (//./ \.\\) `"` `"`
+ _                                           
+| |                                          
+| | ____ _ _ __   __ _  __ _ _ __ ___   ___  
+| |/ / _` | '_ \ / _` |/ _` | '__/ _ \ / _ \ 
+|   < (_| | | | | (_| | (_| | | | (_) | (_) |
+|_|\_\__,_|_| |_|\__, |\__,_|_|  \___/ \___/ 
+                  __/ |                      
+                 |___/                       
 
  q-series REPL (Maple-like), version 1.0
 )banner" << std::endl;
