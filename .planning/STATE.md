@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 
 ## Current Position
 
-Phase: 21 of 22 (Error messages)
-Plan: 21-02 complete
-Status: Phase 21 complete
-Last activity: 2026-02-25 — Plan 21-02 executed (runtime error prefix + script line number)
+Phase: 22 of 22 (Demo packaging)
+Plan: 22-01 complete
+Status: Phase 22 complete
+Last activity: 2026-02-25 — Plan 22-01 executed (package-demo with binary, script, README)
 
-Progress: [███░░░░░░░] ~14%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [███░░░░░░░] ~14%
 - [Phase 20-tab-completion]: Plan 20-01: Raw terminal (termios/SetConsoleMode); readLineRaw; Tab completion (getHelpTable+env); unique replace, multiple list; script mode getline unchanged
 - [Phase 21-error-messages]: Plan 21-01: Token.offset, offsetToLineCol, kindToExpected; Tokenizer and Parser throw sites include "parser: line L, col C: message"
 - [Phase 21-error-messages]: Plan 21-02: runtimeErr + ev/evi wrappers; inputLineNum in runRepl; script mode "error: line N: message"
+- [Phase 22-demo-packaging]: Plan 22-01: package-demo copies binary, garvan-demo.sh, README-dist.md; DIR-based BIN resolution for flat and nested layouts; QOL-08 satisfied
 
 ### Pending Todos
 
@@ -69,7 +70,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 21-02-PLAN.md (runtime error prefix + script line number)
+Stopped at: Completed 22-01-PLAN.md (package-demo distributable folder)
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
