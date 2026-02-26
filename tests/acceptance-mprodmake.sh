@@ -18,14 +18,14 @@ run() {
 PASS=0
 FAIL=0
 
-# 1. mprodmake(ep,17) for ep = etaq(2,100)^2/etaq(4,100)/etaq(1,100)
-# Expect (1+q)(1+q³)...(1+q¹⁷) - odd exponents 1,3,5,...,17
-out=$(run "ep := etaq(2,100)^2/etaq(4,100)/etaq(1,100)" "mprodmake(ep,17)")
+# 1. mprodmake(ep,18) for ep = etaq(2,100)^2/etaq(4,100)/etaq(1,100)
+# T=18 so prodmake computes a[17]; expect (1+q)(1+q³)...(1+q¹⁷) - odd exponents 1,3,5,...,17
+out=$(run "ep := etaq(2,100)^2/etaq(4,100)/etaq(1,100)" "mprodmake(ep,18)")
 if echo "$out" | grep -q "(1+q)(1+q³)" && echo "$out" | grep -q "(1+q¹⁷)"; then
-    echo "PASS: mprodmake(ep,17) produces (1+q)(1+q³)...(1+q¹⁷)"
+    echo "PASS: mprodmake(ep,18) produces (1+q)(1+q³)...(1+q¹⁷)"
     PASS=$((PASS+1))
 else
-    echo "FAIL: mprodmake(ep,17) - expected product with (1+q)(1+q³) and (1+q¹⁷)"
+    echo "FAIL: mprodmake(ep,18) - expected product with (1+q)(1+q³) and (1+q¹⁷)"
     echo "  got: $out"
     FAIL=$((FAIL+1))
 fi
