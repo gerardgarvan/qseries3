@@ -145,7 +145,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"add", {"add(expr, var, lo, hi)", "summation over index var from lo to hi"}},
         {"aqprod", {"aqprod(a,q,n,T)", "rising q-factorial (a;q)_n"}},
         {"coeffs", {"coeffs(f,from,to)", "list coefficients from exponent from to to"}},
-        {"etaq", {"etaq(k,T) or etaq(q,k,T)", "eta product Π(1-q^{kn})"}},
+        {"etaq", {"etaq(k) or etaq(k,T) or etaq(q,k,T)", "eta product Π(1-q^{kn})"}},
         {"etamake", {"etamake(f,T)", "identify f as eta product"}},
         {"findhom", {"findhom(L,n,topshift)", "homogeneous polynomial relations between series in L"}},
         {"findhomcombo", {"findhomcombo(f,L,n,topshift[,etaopt])", "express f as polynomial in L"}},
@@ -157,8 +157,8 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"legendre", {"legendre(a,p)", "Legendre symbol (a/p)"}},
         {"prodmake", {"prodmake(f,T)", "Andrews' algorithm: series → infinite product"}},
         {"mprodmake", {"mprodmake(f,T)", "convert series to product (1+q^n1)(1+q^n2)..."}},
-        {"checkprod", {"checkprod(f,T) or checkprod(f,M,T)", "check if f is a nice product (exponents |a[n]| < M)"}},
-        {"checkmult", {"checkmult(f,T) or checkmult(f,T,1)", "check if coefficients are multiplicative"}},
+        {"checkprod", {"checkprod(f) or checkprod(f,T) or checkprod(f,M,T)", "check if f is a nice product (exponents |a[n]| < M)"}},
+        {"checkmult", {"checkmult(f) or checkmult(f,T) or checkmult(f,T,1)", "check if coefficients are multiplicative"}},
         {"qbin", {"qbin(m,n,T) or qbin(q,m,n,T)", "Gaussian polynomial [m;n]_q"}},
         {"qfactor", {"qfactor(f) or qfactor(f,T)", "factorize finite q-product"}},
         {"quinprod", {"quinprod(z,q,T)", "quintuple product"}},
@@ -180,7 +180,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"lqdegree", {"lqdegree(f)", "lowest exponent with nonzero coefficient"}},
         {"jac2series", {"jac2series(var) or jac2series(var,T)", "convert Jacobi product (in var) to series"}},
         {"findlincombo", {"findlincombo(f,L,topshift)", "express f as linear combination of series in L"}},
-        {"findmaxind", {"findmaxind(L, topshift)", "maximal linearly independent subset of q-series in L; returns indices (1-based)"}},
+        {"findmaxind", {"findmaxind(L) or findmaxind(L, topshift)", "maximal linearly independent subset of q-series in L; returns indices (1-based)"}},
     };
     return table;
 }
@@ -266,6 +266,10 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         return aqprod(ev(0), ev(1), static_cast<int>(evi(2)), static_cast<int>(evi(3)));
     }
     if (name == "etaq") {
+        if (args.size() == 1) {
+            int k = static_cast<int>(evi(0));
+            return etaq(q, k, T);
+        }
         if (args.size() == 2) {
             int k = static_cast<int>(evi(0));
             int Tr = static_cast<int>(evi(1));
@@ -273,7 +277,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         }
         if (args.size() == 3)
             return etaq(ev(0), static_cast<int>(evi(1)), static_cast<int>(evi(2)));
-        throw std::runtime_error(runtimeErr(name, "expected etaq(k,T) or etaq(q,k,T), got " + std::to_string(args.size()) + " arguments"));
+        throw std::runtime_error(runtimeErr(name, "expected etaq(k), etaq(k,T), or etaq(q,k,T), got " + std::to_string(args.size()) + " arguments"));
     }
     if (name == "theta2" || name == "theta3" || name == "theta4") {
         if (args.size() == 1) {
@@ -342,18 +346,22 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         return mprodmake(ev(0), static_cast<int>(evi(1)));
     }
     if (name == "checkprod") {
+        if (args.size() == 1)
+            return checkprod(ev(0), T);
         if (args.size() == 2)
             return checkprod(ev(0), static_cast<int>(evi(1)));
         if (args.size() == 3)
             return checkprod(ev(0), static_cast<int>(evi(1)), static_cast<int>(evi(2)));
-        throw std::runtime_error(runtimeErr(name, "expects 2 or 3 arguments"));
+        throw std::runtime_error(runtimeErr(name, "expects 1, 2, or 3 arguments"));
     }
     if (name == "checkmult") {
+        if (args.size() == 1)
+            return checkmult(ev(0), T, false);
         if (args.size() == 2)
             return checkmult(ev(0), static_cast<int>(evi(1)), false);
         if (args.size() == 3)
             return checkmult(ev(0), static_cast<int>(evi(1)), evi(2) != 0);
-        throw std::runtime_error(runtimeErr(name, "expects 2 or 3 arguments"));
+        throw std::runtime_error(runtimeErr(name, "expects 1, 2, or 3 arguments"));
     }
     if (name == "etamake") {
         if (args.size() != 2)
@@ -538,11 +546,16 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         return RelationComboResult{std::move(coeffs), std::move(exps)};
     }
     if (name == "findmaxind") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments: findmaxind(L, topshift)"));
-        auto L = evalListToSeries(args[0].get());
-        int topshift = static_cast<int>(evi(1));
-        return findmaxind(L, topshift);
+        if (args.size() == 1) {
+            auto L = evalListToSeries(args[0].get());
+            return findmaxind(L, 0);
+        }
+        if (args.size() == 2) {
+            auto L = evalListToSeries(args[0].get());
+            int topshift = static_cast<int>(evi(1));
+            return findmaxind(L, topshift);
+        }
+        throw std::runtime_error(runtimeErr(name, "expects 1 or 2 arguments: findmaxind(L) or findmaxind(L, topshift)"));
     }
     if (name == "findpoly") {
         if (args.size() < 4 || args.size() > 5)
