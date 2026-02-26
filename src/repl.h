@@ -38,7 +38,8 @@
 #include <windows.h>
 #endif
 
-// Raw terminal mode: read char-by-char for Tab completion
+// Raw terminal mode: read char-by-char for Tab completion.
+// RawModeGuard restores on scope exit. If process is killed (e.g. Ctrl+C), run "reset" to restore terminal.
 #if defined(__CYGWIN__) || !defined(_WIN32)
 struct RawModeGuard {
     struct termios orig;
@@ -761,12 +762,15 @@ inline void handleTabCompletion(std::string& line, const Environment& env) {
     std::cout << "\nqseries> " << line << std::flush;
 }
 
-inline std::string readLineRaw(Environment& env) {
+inline std::optional<std::string> readLineRaw(Environment& env) {
     RawModeGuard guard;
     std::string line;
     for (;;) {
         int c = readOneChar();
-        if (c < 0) break;  // EOF
+        if (c < 0) {
+            if (line.empty()) return std::nullopt;
+            return line;
+        }
         if (c == '\n' || c == '\r') return line;
         if (c == '\t') {
             handleTabCompletion(line, env);
@@ -784,7 +788,6 @@ inline std::string readLineRaw(Environment& env) {
             std::cout << static_cast<char>(c) << std::flush;
         }
     }
-    return line;
 }
 
 inline void display(const EvalResult& res, Environment& env, int /*T*/) {
@@ -863,11 +866,15 @@ inline void runRepl() {
 
     for (;;) {
         std::string line;
-        if (stdin_is_tty())
+        if (stdin_is_tty()) {
             std::cout << "qseries> " << std::flush;
-        if (!std::getline(std::cin, line)) break;
-        if (!stdin_is_tty())
+            auto opt = readLineRaw(env);
+            if (!opt) break;
+            line = *opt;
+        } else {
+            if (!std::getline(std::cin, line)) break;
             std::cout << "qseries> " << line << std::endl;
+        }
 
         // Backslash continuation: while line ends with \, read more lines
         size_t contCount = 0;
@@ -880,14 +887,17 @@ inline void runRepl() {
             line.pop_back();  // remove trailing backslash
             if (contCount >= maxContinuations)
                 break;
-            if (stdin_is_tty())
+            if (stdin_is_tty()) {
                 std::cout << "  > " << std::flush;
-            std::string next;
-            if (!std::getline(std::cin, next))
-                break;
-            if (!stdin_is_tty())
+                auto nextOpt = readLineRaw(env);
+                if (!nextOpt) break;
+                line += " " + *nextOpt;
+            } else {
+                std::string next;
+                if (!std::getline(std::cin, next)) break;
                 std::cout << "  > " << next << std::endl;
-            line += " " + next;
+                line += " " + next;
+            }
             ++contCount;
         }
 
