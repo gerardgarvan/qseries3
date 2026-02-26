@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v1.4 (close-more-gaps) — defining requirements
+**Current focus:** Milestone v1.5 (REPL improvements) — Phase 27 ready
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-25 — Milestone v1.4 started
+Phase: 27 (Suppress output / semicolon)
+Plan: 01 complete
+Status: Plan 27-01 executed; trailing-colon output suppression shipped
+Last activity: 2026-02-26 — Phase 27 Plan 01 complete (REPL-OPTS-01)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] ~20%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 21-error-messages]: Plan 21-02: runtimeErr + ev/evi wrappers; inputLineNum in runRepl; script mode "error: line N: message"
 - [Phase 22-demo-packaging]: Plan 22-01: package-demo copies binary, garvan-demo.sh, README-dist.md; DIR-based BIN resolution for flat and nested layouts; QOL-08 satisfied
 - [Phase 23-quick-wins]: Plan 23-01: acceptance-wins.sh for version, qdegree, lqdegree, jac2series, findlincombo; Makefile acceptance-wins target; MANUAL.md updates; implementation was pre-existing
+- [Phase 27-suppress-output-semicolon]: Plan 27-01: Trailing colon suppresses output; REPL-layer only; strip before parse; display and timing skipped; acceptance-suppress-output.sh
 
 ### Pending Todos
 
@@ -70,8 +71,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-25
-Stopped at: Completed 22-01-PLAN.md (package-demo distributable folder)
+Last session: 2026-02-26
+Stopped at: Completed 27-01-PLAN.md (suppress-output trailing colon)
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
@@ -88,6 +89,13 @@ Stopped at: Completed 22-01-PLAN.md (package-demo distributable folder)
 ### Milestone v1.4 Roadmap (2026-02-25)
 
 - Phases 24–26 derived from GAP-01 through GAP-04 (mprodmake, checkprod, checkmult, findmaxind)
+
+### Milestone v1.5 Roadmap (2026-02-26)
+
+- Phases 27–29 derived from REPL-OPTS-01 through REPL-OPTS-03
+- Phase 27: Suppress output (semicolon)
+- Phase 28: Arrow-key line navigation
+- Phase 29: Optional-arg audit (series, etaq, qfactor, jac2series, checkprod, checkmult, findmaxind)
 - Phase 16: Script mode — qseries < script.qs
 - Phase 17: help + help(func)
 - Phase 18: Timing
