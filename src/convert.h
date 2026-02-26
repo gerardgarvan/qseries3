@@ -165,6 +165,71 @@ inline std::vector<int> mprodmake(const Series& f, int T) {
     return result;
 }
 
+// checkprod result: minExp, nice (all |a[n]| < M), M
+struct CheckprodResult { int minExp; bool nice; int M; };
+
+// checkprod(f, T) — M=2 (nice = exponents in {-1,0,1})
+inline CheckprodResult checkprod(const Series& f, int T) {
+    return checkprod(f, 2, T);
+}
+
+// checkprod(f, M, T) — explicit M
+inline CheckprodResult checkprod(const Series& f, int M, int T) {
+    Series g = f.truncTo(T);
+    int minExp = g.minExp();
+    if (g.coeff(0).isZero() || minExp > 0) {
+        return {minExp, false, M};
+    }
+    auto a = prodmake(g, T);
+    if (a.empty()) return {minExp, false, M};
+
+    for (int n = 1; n < T; ++n) {
+        auto it = a.find(n);
+        if (it == a.end()) continue;
+        const Frac& an = it->second;
+        if (an.den != BigInt(1)) return {minExp, false, M};
+        int v = 0;
+        if (an.num.d.size() == 1 && an.num.d[0] <= static_cast<uint32_t>(INT_MAX))
+            v = an.num.neg ? -static_cast<int>(an.num.d[0]) : static_cast<int>(an.num.d[0]);
+        else if (!an.num.isZero()) return {minExp, false, M};
+        if (v < 0) v = -v;
+        if (v >= M) return {minExp, false, M};
+    }
+    return {minExp, true, M};
+}
+
+// checkmult result: multiplicative flag and failure pairs
+struct CheckmultResult {
+    bool multiplicative;
+    std::vector<std::pair<int,int>> failures;
+};
+
+inline CheckmultResult checkmult(const Series& f, int T, bool verbose = false) {
+    Series g = f.truncTo(T);
+    CheckmultResult out{true, {}};
+    auto gcd_int = [](int a, int b) {
+        a = (a < 0) ? -a : a;
+        b = (b < 0) ? -b : b;
+        while (b) { int t = b; b = a % b; a = t; }
+        return a;
+    };
+    for (int m = 2; m < T; ++m) {
+        for (int n = 2; n < T; ++n) {
+            if (m * n >= T) continue;
+            if (gcd_int(m, n) != 1) continue;
+            Frac a_mn = g.coeff(m * n);
+            Frac a_m = g.coeff(m);
+            Frac a_n = g.coeff(n);
+            if (a_mn != a_m * a_n) {
+                out.multiplicative = false;
+                out.failures.push_back({m, n});
+                if (!verbose) return out;
+            }
+        }
+    }
+    return out;
+}
+
 // T(r, n): polynomial from qseriesdoc §3.2 recurrence
 inline Series T_rn(int r, int n, int T_trunc) {
     if (n == 0) return Series::one(T_trunc);
