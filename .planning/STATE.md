@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v1.5 (REPL improvements) — Phase 27 ready
+**Current focus:** Milestone v1.5 (REPL improvements) — Phase 28 complete
 
 ## Current Position
 
-Phase: 27 (Suppress output / semicolon)
+Phase: 28 (Arrow-key line navigation)
 Plan: 01 complete
-Status: Plan 27-01 executed; trailing-colon output suppression shipped
-Last activity: 2026-02-26 — Phase 27 Plan 01 complete (REPL-OPTS-01)
+Status: Plan 28-01 executed; left/right arrow navigation and cursor-aware editing shipped
+Last activity: 2026-02-26 — Phase 28 Plan 01 complete (REPL-OPTS-02)
 
-Progress: [██░░░░░░░░] ~20%
+Progress: [██░░░░░░░░] ~21%
 
 ## Performance Metrics
 
@@ -31,6 +31,7 @@ Progress: [██░░░░░░░░] ~20%
 | 02-frac | 2 | ~25min | ~12min |
 
 **Recent Trend:** Phase 10 complete — REPL with findhom/findnonhomcombo, subs_q, tests/acceptance.sh; all 9 SPEC tests pass
+| Phase 28-arrow-key-line-navigation P01 | 20 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -60,6 +61,7 @@ Progress: [██░░░░░░░░] ~20%
 - [Phase 22-demo-packaging]: Plan 22-01: package-demo copies binary, garvan-demo.sh, README-dist.md; DIR-based BIN resolution for flat and nested layouts; QOL-08 satisfied
 - [Phase 23-quick-wins]: Plan 23-01: acceptance-wins.sh for version, qdegree, lqdegree, jac2series, findlincombo; Makefile acceptance-wins target; MANUAL.md updates; implementation was pre-existing
 - [Phase 27-suppress-output-semicolon]: Plan 27-01: Trailing colon suppresses output; REPL-layer only; strip before parse; display and timing skipped; acceptance-suppress-output.sh
+- [Phase 28-arrow-key-line-navigation]: Plan 28-01: readLineRaw cursor pos, redrawLineRaw, ESC left/right, handleTabCompletion(line,pos,env); acceptance-arrow-keys.sh via script/PTY
 
 ### Pending Todos
 
@@ -72,7 +74,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 27-01-PLAN.md (suppress-output trailing colon)
+Stopped at: Completed 28-01-PLAN.md (arrow-key line navigation)
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
