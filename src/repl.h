@@ -717,6 +717,39 @@ inline std::string trim(const std::string& s) {
     return s.substr(i, j - i);
 }
 
+// Tab completion handler (called from readLineRaw)
+inline void handleTabCompletion(std::string& line, const Environment& env) {
+    (void)line;
+    (void)env;
+    // Stub; full implementation in Task 3
+}
+
+inline std::string readLineRaw(Environment& env) {
+    RawModeGuard guard;
+    std::string line;
+    for (;;) {
+        int c = readOneChar();
+        if (c < 0) break;  // EOF
+        if (c == '\n' || c == '\r') return line;
+        if (c == '\t') {
+            handleTabCompletion(line, env);
+            continue;
+        }
+        if (c == 8 || c == 127) {  // Backspace / DEL
+            if (!line.empty()) {
+                line.pop_back();
+                std::cout << "\b \b" << std::flush;
+            }
+            continue;
+        }
+        if (c >= 32 && c <= 126) {
+            line += static_cast<char>(c);
+            std::cout << static_cast<char>(c) << std::flush;
+        }
+    }
+    return line;
+}
+
 inline void display(const EvalResult& res, Environment& env, int /*T*/) {
     std::visit([&env](auto&& arg) {
         using T = std::decay_t<decltype(arg)>;
