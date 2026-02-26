@@ -717,11 +717,48 @@ inline std::string trim(const std::string& s) {
     return s.substr(i, j - i);
 }
 
-// Tab completion handler (called from readLineRaw)
+inline std::set<std::string> getCompletionCandidates(const Environment& env) {
+    std::set<std::string> out;
+    for (const auto& [k, _] : getHelpTable())
+        out.insert(k);
+    for (const auto& [k, _] : env.env)
+        out.insert(k);
+    return out;
+}
+
 inline void handleTabCompletion(std::string& line, const Environment& env) {
-    (void)line;
-    (void)env;
-    // Stub; full implementation in Task 3
+    size_t end = line.size();
+    size_t start = end;
+    while (start > 0) {
+        unsigned char c = static_cast<unsigned char>(line[start - 1]);
+        if (std::isalnum(c) || c == '_')
+            --start;
+        else
+            break;
+    }
+    std::string prefix = line.substr(start, end - start);
+    if (prefix.empty()) return;
+    auto candidates = getCompletionCandidates(env);
+    std::vector<std::string> matches;
+    for (const auto& cand : candidates) {
+        if (cand.size() >= prefix.size() && cand.compare(0, prefix.size(), prefix) == 0)
+            matches.push_back(cand);
+    }
+    if (matches.empty()) return;
+    if (matches.size() == 1) {
+        const std::string& match = matches[0];
+        for (size_t i = 0; i < prefix.size(); ++i)
+            std::cout << "\b \b" << std::flush;
+        line = line.substr(0, start) + match;
+        std::cout << match.substr(prefix.size()) << std::flush;
+        return;
+    }
+    std::cout << "\n";
+    for (size_t i = 0; i < matches.size(); ++i) {
+        if (i) std::cout << " ";
+        std::cout << matches[i];
+    }
+    std::cout << "\nqseries> " << line << std::flush;
 }
 
 inline std::string readLineRaw(Environment& env) {
