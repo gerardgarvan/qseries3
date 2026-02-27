@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v1.9 (Manual Update & Testing)
+**Current focus:** Milestone v2.0 (Robustness & Tutorial Coverage)
 
 ## Current Position
 
-Phase: 40-acceptance-tests-v18
-Plan: 01 — COMPLETED
-Status: Phase 40 complete; Milestone v1.9 complete
-Last activity: 2026-02-27 — Phase 40 executed (acceptance-v18.sh with 12 tests)
+Phase: 41-robustness-edge-cases
+Plan: 02 -- READY
+Status: Plan 01 complete; Plan 02 ready for execution
+Last activity: 2026-02-27 -- 41-01 executed (2 tasks, 4 files)
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [██████████] 100%
 - [Phase 27-suppress-output-semicolon]: Plan 27-01: Trailing colon suppresses output; REPL-layer only; strip before parse; display and timing skipped; acceptance-suppress-output.sh
 - [Phase 28-arrow-key-line-navigation]: Plan 28-01: readLineRaw cursor pos, redrawLineRaw, ESC left/right, handleTabCompletion(line,pos,env); acceptance-arrow-keys.sh via script/PTY
 - [Phase 29-optional-arg-audit]: Plan 29-01: etaq(k), checkprod(f), checkmult(f), findmaxind(L) 1-arg forms; acceptance-optional-args.sh; getHelpTable updates
+- [Phase 41-robustness-edge-cases]: Plan 41-01: etaq k>0, sift n>0, pow ±10000 limit, parser depth 256 limit, INT64_MAX overflow check; all 10 acceptance tests pass
 
 ### Roadmap Evolution
 
@@ -82,6 +83,10 @@ Progress: [██████████] 100%
 - Milestone v1.9 started: Manual Update & Testing
 - Phase 39 added: Update MANUAL.md (DOC-03, DOC-04)
 - Phase 40 added: Acceptance tests for v1.8 (TEST-01, TEST-02)
+- v1.9 committed and tagged
+- Milestone v2.0 started: Robustness & Tutorial Coverage
+- Phase 41 added: Robustness & edge cases (ROBUST-01 through ROBUST-06)
+- Phase 42 added: Garvan tutorial coverage (TUTORIAL-01, TUTORIAL-02)
 
 ### Pending Todos
 
@@ -93,8 +98,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-26
-Stopped at: Completed 29-01-PLAN.md (optional-arg audit)
+Last session: 2026-02-27
+Stopped at: Completed 41-01-PLAN.md (robustness input validation guards)
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
