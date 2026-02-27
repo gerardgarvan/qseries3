@@ -223,7 +223,9 @@ inline int64_t evalToInt(const Expr* e, Environment& env,
                 case BinOp::Add: return l + r;
                 case BinOp::Sub: return l - r;
                 case BinOp::Mul: return l * r;
-                case BinOp::Div: return l / r;
+                case BinOp::Div:
+                    if (r == 0) throw std::runtime_error("division by zero");
+                    return l / r;
                 case BinOp::Pow: {
                     if (r < 0) throw std::runtime_error("negative exponent in integer power");
                     int64_t acc = 1;
@@ -255,6 +257,29 @@ inline Series evalAsSeries(const Expr* e, Environment& env,
     if (!std::holds_alternative<Series>(r))
         throw std::runtime_error("expected series");
     return std::get<Series>(r);
+}
+
+inline Series toSeries(const EvalResult& r, const char* context, int T = 50) {
+    if (std::holds_alternative<Series>(r))
+        return std::get<Series>(r);
+    if (std::holds_alternative<int64_t>(r))
+        return Series::constant(Frac(std::get<int64_t>(r)), T);
+    throw std::runtime_error(std::string(context) + ": expected series expression");
+}
+
+inline int levenshteinDistance(const std::string& a, const std::string& b) {
+    size_t m = a.size(), n = b.size();
+    std::vector<size_t> prev(n + 1), curr(n + 1);
+    for (size_t j = 0; j <= n; ++j) prev[j] = j;
+    for (size_t i = 1; i <= m; ++i) {
+        curr[0] = i;
+        for (size_t j = 1; j <= n; ++j) {
+            size_t cost = (a[i-1] == b[j-1]) ? 0 : 1;
+            curr[j] = std::min({prev[j] + 1, curr[j-1] + 1, prev[j-1] + cost});
+        }
+        std::swap(prev, curr);
+    }
+    return static_cast<int>(prev[n]);
 }
 
 inline EvalResult dispatchBuiltin(const std::string& name,
@@ -706,7 +731,26 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         throw std::runtime_error(runtimeErr(name, "expects 0 or 1 argument"));
     }
 
-    throw std::runtime_error(runtimeErr(name, "unknown built-in"));
+    {
+        const auto& table = getHelpTable();
+        std::vector<std::pair<int, std::string>> suggestions;
+        for (const auto& [key, _] : table) {
+            int d = levenshteinDistance(name, key);
+            if (d <= 3)
+                suggestions.push_back({d, key});
+        }
+        std::sort(suggestions.begin(), suggestions.end());
+        std::string msg = "unknown built-in '" + name + "'.";
+        if (!suggestions.empty()) {
+            msg += " Did you mean:";
+            for (size_t i = 0; i < std::min(suggestions.size(), size_t(2)); ++i)
+                msg += " " + suggestions[i].second;
+            msg += "?";
+        } else {
+            msg += " No close matches found.";
+        }
+        throw std::runtime_error(msg);
+    }
 }
 
 inline EvalResult evalExpr(const Expr* e, Environment& env,
@@ -735,22 +779,26 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
                 int64_t expVal = evalToInt(e->right.get(), env, sumIndices);
                 return Series::qpow(static_cast<int>(expVal), env.T);
             }
-            Series l = std::get<Series>(eval(e->left.get(), env, sumIndices));
-            Series r = std::get<Series>(eval(e->right.get(), env, sumIndices));
+            Series l = toSeries(eval(e->left.get(), env, sumIndices), "binary op", env.T);
+            Series r = toSeries(eval(e->right.get(), env, sumIndices), "binary op", env.T);
             switch (e->binOp) {
                 case BinOp::Add: return l + r;
                 case BinOp::Sub: return l - r;
                 case BinOp::Mul: return l * r;
-                case BinOp::Div: return l / r;
+                case BinOp::Div:
+                    if (r.c.empty()) throw std::runtime_error("division by zero");
+                    return l / r;
                 case BinOp::Pow: {
                     int64_t expVal = evalToInt(e->right.get(), env, sumIndices);
+                    if (expVal > 10000 || expVal < -10000)
+                        throw std::runtime_error("pow: exponent magnitude too large (limit 10000)");
                     return l.pow(static_cast<int>(expVal));
                 }
             }
             __builtin_unreachable();
         }
         case Expr::Tag::UnOp: {
-            Series s = std::get<Series>(eval(e->operand.get(), env, sumIndices));
+            Series s = toSeries(eval(e->operand.get(), env, sumIndices), "unary op", env.T);
             return -s;
         }
         case Expr::Tag::Call:
@@ -764,7 +812,7 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
             auto idx = sumIndices;
             for (int64_t n = lo; n <= hi; ++n) {
                 idx[e->sumVar] = n;
-                Series term = std::get<Series>(eval(e->body.get(), env, idx));
+                Series term = toSeries(eval(e->body.get(), env, idx), "sum body", env.T);
                 acc = (acc + term).truncTo(env.T);
             }
             return acc;
@@ -1112,6 +1160,11 @@ inline EvalResult evalStmt(const Stmt* s, Environment& env) {
         }
         if (std::holds_alternative<std::vector<JacFactor>>(res)) {
             env.env[s->assignName] = std::get<std::vector<JacFactor>>(res);
+            return res;
+        }
+        if (std::holds_alternative<int64_t>(res)) {
+            int64_t val = std::get<int64_t>(res);
+            env.env[s->assignName] = Series::constant(Frac(val), env.T);
             return res;
         }
         throw std::runtime_error("assignment requires Series or Jacobi product");

@@ -209,8 +209,6 @@ struct Series {
     Series pow(int n) const {
         if (n == 0)
             return one(trunc);
-        if (n > 10000 || n < -10000)
-            throw std::runtime_error("pow: exponent magnitude too large (limit 10000)");
         if (n < 0)
             return inverse().pow(-n);
         Series base = *this;
