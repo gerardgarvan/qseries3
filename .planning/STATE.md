@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 
 ## Current Position
 
-Phase: 41-robustness-edge-cases
-Plan: 02 -- COMPLETE
-Status: Phase 41 complete; all 9 robustness fixes implemented and tested
-Last activity: 2026-02-27 -- 41-02 executed (2 tasks, 3 files)
+Phase: 42-garvan-tutorial-coverage
+Plan: 01 -- COMPLETE
+Status: T_rn memoization and min/max builtins implemented; plan 02 pending
+Last activity: 2026-02-27 -- 42-01 executed (2 tasks, 2 files)
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -33,6 +33,7 @@ Progress: [██████████] 100%
 **Recent Trend:** Phase 10 complete — REPL with findhom/findnonhomcombo, subs_q, tests/acceptance.sh; all 9 SPEC tests pass
 | Phase 28-arrow-key-line-navigation P01 | 20 | 3 tasks | 3 files |
 | Phase 29-optional-arg-audit P01 | ~12 | 4 tasks | 3 files |
+| Phase 42-garvan-tutorial-coverage P01 | ~14 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,7 @@ Progress: [██████████] 100%
 - [Phase 29-optional-arg-audit]: Plan 29-01: etaq(k), checkprod(f), checkmult(f), findmaxind(L) 1-arg forms; acceptance-optional-args.sh; getHelpTable updates
 - [Phase 41-robustness-edge-cases]: Plan 41-01: etaq k>0, sift n>0, pow ±10000 limit, parser depth 256 limit, INT64_MAX overflow check; all 10 acceptance tests pass
 - [Phase 41-robustness-edge-cases]: Plan 41-02: div-by-zero guard in evalToInt and evalExpr, toSeries() safe variant access, levenshteinDistance() typo suggestions, int64_t assignment support; pow limit moved to REPL layer; acceptance-robustness.sh 9 tests pass
+- [Phase 42-garvan-tutorial-coverage]: Plan 42-01: T_rn memoized via wrapper+helper with qbin_fast addition recurrence (no division); T(0,30,50) from intractable to ~2s; min/max integer builtins with variadic args
 
 ### Roadmap Evolution
 
@@ -100,7 +102,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 41-02-PLAN.md (REPL hardening and acceptance tests)
+Stopped at: Completed 42-01-PLAN.md (T_rn memoization and min/max builtins)
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
