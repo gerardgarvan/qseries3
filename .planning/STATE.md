@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 
 ## Current Position
 
-Phase: 43 — Wasm compile
-Plan: 02 complete
-Status: Plan 43-02 executed (Wasm test suites — Node.js + browser; checkpoint deferred)
-Last activity: 2026-02-27 — Phase 43-02 complete
+Phase: 44 — Starlight scaffold ✓ Plan 01 COMPLETE
+Plan: 01 complete
+Status: Astro Starlight site scaffolded in website/ — 16 placeholder pages, 4-group sidebar, teal theme, Pagefind search
+Last activity: 2026-02-27 — Phase 44 Plan 01 executed
 
-Progress: [████░░░░░░] 40%
+Progress: [████░░░░░░] 45%
 
 ## Performance Metrics
 
@@ -37,6 +37,7 @@ Progress: [████░░░░░░] 40%
 | Phase 42-garvan-tutorial-coverage P02 | ~10 | 2 tasks | 4 files |
 | Phase 43-wasm-compile P01 | ~7 | 2 tasks | 3 files |
 | Phase 43-wasm-compile P02 | ~1 | 1 task | 2 files |
+| Phase 44-starlight-scaffold P01 | ~7 | 2 tasks | 24 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,7 @@ Progress: [████░░░░░░] 40%
 - [Phase 42-garvan-tutorial-coverage]: Plan 42-02: Version bump 1.9→2.0 across 7 locations in 4 files; MANUAL.md gains Integer Utilities section (min/max) and T_rn memoization note; Milestone v2.0 complete
 - [Phase 43-wasm-compile]: Plan 43-01: Emscripten guards in repl.h (4 #ifndef blocks); main_wasm.cpp with Embind evaluate()/get_banner(); Makefile wasm target; emsdk not installed so Wasm build untested
 - [Phase 43-wasm-compile]: Plan 43-02: test_wasm.mjs (16 assertions, 10 categories) and test_wasm.html (browser test page); checkpoint deferred until emsdk available
+- [Phase 44-starlight-scaffold]: Plan 44-01: Astro Starlight site in website/ with manual sidebar (4 groups, 16 slugs), teal accent theme, 16 placeholder pages, Pagefind search; npm run build produces dist/ with 17 HTML files
 
 ### Roadmap Evolution
 
@@ -115,7 +117,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 43-02 complete (Wasm test suites — Node.js + browser; checkpoint deferred)
+Stopped at: Completed 44-01-PLAN.md
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
