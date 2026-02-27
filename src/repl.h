@@ -192,6 +192,8 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"jac2series", {"jac2series(var) or jac2series(var,T)", "convert Jacobi product (in var) to series"}},
         {"findlincombo", {"findlincombo(f,L,topshift)", "express f as linear combination of series in L"}},
         {"findmaxind", {"findmaxind(L) or findmaxind(L, topshift)", "maximal linearly independent subset of q-series in L; returns indices (1-based)"}},
+        {"max", {"max(a, b, ...)", "maximum of 2 or more integers"}},
+        {"min", {"min(a, b, ...)", "minimum of 2 or more integers"}},
     };
     return table;
 }
@@ -681,6 +683,22 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         if (args.size() != 1)
             throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
         return static_cast<int64_t>(euler_phi(static_cast<int>(evi(0))));
+    }
+    if (name == "min") {
+        if (args.size() < 2)
+            throw std::runtime_error(runtimeErr(name, "expects 2 or more arguments"));
+        int64_t result = evi(0);
+        for (size_t i = 1; i < args.size(); ++i)
+            result = std::min(result, evi(i));
+        return result;
+    }
+    if (name == "max") {
+        if (args.size() < 2)
+            throw std::runtime_error(runtimeErr(name, "expects 2 or more arguments"));
+        int64_t result = evi(0);
+        for (size_t i = 1; i < args.size(); ++i)
+            result = std::max(result, evi(i));
+        return result;
     }
     if (name == "eisenstein") {
         if (args.size() != 2)
