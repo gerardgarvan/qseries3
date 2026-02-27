@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 ## Current Position
 
 Phase: 43 — Wasm compile
-Plan: —
-Status: Not started (roadmap created, awaiting planning)
-Last activity: 2026-02-27 — Milestone v2.1 roadmap created (phases 43–47)
+Plan: 01 complete
+Status: Plan 43-01 executed (Wasm guards + entry point + Makefile target)
+Last activity: 2026-02-27 — Phase 43-01 complete
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 20%
 
 ## Performance Metrics
 
@@ -35,6 +35,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 29-optional-arg-audit P01 | ~12 | 4 tasks | 3 files |
 | Phase 42-garvan-tutorial-coverage P01 | ~14 | 2 tasks | 2 files |
 | Phase 42-garvan-tutorial-coverage P02 | ~10 | 2 tasks | 4 files |
+| Phase 43-wasm-compile P01 | ~7 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,7 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 41-robustness-edge-cases]: Plan 41-02: div-by-zero guard in evalToInt and evalExpr, toSeries() safe variant access, levenshteinDistance() typo suggestions, int64_t assignment support; pow limit moved to REPL layer; acceptance-robustness.sh 9 tests pass
 - [Phase 42-garvan-tutorial-coverage]: Plan 42-01: T_rn memoized via wrapper+helper with qbin_fast addition recurrence (no division); T(0,30,50) from intractable to ~2s; min/max integer builtins with variadic args
 - [Phase 42-garvan-tutorial-coverage]: Plan 42-02: Version bump 1.9→2.0 across 7 locations in 4 files; MANUAL.md gains Integer Utilities section (min/max) and T_rn memoization note; Milestone v2.0 complete
+- [Phase 43-wasm-compile]: Plan 43-01: Emscripten guards in repl.h (4 #ifndef blocks); main_wasm.cpp with Embind evaluate()/get_banner(); Makefile wasm target; emsdk not installed so Wasm build untested
 
 ### Roadmap Evolution
 
@@ -111,7 +113,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: v2.1 roadmap created (phases 43–47: Wasm compile, Starlight scaffold, doc content, playground, CI/CD)
+Stopped at: Phase 43-01 complete (Wasm guards + main_wasm.cpp + Makefile wasm target)
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
