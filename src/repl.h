@@ -16,12 +16,16 @@
 #include <cstdint>
 #include <iostream>
 #include <deque>
+#ifndef __EMSCRIPTEN__
 #ifdef _WIN32
 #include <io.h>
 #define stdin_is_tty() _isatty(_fileno(stdin))
 #else
 #include <unistd.h>
 #define stdin_is_tty() isatty(STDIN_FILENO)
+#endif
+#else
+#define stdin_is_tty() false
 #endif
 #include <algorithm>
 #include <sstream>
@@ -35,6 +39,7 @@ inline std::string runtimeErr(const std::string& func, const std::string& msg) {
     return func.empty() ? msg : (func + ": " + msg);
 }
 
+#ifndef __EMSCRIPTEN__
 #if defined(__CYGWIN__) || !defined(_WIN32)
 #include <termios.h>
 #include <unistd.h>
@@ -97,6 +102,7 @@ inline int readOneChar() {
     return -1;
 }
 #endif
+#endif // __EMSCRIPTEN__
 
 // EnvValue: variable can hold Series or Jacobi product
 using EnvValue = std::variant<Series, std::vector<JacFactor>>;
@@ -1017,6 +1023,7 @@ inline std::string trim(const std::string& s) {
     return s.substr(i, j - i);
 }
 
+#ifndef __EMSCRIPTEN__
 // Redraw prompt + line with cursor at pos (0 = before first char, line.size() = after last)
 inline void redrawLineRaw(const std::string& line, size_t pos) {
     std::cout << "\r\033[Kqseries> " << line << std::flush;
@@ -1130,6 +1137,7 @@ inline std::optional<std::string> readLineRaw(Environment& env, const std::deque
         }
     }
 }
+#endif // __EMSCRIPTEN__
 
 inline void display(const EvalResult& res, Environment& env, int /*T*/) {
     std::visit([&env](auto&& arg) {
@@ -1190,6 +1198,7 @@ inline EvalResult evalStmt(const Stmt* s, Environment& env) {
     return eval(s->expr.get(), env, {});
 }
 
+#ifndef __EMSCRIPTEN__
 inline void runRepl() {
     if (stdin_is_tty()) {
         std::cout << R"banner(
@@ -1288,5 +1297,6 @@ inline void runRepl() {
         }
     }
 }
+#endif // __EMSCRIPTEN__
 
 #endif
