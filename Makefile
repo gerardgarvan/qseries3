@@ -4,7 +4,7 @@ CXX ?= g++
 CXXFLAGS = -std=c++20 -O2 -Wall -Wextra -Wpedantic
 LDFLAGS ?= 
 
-.PHONY: all clean test acceptance acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history demo test-package
+.PHONY: all clean test acceptance acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history demo test-package wasm
 
 all: dist/qseries.exe dist-demo
 
@@ -88,3 +88,22 @@ package-demo: dist/qseries.exe
 
 clean:
 	rm -f dist/qseries.exe qseries_debug
+	rm -rf build/
+
+# Wasm build (requires emsdk activated: source emsdk_env.sh)
+EMXX ?= em++
+WASM_FLAGS = -std=c++20 -Oz -lembind \
+    -s MODULARIZE=1 \
+    -s EXPORT_NAME=createQSeries \
+    -s FILESYSTEM=0 \
+    -s ALLOW_MEMORY_GROWTH=1 \
+    -s ENVIRONMENT=web,worker,node \
+    -fwasm-exceptions
+
+wasm: build/wasm/qseries.js
+
+build/wasm:
+	mkdir -p build/wasm
+
+build/wasm/qseries.js: src/main_wasm.cpp src/repl.h src/parser.h src/series.h src/frac.h src/bigint.h src/qfuncs.h src/convert.h src/linalg.h src/relations.h | build/wasm
+	$(EMXX) $(WASM_FLAGS) -o build/wasm/qseries.js src/main_wasm.cpp
