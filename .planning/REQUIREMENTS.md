@@ -349,5 +349,37 @@ Requirements for milestone v1.9 — update documentation and add acceptance test
 | TEST-01, TEST-02 | Phase 40 | Pending |
 
 ---
+
+## v2.0 Requirements (Robustness & Tutorial Coverage)
+
+Requirements for milestone v2.0 — fix critical bugs, harden input validation, improve Garvan tutorial coverage.
+
+### Robustness
+
+- [ ] **ROBUST-01**: `etaq(k, T)` validates k > 0; throws clear error for k <= 0
+- [ ] **ROBUST-02**: `sift(f, n, k, T)` validates n > 0; throws clear error for n <= 0
+- [ ] **ROBUST-03**: Integer division by zero in expressions throws "division by zero" error (no UB/crash)
+- [ ] **ROBUST-04**: Parser has recursion depth limit (~500); throws error on excessively nested input
+- [ ] **ROBUST-05**: Integer literals exceeding int64_t range detected and reported as error
+- [ ] **ROBUST-06**: `Series::pow(INT_MIN)` handled safely; no signed integer overflow UB
+- [ ] **ROBUST-07**: `std::bad_variant_access` never leaks to user; replaced with descriptive error messages
+- [ ] **ROBUST-08**: Unknown built-in suggests closest match (Levenshtein distance or prefix match)
+- [ ] **ROBUST-09**: Integer-valued built-in results (mobius, euler_phi, etc.) can be assigned to variables
+
+### Tutorial Coverage
+
+- [ ] **TUTORIAL-01**: `T_rn(r, n, T)` uses memoization; T(0, 30, 50) completes in reasonable time
+- [ ] **TUTORIAL-02**: `min(a, b, ...)` and `max(a, b, ...)` built-ins available for convenience
+
+---
+
+## Traceability (v2.0)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| ROBUST-01 through ROBUST-09 | Phase 41 | Pending |
+| TUTORIAL-01, TUTORIAL-02 | Phase 42 | Pending |
+
+---
 *Requirements defined: 2025-02-24*
-*Last updated: 2026-02-27 after v1.9 requirements*
+*Last updated: 2026-02-27 after v2.0 requirements*
