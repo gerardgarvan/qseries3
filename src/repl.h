@@ -516,7 +516,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
     if (name == "version") {
         if (args.size() != 0)
             throw std::runtime_error(runtimeErr(name, "expects no arguments"));
-        std::cout << "qseries 1.9\n";
+        std::cout << "qseries 2.0\n";
         return DisplayOnly{};
     }
     if (name == "qdegree") {
@@ -1202,7 +1202,7 @@ inline void runRepl() {
                   __/ |                      
                  |___/                       
 
- q-series REPL (Maple-like), version 1.9
+ q-series REPL (Maple-like), version 2.0
 )banner" << std::endl;
     }
 

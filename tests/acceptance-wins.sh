@@ -17,7 +17,7 @@ PASS=0
 FAIL=0
 
 # 1. --version flag
-if "$BIN" --version 2>&1 | grep -q "qseries 1.9"; then
+if "$BIN" --version 2>&1 | grep -q "qseries 2.0"; then
     echo "PASS: --version"
     PASS=$((PASS+1))
 else
@@ -26,7 +26,7 @@ else
 fi
 
 # 2. version built-in (must call version() — bare "version" parses as variable)
-if run "version()" | grep -q "qseries 1.9"; then
+if run "version()" | grep -q "qseries 2.0"; then
     echo "PASS: version built-in"
     PASS=$((PASS+1))
 else

@@ -139,7 +139,7 @@ prodmake(rr, 50)' | ./qseries
 
 ```
 qseries> version()
-qseries 1.9
+qseries 2.0
 ```
 
 ---
@@ -596,7 +596,7 @@ etaq(k) or etaq(k,T) or etaq(q,k,T) — eta product Π(1-q^{kn})
 
 ```
 qseries> version()
-qseries 1.9
+qseries 2.0
 ```
 
 ---
