@@ -745,7 +745,11 @@ Plans:
   2. `evaluate("etaq(0,50)")` returns an error message string, not a module abort or Wasm trap
   3. Compressed .wasm file (gzip) is under 1.5 MB
   4. All REPL-level expressions work via evaluate() — series arithmetic, prodmake, theta functions, relations
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 43-01-PLAN.md — Guard repl.h terminal I/O, create main_wasm.cpp Embind entry point, add Makefile wasm target
+- [ ] 43-02-PLAN.md — Node.js test script + HTML test page for comprehensive Wasm API verification
 
 ### Phase 44: Astro Starlight scaffold
 **Goal**: Documentation site skeleton exists with responsive layout and navigation
