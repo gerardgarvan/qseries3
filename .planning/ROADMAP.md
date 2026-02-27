@@ -711,4 +711,8 @@ Plans:
   4. Version updated to 2.0
   5. MANUAL.md updated with new features
   6. All existing acceptance tests still pass
-**Plans**: not yet planned
+**Plans**: 2 plans
+
+Plans:
+- [ ] 42-01-PLAN.md — T_rn memoization + min/max integer builtins
+- [ ] 42-02-PLAN.md — Version bump 1.9→2.0, MANUAL.md updates, acceptance tests
