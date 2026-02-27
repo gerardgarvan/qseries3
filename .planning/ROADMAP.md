@@ -760,7 +760,10 @@ Plans:
   2. Placeholder pages exist for each documentation section (manual, tutorial, playground)
   3. Pagefind full-text search is integrated and functional (Starlight built-in)
   4. `npm run build` produces static output in `website/dist/`
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 44-01-PLAN.md — Scaffold Astro Starlight site with config, sidebar, custom theme, and 16 placeholder content pages
 
 ### Phase 45: Documentation content
 **Goal**: Landing page, manual reference, and tutorial content with math rendering
