@@ -1,8 +1,14 @@
 :root {
-  --sl-color-accent-low: hsl(190, 54%, 20%);
-  --sl-color-accent: hsl(190, 80%, 50%);
-  --sl-color-accent-high: hsl(190, 80%, 80%);
+  --sl-color-accent-low: hsl(190, 60%, 15%);
+  --sl-color-accent: hsl(190, 80%, 44%);
+  --sl-color-accent-high: hsl(190, 70%, 85%);
   --sl-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     'Liberation Mono', monospace;
   color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: hsl(190, 60%, 88%);
+  --sl-color-accent: hsl(190, 80%, 36%);
+  --sl-color-accent-high: hsl(190, 60%, 18%);
 }
