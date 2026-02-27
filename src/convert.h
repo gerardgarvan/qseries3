@@ -232,19 +232,64 @@ inline CheckmultResult checkmult(const Series& f, int T, bool verbose = false) {
     return out;
 }
 
-// T(r, n): polynomial from qseriesdoc §3.2 recurrence
-inline Series T_rn(int r, int n, int T_trunc) {
-    if (n == 0) return Series::one(T_trunc);
-    if (n == 1) return Series::zero(T_trunc);
-    Series q_var = Series::q(T_trunc);
+// Gaussian binomial via addition recurrence (no division):
+// [n;m]_q = [n-1;m-1]_q + q^m * [n-1;m]_q
+inline const Series& qbin_fast(int m, int n, int T,
+                                std::map<int64_t, Series>& qbc) {
+    if (m == 0 || m == n) {
+        int64_t key = (int64_t(m) << 20) | n;
+        auto [it, inserted] = qbc.try_emplace(key, Series::one(T));
+        return it->second;
+    }
+    int64_t key = (int64_t(m) << 20) | n;
+    auto it = qbc.find(key);
+    if (it != qbc.end()) return it->second;
+    const Series& a = qbin_fast(m - 1, n - 1, T, qbc);
+    const Series& b = qbin_fast(m, n - 1, T, qbc);
+    Series result = a;
+    for (auto& [e, coeff] : b.c)
+        if (e + m < T) {
+            Frac& rc = result.c[e + m];
+            rc = rc + coeff;
+            if (rc.isZero()) result.c.erase(e + m);
+        }
+    result.trunc = T;
+    qbc[key] = std::move(result);
+    return qbc[key];
+}
+
+// T(r, n): polynomial from qseriesdoc §3.2 recurrence (memoized)
+inline const Series& T_rn_impl(int r, int n, int T_trunc,
+                                std::map<int64_t, Series>& cache,
+                                std::map<int64_t, Series>& qbin_cache) {
+    if (n == 0) {
+        int64_t key = (int64_t(r) << 20) | n;
+        auto [it, inserted] = cache.try_emplace(key, Series::one(T_trunc));
+        return it->second;
+    }
+    if (n == 1) {
+        int64_t key = (int64_t(r) << 20) | n;
+        auto [it, inserted] = cache.try_emplace(key, Series::zero(T_trunc));
+        return it->second;
+    }
+    int64_t key = (int64_t(r) << 20) | n;
+    auto it = cache.find(key);
+    if (it != cache.end()) return it->second;
     Series sum = Series::zero(T_trunc);
     for (int k = 1; k <= n / 2; ++k) {
-        auto qb = qbin(q_var, k, r + 2 * k, T_trunc);
-        auto t_sub = T_rn(r + 2 * k, n - 2 * k, T_trunc);
-        sum = (sum - (qb * t_sub).truncTo(T_trunc)).truncTo(T_trunc);
+        const Series& qb = qbin_fast(k, r + 2 * k, T_trunc, qbin_cache);
+        const Series& t_sub = T_rn_impl(r + 2 * k, n - 2 * k, T_trunc, cache, qbin_cache);
+        sum = sum - qb * t_sub;
     }
     sum.trunc = T_trunc;
-    return sum;
+    cache[key] = std::move(sum);
+    return cache[key];
+}
+
+inline Series T_rn(int r, int n, int T_trunc) {
+    std::map<int64_t, Series> cache;
+    std::map<int64_t, Series> qbin_cache;
+    return T_rn_impl(r, n, T_trunc, cache, qbin_cache);
 }
 
 // qfactor(f, T): write f as q^e · num/den
