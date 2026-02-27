@@ -2,20 +2,22 @@
 phase: 44-starlight-scaffold
 plan: 01
 subsystem: website
-tags: [astro, starlight, documentation, static-site]
+tags: [astro, starlight, docs, pagefind, static-site]
 
-requires: []
+requires:
+  - phase: 43-wasm-compile
+    provides: "Wasm build target for future playground integration"
 provides:
-  - "Astro Starlight documentation site scaffold in website/"
-  - "16 placeholder content pages matching sidebar slugs"
-  - "Custom teal accent theme with monospace font stack"
-  - "Pagefind full-text search (built-in, functional after build)"
-  - "Landing page with hero section and feature highlights"
+  - "Buildable Astro Starlight documentation site in website/"
+  - "16 placeholder content pages with sidebar navigation"
+  - "Pagefind full-text search (functional after build)"
+  - "Teal-themed dark-mode-first design with custom CSS"
+  - "Landing page with hero section and action buttons"
 affects: [45-documentation-content, 46-playground]
 
 tech-stack:
-  added: [astro 5.x, "@astrojs/starlight 0.37.x", pagefind]
-  patterns: [manual-sidebar-config, slug-shorthand, content-collections-v5]
+  added: [astro ^5.0.0, "@astrojs/starlight ^0.37.0", pagefind]
+  patterns: [manual sidebar config, docsLoader/docsSchema, custom CSS properties]
 
 key-files:
   created:
@@ -29,98 +31,91 @@ key-files:
   modified: []
 
 key-decisions:
-  - "Manual sidebar config with 4 groups (Getting Started, Reference Manual, Tutorial, Playground) — no autogenerate"
+  - "Manual sidebar config (not autogenerate) for explicit control over ordering and grouping"
   - "Teal/cyan accent palette (hue 190) for math/dev-tool aesthetic"
-  - "color-scheme: dark hint on :root for browser dark-mode default"
-  - "Slug shorthand format (Starlight 0.28+) — titles from page frontmatter"
-  - "Social links as array format (Starlight 0.30+)"
+  - "Dark mode as default via color-scheme: dark on :root"
+  - "slug-based sidebar items — titles come from page frontmatter"
 
 patterns-established:
-  - "Content pages in website/src/content/docs/ with YAML frontmatter (title, description)"
-  - "Landing page uses .mdx, all other pages use .md"
-  - "CSS custom properties for theming via website/src/styles/custom.css"
+  - "Content pages use YAML frontmatter with title and description"
+  - "Landing page uses template: splash with hero section"
+  - "Custom CSS via Starlight CSS custom properties (no Tailwind)"
 
-duration: 7min
+duration: 5min
 completed: 2026-02-27
 ---
 
 # Phase 44 Plan 01: Starlight Scaffold Summary
 
-**Astro Starlight documentation site with 4-group sidebar, teal-themed landing page, 16 placeholder pages, and Pagefind search**
+**Astro Starlight docs site with 16 placeholder pages, teal theme, Pagefind search, and 4-group sidebar navigation**
 
 ## Performance
 
-- **Duration:** 7 min
-- **Started:** 2026-02-27T18:27:41Z
-- **Completed:** 2026-02-27T18:35:00Z
+- **Duration:** 5 min
+- **Started:** 2026-02-27T23:28:00Z
+- **Completed:** 2026-02-27T23:35:00Z
 - **Tasks:** 2
-- **Files modified:** 24
+- **Files modified:** 23
 
 ## Accomplishments
-- Complete Astro Starlight site scaffold in website/ with Astro 5.x and Starlight 0.37.x
-- Manual sidebar with 4 groups (Getting Started, Reference Manual, Tutorial, Playground) and 16 slug entries
-- Landing page with hero section featuring tagline, action buttons (Get Started, Try Playground), and 4 feature highlights (exact arithmetic, prodmake, theta/eta, relation finding)
-- npm run build produces static HTML in website/dist/ with Pagefind search index (17 HTML files indexed)
-- Custom teal accent theme with monospace font stack and dark-mode-first color scheme
+- Initialized Astro Starlight project with manual sidebar configuration (4 groups, 16 entries)
+- Created all 16 content pages: landing (hero splash), 2 getting-started, 7 manual, 5 tutorial, 1 playground
+- Custom teal accent CSS theme with monospace font emphasis and dark-mode default
+- Build produces static HTML in website/dist/ with Pagefind search index (17 pages, 47ms index build)
+- Dev server serves all pages at http://localhost:4321/ with working navigation
 
 ## Task Commits
 
 Each task was committed atomically:
 
-1. **Task 1: Initialize Astro Starlight project and configure** - `0bd59cf` (feat)
-2. **Task 2: Create placeholder content pages and verify build** - `1cadf05` (feat)
+1. **Task 1: Initialize Astro Starlight project and configure** - `55579ec` (feat)
+2. **Task 2: Create placeholder content pages and verify build** - `b395a53` (feat)
 
 ## Files Created/Modified
-- `website/package.json` — Astro and Starlight dependencies
-- `website/astro.config.mjs` — Starlight integration with manual sidebar, social links, custom CSS
-- `website/tsconfig.json` — Astro strict TypeScript config
-- `website/.gitignore` — node_modules, dist, .astro exclusions
-- `website/src/content.config.ts` — Content collection schema with docsLoader/docsSchema
-- `website/src/styles/custom.css` — Teal accent palette, monospace font, dark color-scheme
-- `website/public/favicon.svg` — Stylized "q" letter in teal on dark background
-- `website/src/content/docs/index.mdx` — Splash landing page with hero and feature highlights
-- `website/src/content/docs/getting-started/installation.md` — Installation placeholder
-- `website/src/content/docs/getting-started/quick-start.md` — Quick Start placeholder
-- `website/src/content/docs/manual/bigint-frac.md` — Integers & Fractions placeholder
-- `website/src/content/docs/manual/series-ops.md` — Series Operations placeholder
-- `website/src/content/docs/manual/q-functions.md` — q-Functions placeholder
-- `website/src/content/docs/manual/product-conversion.md` — Product Conversion placeholder
-- `website/src/content/docs/manual/relations.md` — Relation Finding placeholder
-- `website/src/content/docs/manual/sifting.md` — Sifting & Extraction placeholder
-- `website/src/content/docs/manual/repl-commands.md` — REPL Commands placeholder
-- `website/src/content/docs/tutorial/index.md` — Tutorial Overview placeholder
-- `website/src/content/docs/tutorial/rogers-ramanujan.md` — Rogers-Ramanujan placeholder
-- `website/src/content/docs/tutorial/theta-functions.md` — Theta Functions placeholder
-- `website/src/content/docs/tutorial/partition-identities.md` — Partition Identities placeholder
-- `website/src/content/docs/tutorial/modular-equations.md` — Modular Equations placeholder
-- `website/src/content/docs/playground.md` — Playground placeholder (Phase 46 deliverable)
+- `website/package.json` - Astro + Starlight dependencies
+- `website/tsconfig.json` - Astro strict TS config
+- `website/.gitignore` - node_modules, dist, .astro
+- `website/astro.config.mjs` - Starlight config with manual 4-group sidebar
+- `website/src/content.config.ts` - Content collection schema with docsLoader
+- `website/src/styles/custom.css` - Teal accent theme, monospace font, dark mode default
+- `website/public/favicon.svg` - Stylized "q" with infinity symbol
+- `website/src/content/docs/index.mdx` - Landing page with hero section
+- `website/src/content/docs/getting-started/installation.md` - Installation placeholder
+- `website/src/content/docs/getting-started/quick-start.md` - Quick start placeholder
+- `website/src/content/docs/manual/bigint-frac.md` - Integers & Fractions placeholder
+- `website/src/content/docs/manual/series-ops.md` - Series Operations placeholder
+- `website/src/content/docs/manual/q-functions.md` - q-Functions placeholder
+- `website/src/content/docs/manual/product-conversion.md` - Product Conversion placeholder
+- `website/src/content/docs/manual/relations.md` - Relation Finding placeholder
+- `website/src/content/docs/manual/sifting.md` - Sifting & Extraction placeholder
+- `website/src/content/docs/manual/repl-commands.md` - REPL Commands placeholder
+- `website/src/content/docs/tutorial/index.md` - Tutorial Overview placeholder
+- `website/src/content/docs/tutorial/rogers-ramanujan.md` - Rogers-Ramanujan placeholder
+- `website/src/content/docs/tutorial/theta-functions.md` - Theta Functions placeholder
+- `website/src/content/docs/tutorial/partition-identities.md` - Partition Identities placeholder
+- `website/src/content/docs/tutorial/modular-equations.md` - Modular Equations placeholder
+- `website/src/content/docs/playground.md` - Playground placeholder (Phase 46)
 
 ## Decisions Made
-- Manual sidebar config (no autogenerate) for exact control over ordering and grouping
-- Teal/cyan accent palette (hue 190) conveying math/dev-tool aesthetic
-- `color-scheme: dark` hint on `:root` so browsers default to dark mode
-- Slug shorthand format (`{ slug: '...' }`) per Starlight 0.28+ — titles come from page frontmatter
-- Social links as array format per Starlight 0.30+ — `[{ icon, label, href }]`
-- GitHub URL set to `https://github.com/GarvanResearchGroup/qseries` per plan
+- Manual sidebar config (not autogenerate) for explicit control over page ordering and grouping
+- Teal/cyan accent palette (hue ~190) for a math/developer-tool aesthetic
+- Dark mode as default via `color-scheme: dark` on `:root`
+- Slug-based sidebar items — titles come from page frontmatter, not config
 
 ## Deviations from Plan
 
-None — plan executed exactly as written.
+None - plan executed exactly as written.
 
 ## Issues Encountered
-
-None.
+None
 
 ## User Setup Required
-
-None — no external service configuration required.
+None - no external service configuration required.
 
 ## Next Phase Readiness
-- Site scaffold complete, ready for Phase 45 (documentation content) to replace placeholder text
-- Playground page placeholder ready for Phase 46 (Wasm REPL integration)
-- All sidebar links resolve correctly — Phase 45 only needs to edit existing .md files
-
-## Self-Check: PASSED
+- Documentation site skeleton complete, ready for Phase 45 (content population)
+- All sidebar slugs map to existing pages — no 404s
+- Playground page placeholder ready for Phase 46 (WebAssembly REPL)
 
 ---
 *Phase: 44-starlight-scaffold*
