@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <cctype>
+#include <climits>
 #include <stdexcept>
 
 // --- Token ---
@@ -219,6 +220,7 @@ class Parser {
     std::vector<Token> tokens;
     size_t pos = 0;
     std::string inputStr;
+    int depth = 0;
 
     const Token& peek() const {
         if (pos >= tokens.size()) return tokens.back();
@@ -298,7 +300,12 @@ class Parser {
         if (peek().kind == Token::Kind::INT) {
             Token t = consume();
             int64_t v = 0;
-            for (char c : t.text) v = v * 10 + (c - '0');
+            for (char c : t.text) {
+                int digit = c - '0';
+                if (v > (INT64_MAX - digit) / 10)
+                    throw std::runtime_error("parser: integer literal too large for int64");
+                v = v * 10 + digit;
+            }
             return Expr::makeInt(v);
         }
         if (peek().kind == Token::Kind::Q) {
@@ -321,7 +328,10 @@ class Parser {
         }
         if (peek().kind == Token::Kind::LPAREN) {
             consume();
+            if (++depth > 256)
+                throw std::runtime_error("parser: expression too deeply nested (limit 256)");
             ExprPtr e = parseExpr(0);
+            --depth;
             expect(Token::Kind::RPAREN);
             return e;
         }
