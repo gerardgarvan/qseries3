@@ -1,0 +1,322 @@
+
+--- Rogers-Ramanujan ---
+qseries> rr := sum(q^(n^2)/aqprod(q,q,n,50), n, 0, 8)
+qseries> series(rr, 50)
+qseries> prodmake(rr, 40)
+
+     (\-"""-/)
+        | |
+     \ ^ ^ / .-.
+     \_o_/ / /
+     /` `\/ |
+     / \ |
+     \ ( ) / |
+     / \_) (_/ \ /
+     | (\-/) |
+     \ --^o^-- /
+     \ '.___.' /
+     .' \-=-/ '.
+     / /` `\ \
+     (//./ \.\\) `"` `"`
+
+ q-series REPL (Maple-like), version 1.0
+
+qseries> rr := sum(q^(n^2)/aqprod(q,q,n,50), n, 0, 8)
+1 + q + q² + q³ + 2q⁴ + 2q⁵ + 3q⁶ + 3q⁷ + 4q⁸ + 5q⁹ + 6q¹⁰ + 7q¹¹ + 9q¹² + 10q¹³ + 12q¹⁴ + 14q¹⁵ + 17q¹⁶ + 19q¹⁷ + 23q¹⁸ + 26q¹⁹ + 31q²⁰ + 35q²¹ + 41q²² + 46q²³ + 54q²⁴ + 61q²⁵ + 70q²⁶ + 79q²⁷ + 91q²⁸ + 102q²⁹ + O(q⁵⁰)
+qseries> series(rr, 50)
+1 + q + q² + q³ + 2q⁴ + 2q⁵ + 3q⁶ + 3q⁷ + 4q⁸ + 5q⁹ + 6q¹⁰ + 7q¹¹ + 9q¹² + 10q¹³ + 12q¹⁴ + 14q¹⁵ + 17q¹⁶ + 19q¹⁷ + 23q¹⁸ + 26q¹⁹ + 31q²⁰ + 35q²¹ + 41q²² + 46q²³ + 54q²⁴ + 61q²⁵ + 70q²⁶ + 79q²⁷ + 91q²⁸ + 102q²⁹ + 117q³⁰ + 131q³¹ + 149q³² + 167q³³ + 189q³⁴ + 211q³⁵ + 239q³⁶ + 266q³⁷ + 299q³⁸ + 333q³⁹ + 374q⁴⁰ + 415q⁴¹ + 465q⁴² + 515q⁴³ + 575q⁴⁴ + 637q⁴⁵ + 709q⁴⁶ + 783q⁴⁷ + 871q⁴⁸ + 961q⁴⁹ + O(q⁵⁰)
+qseries> prodmake(rr, 40)
+1 / (((1-q) (-q⁴+1) (-q⁶+1) (-q⁹+1) (-q¹¹+1) (-q¹⁴+1) (-q¹⁶+1) (-q¹⁹+1) (-q²¹+1) (-q²⁴+1) (-q²⁶+1) (-q²⁹+1) (-q³¹+1) (-q³⁴+1) (-q³⁶+1) (-q³⁹+1)))
+
+--- qfactor T(8,8) (qseriesdoc §3.2) ---
+qseries> set_trunc(64)
+qseries> t8 := T(8,8)
+qseries> qfactor(t8, 20)
+
+     (\-"""-/)
+        | |
+     \ ^ ^ / .-.
+     \_o_/ / /
+     /` `\/ |
+     / \ |
+     \ ( ) / |
+     / \_) (_/ \ /
+     | (\-/) |
+     \ --^o^-- /
+     \ '.___.' /
+     .' \-=-/ '.
+     / /` `\ \
+     (//./ \.\\) `"` `"`
+
+ q-series REPL (Maple-like), version 1.0
+
+qseries> set_trunc(64)
+qseries> t8 := T(8,8)
+q⁶ + q⁷ + 2q⁸ + 3q⁹ + 5q¹⁰ + 6q¹¹ + 9q¹² + 11q¹³ + 15q¹⁴ + 17q¹⁵ + 21q¹⁶ + 23q¹⁷ + 28q¹⁸ + 29q¹⁹ + 33q²⁰ + 34q²¹ + 37q²² + 36q²³ + 38q²⁴ + 36q²⁵ + 37q²⁶ + 34q²⁷ + 33q²⁸ + 29q²⁹ + 28q³⁰ + 23q³¹ + 21q³² + 17q³³ + 15q³⁴ + 11q³⁵ + O(q⁶⁴)
+qseries> qfactor(t8, 20)
+q⁶·(1-q⁹)(1-q¹⁰)(1-q¹¹) / (((1-q¹)(1-q²)(1-q³)(1-q⁴)))
+
+--- etamake on theta functions (qseriesdoc §3.3) ---
+qseries> set_trunc(100)
+qseries> etamake(theta2(100), 100)
+qseries> etamake(theta3(100), 100)
+qseries> etamake(theta4(100), 100)
+
+     (\-"""-/)
+        | |
+     \ ^ ^ / .-.
+     \_o_/ / /
+     /` `\/ |
+     / \ |
+     \ ( ) / |
+     / \_) (_/ \ /
+     | (\-/) |
+     \ --^o^-- /
+     \ '.___.' /
+     .' \-=-/ '.
+     / /` `\ \
+     (//./ \.\\) `"` `"`
+
+ q-series REPL (Maple-like), version 1.0
+
+qseries> set_trunc(100)
+qseries> etamake(theta2(100), 100)
+η(4τ)² / (η(2τ)⁻¹)
+qseries> etamake(theta3(100), 100)
+η(2τ)⁵ / (η(τ)⁻² η(4τ)⁻²)
+qseries> etamake(theta4(100), 100)
+η(τ)² / (η(2τ)⁻¹)
+
+--- jacprodmake Rogers-Ramanujan (qseriesdoc §3.4) ---
+qseries> rr := sum(q^(n^2)/aqprod(q,q,n,50), n, 0, 8)
+qseries> jp := jacprodmake(rr, 40)
+qseries> jac2prod(jp)
+
+     (\-"""-/)
+        | |
+     \ ^ ^ / .-.
+     \_o_/ / /
+     /` `\/ |
+     / \ |
+     \ ( ) / |
+     / \_) (_/ \ /
+     | (\-/) |
+     \ --^o^-- /
+     \ '.___.' /
+     .' \-=-/ '.
+     / /` `\ \
+     (//./ \.\\) `"` `"`
+
+ q-series REPL (Maple-like), version 1.0
+
+qseries> rr := sum(q^(n^2)/aqprod(q,q,n,50), n, 0, 8)
+1 + q + q² + q³ + 2q⁴ + 2q⁵ + 3q⁶ + 3q⁷ + 4q⁸ + 5q⁹ + 6q¹⁰ + 7q¹¹ + 9q¹² + 10q¹³ + 12q¹⁴ + 14q¹⁵ + 17q¹⁶ + 19q¹⁷ + 23q¹⁸ + 26q¹⁹ + 31q²⁰ + 35q²¹ + 41q²² + 46q²³ + 54q²⁴ + 61q²⁵ + 70q²⁶ + 79q²⁷ + 91q²⁸ + 102q²⁹ + O(q⁵⁰)
+qseries> jp := jacprodmake(rr, 40)
+1 / (((q,q^5)_∞ (q^4,q^5)_∞ (q^5,q^5)_∞))
+qseries> jac2prod(jp)
+1 / (((q,q^5)_∞ (q^4,q^5)_∞ (q^5,q^5)_∞))
+
+--- findhom: Gauss AGM (qseriesdoc §4.1) ---
+qseries> set_trunc(100)
+qseries> findhom([theta3(q,100), theta4(q,100), theta3(subs_q(q,2),100), theta4(subs_q(q,2),100)], 2, 0)
+
+     (\-"""-/)
+        | |
+     \ ^ ^ / .-.
+     \_o_/ / /
+     /` `\/ |
+     / \ |
+     \ ( ) / |
+     / \_) (_/ \ /
+     | (\-/) |
+     \ --^o^-- /
+     \ '.___.' /
+     .' \-=-/ '.
+     / /` `\ \
+     (//./ \.\\) `"` `"`
+
+ q-series REPL (Maple-like), version 1.0
+
+qseries> set_trunc(100)
+qseries> findhom([theta3(q,100), theta4(q,100), theta3(subs_q(q,2),100), theta4(subs_q(q,2),100)], 2, 0)
+-X₄²+X₂X₄
+-X₃X₄+X₂X₃
+-X₄²+X₂²
+-X₃X₄+X₁X₄
+-X₃²+X₁X₃
+-X₃X₄+X₁X₂
+-X₃²+X₁²
+
+--- findhomcombo: U_{5,6} (qseriesdoc §4.2) ---
+qseries> set_trunc(100)
+qseries> findhomcombo(theta3(subs_q(q,2),100)^2, [theta3(q,100), theta4(q,100)], 2, 0)
+
+     (\-"""-/)
+        | |
+     \ ^ ^ / .-.
+     \_o_/ / /
+     /` `\/ |
+     / \ |
+     \ ( ) / |
+     / \_) (_/ \ /
+     | (\-/) |
+     \ --^o^-- /
+     \ '.___.' /
+     .' \-=-/ '.
+     / /` `\ \
+     (//./ \.\\) `"` `"`
+
+ q-series REPL (Maple-like), version 1.0
+
+qseries> set_trunc(100)
+qseries> findhomcombo(theta3(subs_q(q,2),100)^2, [theta3(q,100), theta4(q,100)], 2, 0)
+X₁²
+
+--- findnonhomcombo: Watson modular equation (qseriesdoc §4.4) ---
+qseries> set_trunc(100)
+qseries> xi := q^2*etaq(49,100)/etaq(1,100)
+qseries> T := q*(etaq(7,100)/etaq(1,100))^4
+qseries> findnonhomcombo(T^2, [T, xi], [1, 7], 0)
+
+     (\-"""-/)
+        | |
+     \ ^ ^ / .-.
+     \_o_/ / /
+     /` `\/ |
+     / \ |
+     \ ( ) / |
+     / \_) (_/ \ /
+     | (\-/) |
+     \ --^o^-- /
+     \ '.___.' /
+     .' \-=-/ '.
+     / /` `\ \
+     (//./ \.\\) `"` `"`
+
+ q-series REPL (Maple-like), version 1.0
+
+qseries> set_trunc(100)
+qseries> xi := q^2*etaq(49,100)/etaq(1,100)
+q² + q³ + 2q⁴ + 3q⁵ + 5q⁶ + 7q⁷ + 11q⁸ + 15q⁹ + 22q¹⁰ + 30q¹¹ + 42q¹² + 56q¹³ + 77q¹⁴ + 101q¹⁵ + 135q¹⁶ + 176q¹⁷ + 231q¹⁸ + 297q¹⁹ + 385q²⁰ + 490q²¹ + 627q²² + 792q²³ + 1002q²⁴ + 1255q²⁵ + 1575q²⁶ + 1958q²⁷ + 2436q²⁸ + 3010q²⁹ + 3718q³⁰ + 4565q³¹ + O(q¹⁰⁰)
+qseries> T := q*(etaq(7,100)/etaq(1,100))^4
+q + 4q² + 14q³ + 40q⁴ + 105q⁵ + 252q⁶ + 574q⁷ + 1236q⁸ + 2564q⁹ + 5124q¹⁰ + 9948q¹¹ + 18788q¹² + 34685q¹³ + 62664q¹⁴ + 111132q¹⁵ + 193672q¹⁶ + 332325q¹⁷ + 561996q¹⁸ + 937958q¹⁹ + 1546132q²⁰ + 2519825q²¹ + 4062888q²² + 6486008q²³ + 10257324q²⁴ + 16079389q²⁵ + 24996636q²⁶ + 38555216q²⁷ + 59025820q²⁸ + 89728900q²⁹ + 135486960q³⁰ + O(q¹⁰⁰)
+qseries> findnonhomcombo(T^2, [T, xi], [1, 7], 0)
+X₂+7X₂²+21X₂³+49X₂⁴+147X₂⁵+343X₂⁶+343X₂⁷+7X₁X₂+35X₁X₂²+49X₁X₂³
+
+--- Sifting: Rødseth (qseriesdoc §5) ---
+qseries> set_trunc(200)
+qseries> PD := etaq(2,200)/etaq(1,200)
+qseries> PD1 := sift(PD,5,1,199)
+qseries> etamake(PD1, 30)
+
+     (\-"""-/)
+        | |
+     \ ^ ^ / .-.
+     \_o_/ / /
+     /` `\/ |
+     / \ |
+     \ ( ) / |
+     / \_) (_/ \ /
+     | (\-/) |
+     \ --^o^-- /
+     \ '.___.' /
+     .' \-=-/ '.
+     / /` `\ \
+     (//./ \.\\) `"` `"`
+
+ q-series REPL (Maple-like), version 1.0
+
+qseries> set_trunc(200)
+qseries> PD := etaq(2,200)/etaq(1,200)
+1 + q + q² + 2q³ + 2q⁴ + 3q⁵ + 4q⁶ + 5q⁷ + 6q⁸ + 8q⁹ + 10q¹⁰ + 12q¹¹ + 15q¹² + 18q¹³ + 22q¹⁴ + 27q¹⁵ + 32q¹⁶ + 38q¹⁷ + 46q¹⁸ + 54q¹⁹ + 64q²⁰ + 76q²¹ + 89q²² + 104q²³ + 122q²⁴ + 142q²⁵ + 165q²⁶ + 192q²⁷ + 222q²⁸ + 256q²⁹ + O(q²⁰⁰)
+qseries> PD1 := sift(PD,5,1,199)
+1 + 4q + 12q² + 32q³ + 76q⁴ + 165q⁵ + 340q⁶ + 668q⁷ + 1260q⁸ + 2304q⁹ + 4097q¹⁰ + 7108q¹¹ + 12076q¹² + 20132q¹³ + 32992q¹⁴ + 53250q¹⁵ + 84756q¹⁶ + 133184q¹⁷ + 206848q¹⁸ + 317788q¹⁹ + 483330q²⁰ + 728260q²¹ + 1087744q²² + 1611388q²³ + 2368800q²⁴ + 3457027q²⁵ + 5010688q²⁶ + 7215644q²⁷ + 10327156q²⁸ + 14694244q²⁹ + O(q⁴⁰)
+qseries> etamake(PD1, 30)
+η(2τ)² η(5τ)³ / (η(τ)⁻⁴ η(10τ)⁻¹)
+
+--- Triple product: Euler pentagonal (qseriesdoc §6.1) ---
+qseries> set_trunc(60)
+qseries> series(tripleprod(q,q^3,10), 60)
+
+     (\-"""-/)
+        | |
+     \ ^ ^ / .-.
+     \_o_/ / /
+     /` `\/ |
+     / \ |
+     \ ( ) / |
+     / \_) (_/ \ /
+     | (\-/) |
+     \ --^o^-- /
+     \ '.___.' /
+     .' \-=-/ '.
+     / /` `\ \
+     (//./ \.\\) `"` `"`
+
+ q-series REPL (Maple-like), version 1.0
+
+qseries> set_trunc(60)
+qseries> series(tripleprod(q,q^3,10), 60)
+1 - q - q² + q⁵ + q⁷ + O(q¹⁰)
+
+--- Quintuple product and Euler dissection (qseriesdoc §6.2) ---
+qseries> set_trunc(500)
+qseries> EULER := etaq(1,500)
+qseries> E0 := sift(EULER,5,0,499)
+qseries> jp := jacprodmake(E0,50)
+qseries> jac2prod(jp)
+qseries> series(quinprod(q,q^5,20), 100)
+
+     (\-"""-/)
+        | |
+     \ ^ ^ / .-.
+     \_o_/ / /
+     /` `\/ |
+     / \ |
+     \ ( ) / |
+     / \_) (_/ \ /
+     | (\-/) |
+     \ --^o^-- /
+     \ '.___.' /
+     .' \-=-/ '.
+     / /` `\ \
+     (//./ \.\\) `"` `"`
+
+ q-series REPL (Maple-like), version 1.0
+
+qseries> set_trunc(500)
+qseries> EULER := etaq(1,500)
+1 - q - q² + q⁵ + q⁷ - q¹² - q¹⁵ + q²² + q²⁶ - q³⁵ - q⁴⁰ + q⁵¹ + q⁵⁷ - q⁷⁰ - q⁷⁷ + q⁹² + q¹⁰⁰ - q¹¹⁷ - q¹²⁶ + q¹⁴⁵ + q¹⁵⁵ - q¹⁷⁶ - q¹⁸⁷ + q²¹⁰ + q²²² - q²⁴⁷ - q²⁶⁰ + q²⁸⁷ + q³⁰¹ - q³³⁰ + O(q⁵⁰⁰)
+qseries> E0 := sift(EULER,5,0,499)
+1 + q - q³ - q⁷ - q⁸ - q¹⁴ + q²⁰ + q²⁹ + q³¹ + q⁴² - q⁵² - q⁶⁶ - q⁶⁹ - q⁸⁵ + q⁹⁹ + O(q¹⁰⁰)
+qseries> jp := jacprodmake(E0,50)
+1 / (((q,q^5)_∞ (q^4,q^5)_∞ (q^5,q^5)_∞))
+qseries> jac2prod(jp)
+1 / (((q,q^5)_∞ (q^4,q^5)_∞ (q^5,q^5)_∞))
+qseries> series(quinprod(q,q^5,20), 100)
+1 + q - q³ - q⁷ - q⁸ - q¹⁴ - q¹⁹ + O(q²⁰)
+
+--- Winquist identity (qseriesdoc §6.3) ---
+qseries> set_trunc(200)
+qseries> series(winquist(q^5,q^3,q^11,20), 60)
+
+     (\-"""-/)
+        | |
+     \ ^ ^ / .-.
+     \_o_/ / /
+     /` `\/ |
+     / \ |
+     \ ( ) / |
+     / \_) (_/ \ /
+     | (\-/) |
+     \ --^o^-- /
+     \ '.___.' /
+     .' \-=-/ '.
+     / /` `\ \
+     (//./ \.\\) `"` `"`
+
+ q-series REPL (Maple-like), version 1.0
+
+qseries> set_trunc(200)
+qseries> series(winquist(q^5,q^3,q^11,20), 60)
+1 - q² - -2q³ + q⁵ + q⁷ + q¹¹ + q¹² - q¹⁵ - q¹⁶ + q¹⁸ + O(q²⁰)

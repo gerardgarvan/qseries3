@@ -488,7 +488,12 @@ Plans:
 | 30. Output on next line | 1/1 | Complete    | 2026-02-26 |
 | 31. Up-down arrows for history | 1/1 | Complete | 2026-02-26 |
 | 32. etaq memoization | 0/? | Complete    | 2026-02-26 |
-| 33. Euler pentagonal optimization | 0/? | Not started | - |
+| 33. Euler pentagonal optimization | 1/1 | Complete    | 2026-02-26 |
+| 34. Fix compiler warnings | 1/1 | Complete    | 2026-02-26 |
+| 35. User manual | 1/1 | Complete    | 2026-02-26 |
+| 36. Expose NT helpers | 0/? | Not started | - |
+| 37. Convenience functions | 0/? | Not started | - |
+| 38. Math enrichment | 0/? | Not started | - |
 
 ### Phase 30: Output on next line after input
 
@@ -511,7 +516,7 @@ Plans:
 **Milestone v1.6 (etaq Performance) — phases 32–33:**
 
 - [x] **Phase 32: etaq memoization** - Cache etaq(k,T) results so repeated calls return instantly (completed -) (completed 2026-02-26)
-- [ ] **Phase 33: Euler pentagonal optimization** - etaq(1,T) via pentagonal number theorem recurrence O(T*sqrt(T)) (completed -)
+- [x] **Phase 33: Euler pentagonal optimization** - etaq(1,T) via pentagonal number theorem recurrence O(√T) (completed 2026-02-26)
 
 ### Phase 32: etaq memoization
 **Goal**: Repeated etaq(k,T) calls return cached results without recomputation
@@ -540,4 +545,124 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 33-01-PLAN.md — Pentagonal fast path in etaq() + acceptance test verification
+- [x] 33-01-PLAN.md — Pentagonal fast path in etaq() + acceptance verification
+
+**Milestone v1.7 (Polish & Documentation) — phases 34–35:**
+
+- [x] **Phase 34: Fix compiler warnings** - Eliminate all -Wall -Wextra -Wpedantic warnings for clean build (completed 2026-02-26)
+- [x] **Phase 35: User manual** - MANUAL.md with getting started, all 37 built-ins, workflow tutorials (completed 2026-02-26)
+
+### Phase 34: Fix compiler warnings
+**Goal**: Clean build with zero warnings under -Wall -Wextra -Wpedantic
+**Depends on**: Phase 33
+**Requirements**: POLISH-01, POLISH-02
+**Success Criteria** (what must be TRUE):
+  1. `g++ -std=c++20 -O2 -Wall -Wextra -Wpedantic` produces zero warnings
+  2. All existing acceptance tests still pass
+  3. No behavioral changes — warning fixes only
+**Plans**: 1 plan
+
+Plans:
+- [x] 34-01-PLAN.md — Fix all 8 warnings across qfuncs.h, convert.h, repl.h
+
+### Phase 35: User manual
+**Goal**: Comprehensive MANUAL.md documenting all built-in functions with examples and workflow tutorials
+**Depends on**: Phase 34
+**Requirements**: DOC-01, DOC-02
+**Success Criteria** (what must be TRUE):
+  1. MANUAL.md exists with getting-started section (build, launch, basic usage)
+  2. All 37 built-in functions documented with signature, description, and example
+  3. Workflow tutorials: Rogers-Ramanujan, product identification, relation finding
+  4. Document covers REPL features: tab completion, arrow keys, history, semicolon suppression, backslash continuation
+**Plans**: 1 plan
+
+Plans:
+- [x] 35-01-PLAN.md — Write MANUAL.md with all 37 built-ins, tutorials, REPL features
+
+**Milestone v1.8 (More Math Functions) — phases 36–38:**
+
+- [x] **Phase 36: Expose NT helpers** - REPL bindings for divisors, mobius, euler_phi (completed 2026-02-25)
+- [ ] **Phase 37: Convenience functions** - coeff, dissect, jacobi, kronecker
+- [ ] **Phase 38: Math enrichment** - eisenstein, partition, qdiff
+
+### Phase 36: Expose NT helpers
+**Goal**: Expose the 3 internal number theory helpers as REPL built-ins
+**Depends on**: Phase 35
+**Requirements**: MATH-01, MATH-02, MATH-03, MATH-11
+**Success Criteria** (what must be TRUE):
+  1. User can call `divisors(12)` and get `[1, 2, 3, 4, 6, 12]`
+  2. User can call `mobius(6)` and get `1`, `mobius(4)` and get `0`
+  3. User can call `euler_phi(12)` and get `4`
+  4. help(divisors), help(mobius), help(euler_phi) work
+  5. All existing acceptance tests still pass
+**Plans**: 1 plan
+
+Plans:
+- [x] 36-01-PLAN.md — Add REPL bindings + help for divisors, mobius, euler_phi
+
+### Phase 37: Convenience functions
+**Goal**: Add coeff, dissect, jacobi, kronecker built-ins
+**Depends on**: Phase 36
+**Requirements**: MATH-04, MATH-05, MATH-06, MATH-07, MATH-11
+**Success Criteria** (what must be TRUE):
+  1. `coeff(etaq(1,30), 5)` returns `1`
+  2. `dissect(f, 5, T)` returns list of 5 sifted series
+  3. `jacobi(2, 15)` returns correct Jacobi symbol
+  4. `kronecker(a, n)` works for all integer n
+  5. All existing acceptance tests still pass
+**Plans**: 1 plan
+
+Plans:
+- [x] 37-01-PLAN.md — Add coeff, dissect, jacobi, kronecker built-ins
+
+### Phase 38: Math enrichment
+**Goal**: Add eisenstein, partition, qdiff built-ins
+**Depends on**: Phase 37
+**Requirements**: MATH-08, MATH-09, MATH-10, MATH-11
+**Success Criteria** (what must be TRUE):
+  1. `eisenstein(2, 50)` produces E_4(q) = 1 + 240q + 2160q² + ...
+  2. `partition(100)` returns 190569292 (exact)
+  3. `qdiff(f)` computes the formal q-derivative correctly
+  4. All existing acceptance tests still pass
+**Plans**: 1 plan
+
+Plans:
+- [x] 38-01-PLAN.md — Add eisenstein, partition, qdiff built-ins
+
+---
+
+## Milestone v1.9 (Manual Update & Testing)
+
+**Objective:** Update documentation and add acceptance tests for all v1.8 functions.
+**Requirements:** DOC-03, DOC-04, TEST-01, TEST-02
+
+### Progress
+
+- [ ] **Phase 39: Update MANUAL.md** - Document 10 new built-ins, update version references
+- [ ] **Phase 40: Acceptance tests** - Test script for all v1.8 functions
+
+### Phase 39: Update MANUAL.md
+**Goal**: Document all 10 v1.8 built-ins with signatures, descriptions, and examples; update version references
+**Depends on**: Phase 38
+**Requirements**: DOC-03, DOC-04
+**Success Criteria** (what must be TRUE):
+  1. MANUAL.md contains entries for coeff, dissect, divisors, eisenstein, euler_phi, jacobi, kronecker, mobius, partition, qdiff
+  2. Each entry has signature, description, and example with actual REPL output
+  3. Version references updated to 1.9
+**Plans**: 1 plan
+
+Plans:
+- [x] 39-01-PLAN.md — Document 10 v1.8 built-ins + fix version refs
+
+### Phase 40: Acceptance tests for v1.8 functions
+**Goal**: Add test script covering all 10 new v1.8 functions
+**Depends on**: Phase 39
+**Requirements**: TEST-01, TEST-02
+**Success Criteria** (what must be TRUE):
+  1. Test script tests each of the 10 new functions with correct expected output
+  2. All new tests pass
+  3. All existing acceptance tests still pass
+**Plans**: 1 plan
+
+Plans:
+- [x] 40-01-PLAN.md — Create acceptance-v18.sh test script + Makefile target

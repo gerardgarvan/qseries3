@@ -4,7 +4,7 @@ CXX ?= g++
 CXXFLAGS = -std=c++20 -O2 -Wall -Wextra -Wpedantic
 LDFLAGS ?= 
 
-.PHONY: all clean test acceptance acceptance-qol acceptance-wins acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args demo test-package
+.PHONY: all clean test acceptance acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history demo test-package
 
 all: dist/qseries.exe dist-demo
 
@@ -56,6 +56,14 @@ acceptance-suppress-output: dist/qseries.exe
 # Run Phase 28 arrow-key navigation acceptance tests (TTY simulation; skips if script unavailable)
 acceptance-arrow-keys: dist/qseries.exe
 	./tests/acceptance-arrow-keys.sh
+
+# Run Phase 31 up/down arrow history acceptance tests (TTY simulation; skips if script unavailable)
+acceptance-history: dist/qseries.exe
+	./tests/acceptance-history.sh
+
+# Run v1.8 function acceptance tests
+acceptance-v18: dist/qseries.exe
+	./tests/acceptance-v18.sh
 
 # Run Phase 29 optional-arg variants acceptance tests
 acceptance-optional-args: dist/qseries.exe

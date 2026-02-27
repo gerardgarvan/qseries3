@@ -32,7 +32,7 @@ inline std::vector<std::pair<int, Frac>> etamake(const Series& f, int T) {
         return result;
     }
     g = (g / Series::constant(lead, T)).truncTo(T);
-    int q_shift = me;  // track q^me factor for display if needed
+
 
     Series q_var = Series::q(T);
     const int max_iter = 2 * T;
@@ -168,12 +168,7 @@ inline std::vector<int> mprodmake(const Series& f, int T) {
 // checkprod result: minExp, nice (all |a[n]| < M), M
 struct CheckprodResult { int minExp; bool nice; int M; };
 
-// checkprod(f, T) — M=2 (nice = exponents in {-1,0,1})
-inline CheckprodResult checkprod(const Series& f, int T) {
-    return checkprod(f, 2, T);
-}
-
-// checkprod(f, M, T) — explicit M
+// checkprod(f, M, T) — explicit M (define first so overload is visible)
 inline CheckprodResult checkprod(const Series& f, int M, int T) {
     Series g = f.truncTo(T);
     int minExp = g.minExp();
@@ -196,6 +191,11 @@ inline CheckprodResult checkprod(const Series& f, int M, int T) {
         if (v >= M) return {minExp, false, M};
     }
     return {minExp, true, M};
+}
+
+// checkprod(f, T) — M=2 (nice = exponents in {-1,0,1})
+inline CheckprodResult checkprod(const Series& f, int T) {
+    return checkprod(f, 2, T);
 }
 
 // checkmult result: multiplicative flag and failure pairs

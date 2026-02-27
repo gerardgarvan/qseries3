@@ -691,8 +691,15 @@ int runUnitTests() {
 }
 
 int main(int argc, char** argv) {
-    if (argc > 1 && std::string(argv[1]) == "--test")
-        return runUnitTests();
+    if (argc > 1) {
+        std::string arg = argv[1];
+        if (arg == "--version") {
+            std::cout << "qseries 1.9\n";
+            return 0;
+        }
+        if (arg == "--test")
+            return runUnitTests();
+    }
     runRepl();
     return 0;
 }

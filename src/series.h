@@ -162,21 +162,25 @@ struct Series {
 
     Series inverse() const {
         int m = minExp();
-        if (m > 0) {
+        if (m != 0) {
             // f = q^m * h, h[0]!=0. 1/f = q^{-m} * (1/h)
+            // Handles m>0 (e.g. q) and m<0 (e.g. q^{-1} from previous inverse)
             Series h;
             h.trunc = trunc - m;
+            if (h.trunc <= 0) h.trunc = 1;
             for (const auto& [e, v] : c) {
                 int newExp = e - m;
                 if (newExp >= 0 && newExp < h.trunc)
                     h.c[newExp] = v;
             }
+            if (h.c.empty() || h.coeff(0).isZero())
+                throw std::invalid_argument("Series::inverse: constant term zero");
             Series invH = h.inverse();
             Series result;
             result.trunc = trunc;
             for (const auto& [e, v] : invH.c) {
                 int newExp = e - m;
-                if (newExp >= -invH.trunc)  // include negative exponents
+                if (newExp >= -invH.trunc)
                     result.c[newExp] = v;
             }
             return result;
@@ -266,15 +270,18 @@ struct Series {
                     out += " + ";
             }
             Frac av = v.abs();
+            bool showNeg = (count == 0 && v < Frac(0));
             if (e == 0) {
-                out += (v < Frac(0) ? "-" : "") + (av.isOne() ? "1" : av.str());
+                if (showNeg) out += "-";
+                out += av.isOne() ? "1" : av.str();
             } else {
-                if (!av.isOne())
-                    out += (v < Frac(0) ? "-" : "") + av.str();
-                if (e == 1)
-                    out += "q";
-                else
-                    out += "q" + expToUnicode(e);
+                if (av.isOne()) {
+                    if (showNeg) out += "-";
+                } else {
+                    if (showNeg) out += "-";
+                    out += av.str();
+                }
+                out += (e == 1) ? "q" : ("q" + expToUnicode(e));
             }
             ++count;
         }

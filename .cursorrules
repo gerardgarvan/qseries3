@@ -1,0 +1,57 @@
+# .cursorrules — Q-Series REPL Project
+
+## What This Is
+A standalone single-binary REPL for q-series computation (number theory / partition theory / modular forms). Reimplements Frank Garvan's `qseries` Maple package in C++. Read SPEC.md for the full specification.
+
+## Hard Constraints
+- C++20, compiled with `g++ -std=c++20 -O2 -static`
+- ZERO external dependencies. No GMP, no Boost, no package managers
+- All arithmetic is exact rational (BigInt → Frac → Series). No floats anywhere in the math pipeline
+- Single binary output. Everything in header files + one main.cpp
+- Must pass the acceptance tests in SPEC.md (Rogers-Ramanujan, partition function, theta/eta identities, etc.)
+
+## Architecture (read SPEC.md for details)
+Bottom-up layers — build and test each before the next:
+1. `bigint.h` — Arbitrary precision integer (base 10^9, vector<uint32_t>)
+2. `frac.h` — Exact rational (auto-reduces via GCD on every operation)
+3. `series.h` — Truncated power series (std::map<int,Frac>, int trunc)
+4. `qfuncs.h` — aqprod, qbin, etaq, theta2/3/4, tripleprod, quinprod, winquist
+5. `convert.h` — prodmake (Andrews' algorithm), etamake, jacprodmake, qfactor
+6. `linalg.h` — Gaussian elimination over Q, kernel computation
+7. `relations.h` — findhom, findnonhom, findhomcombo, findnonhomcombo, findpoly
+8. `parser.h` — Tokenizer + recursive descent expression parser
+9. `repl.h` — REPL loop, variable environment, help system
+10. `main.cpp` — Entry point
+
+## Code Style Rules
+- Each layer is a single .h file (header-only for simplicity, everything is `inline`)
+- No classes with virtual methods. Use structs with methods
+- Operator overloading is essential — Series arithmetic must read like math: `f * g + h.pow(3)`
+- Always propagate truncation: result.trunc = min(a.trunc, b.trunc) in binary ops
+- Always call Frac::reduce() after construction — forgetting this causes exponential BigInt growth
+- Use `std::map<int, Frac>` for Series coefficients (ordered iteration is critical)
+
+## Testing Approach
+After implementing each layer, test it immediately:
+- BigInt: test division edge cases (this is the hardest part), negative numbers, zero
+- Frac: test that 6/4 reduces to 3/2, that 0/5 becomes 0/1
+- Series: test that `(1-q) * (1/(1-q))` = 1 to whatever truncation
+- qfuncs: test `etaq(1,20)` coefficients match Euler's pentagonal theorem
+- prodmake: THE critical test — Rogers-Ramanujan must produce exponents at ±1 mod 5
+
+## Common Bugs to Avoid
+1. Series::inverse() — the recurrence is g[n] = -(1/c₀) * Σ_{j=1}^{n} f[j]*g[n-j]. Note j starts at 1, not 0
+2. Series multiplication — skip terms where e1+e2 >= trunc EARLY (inner loop optimization)
+3. BigInt::divmod — long division in base 10^9 with binary search for each quotient digit
+4. prodmake step 2 — the divisor sum excludes d=n itself: Σ_{d|n, d<n} d*a[d]
+5. jacprodmake — don't demand perfect periodicity; use 80% match threshold then verify
+
+## The Most Important Algorithm
+Andrews' prodmake (series → product) is the heart of everything. Get this right first:
+1. Extract coeffs b[0..T-1], normalize b[0]=1
+2. Recurrence: c[n] = n*b[n] - Σ_{j=1}^{n-1} b[n-j]*c[j]  
+3. Extraction: a[n] = (c[n] - Σ_{d|n,d<n} d*a[d]) / n
+4. Result: f = Π (1-q^n)^{-a[n]}
+
+## Reference Document
+The file `qseriesdoc.md` is Frank Garvan's tutorial with worked examples. Every computation shown in that document should be reproducible in our REPL. When in doubt about expected behavior, consult that document.

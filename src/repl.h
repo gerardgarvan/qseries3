@@ -144,21 +144,31 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
     static const std::map<std::string, std::pair<std::string, std::string>> table = {
         {"add", {"add(expr, var, lo, hi)", "summation over index var from lo to hi"}},
         {"aqprod", {"aqprod(a,q,n,T)", "rising q-factorial (a;q)_n"}},
+        {"coeff", {"coeff(f,n)", "coefficient of q^n in series f"}},
         {"coeffs", {"coeffs(f,from,to)", "list coefficients from exponent from to to"}},
+        {"dissect", {"dissect(f,m,T)", "list all m siftings of f: sift(f,m,k,T) for k=0..m-1"}},
+        {"divisors", {"divisors(n)", "sorted list of positive divisors of n"}},
+        {"eisenstein", {"eisenstein(k,T)", "normalized Eisenstein series E_{2k}(q)"}},
         {"etaq", {"etaq(k) or etaq(k,T) or etaq(q,k,T)", "eta product Π(1-q^{kn})"}},
         {"etamake", {"etamake(f,T)", "identify f as eta product"}},
+        {"euler_phi", {"euler_phi(n)", "Euler's totient φ(n)"}},
         {"findhom", {"findhom(L,n,topshift)", "homogeneous polynomial relations between series in L"}},
         {"findhomcombo", {"findhomcombo(f,L,n,topshift[,etaopt])", "express f as polynomial in L"}},
         {"findnonhom", {"findnonhom(L,n,topshift)", "nonhomogeneous polynomial relations"}},
         {"findnonhomcombo", {"findnonhomcombo(f,L,n_list,topshift[,etaopt])", "express f as polynomial in L (nonhom)"}},
         {"findpoly", {"findpoly(x,y,deg1,deg2[,check])", "polynomial relation between two series"}},
         {"jac2prod", {"jac2prod(var)", "display Jacobi product stored in variable"}},
+        {"jacobi", {"jacobi(a,n)", "Jacobi symbol (a/n) for odd positive n"}},
         {"jacprodmake", {"jacprodmake(f,T)", "identify f as Jacobi product"}},
+        {"kronecker", {"kronecker(a,n)", "Kronecker symbol (a/n) for all integer n"}},
         {"legendre", {"legendre(a,p)", "Legendre symbol (a/p)"}},
+        {"partition", {"partition(n)", "partition number p(n)"}},
         {"prodmake", {"prodmake(f,T)", "Andrews' algorithm: series → infinite product"}},
+        {"mobius", {"mobius(n)", "Möbius function μ(n): 0 if squared factor, (-1)^k otherwise"}},
         {"mprodmake", {"mprodmake(f,T)", "convert series to product (1+q^n1)(1+q^n2)..."}},
         {"checkprod", {"checkprod(f) or checkprod(f,T) or checkprod(f,M,T)", "check if f is a nice product (exponents |a[n]| < M)"}},
         {"checkmult", {"checkmult(f) or checkmult(f,T) or checkmult(f,T,1)", "check if coefficients are multiplicative"}},
+        {"clear_cache", {"clear_cache()", "clear memoization caches (etaq)"}},
         {"qbin", {"qbin(m,n,T) or qbin(q,m,n,T)", "Gaussian polynomial [m;n]_q"}},
         {"qfactor", {"qfactor(f) or qfactor(f,T)", "factorize finite q-product"}},
         {"quinprod", {"quinprod(z,q,T)", "quintuple product"}},
@@ -177,6 +187,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"version", {"version", "print package version"}},
         {"winquist", {"winquist(a,b,q,T)", "Winquist identity"}},
         {"qdegree", {"qdegree(f)", "highest exponent with nonzero coefficient"}},
+        {"qdiff", {"qdiff(f)", "q-derivative: θ_q f = Σ n·a_n·q^n"}},
         {"lqdegree", {"lqdegree(f)", "lowest exponent with nonzero coefficient"}},
         {"jac2series", {"jac2series(var) or jac2series(var,T)", "convert Jacobi product (in var) to series"}},
         {"findlincombo", {"findlincombo(f,L,topshift)", "express f as linear combination of series in L"}},
@@ -220,6 +231,7 @@ inline int64_t evalToInt(const Expr* e, Environment& env,
                     return acc;
                 }
             }
+            __builtin_unreachable();
         }
         case Expr::Tag::UnOp:
             return -evalToInt(e->operand.get(), env, sumIndices);
@@ -436,6 +448,27 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         std::cout << "]" << std::endl;
         return DisplayOnly{};
     }
+    if (name == "coeff") {
+        if (args.size() != 2)
+            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
+        Frac c = ev(0).coeff(static_cast<int>(evi(1)));
+        std::cout << c.str() << std::endl;
+        return DisplayOnly{};
+    }
+    if (name == "dissect") {
+        if (args.size() != 3)
+            throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
+        Series f = ev(0);
+        int m = static_cast<int>(evi(1));
+        int Td = static_cast<int>(evi(2));
+        if (m <= 0)
+            throw std::runtime_error(runtimeErr(name, "m must be positive"));
+        for (int k = 0; k < m; ++k) {
+            Series s = sift(f, m, k, Td);
+            std::cout << "k=" << k << ": " << s.str(30) << std::endl;
+        }
+        return DisplayOnly{};
+    }
     if (name == "set_trunc") {
         if (args.size() != 1)
             throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
@@ -444,12 +477,19 @@ inline EvalResult dispatchBuiltin(const std::string& name,
             throw std::runtime_error(runtimeErr(name, "truncation must be positive"));
         env.T = N;
         env.env["q"] = Series::q(N);
+        clear_etaq_cache();
+        return std::monostate{};
+    }
+    if (name == "clear_cache") {
+        if (args.size() != 0)
+            throw std::runtime_error(runtimeErr(name, "expects no arguments"));
+        clear_etaq_cache();
         return std::monostate{};
     }
     if (name == "version") {
         if (args.size() != 0)
             throw std::runtime_error(runtimeErr(name, "expects no arguments"));
-        std::cout << "qseries 1.3\n";
+        std::cout << "qseries 1.9\n";
         return DisplayOnly{};
     }
     if (name == "qdegree") {
@@ -564,7 +604,8 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         Series y = ev(1);
         int deg1 = static_cast<int>(evi(2));
         int deg2 = static_cast<int>(evi(3));
-        std::optional<int> check = (args.size() == 5) ? std::optional<int>(static_cast<int>(evi(4))) : std::nullopt;
+        std::optional<int> check;
+        if (args.size() == 5) check = static_cast<int>(evi(4));
         auto basis = findpoly(x, y, deg1, deg2, check);
         std::vector<std::vector<int>> exps;
         for (int j = 0; j <= deg2; ++j)
@@ -577,12 +618,61 @@ inline EvalResult dispatchBuiltin(const std::string& name,
             throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
         return static_cast<int64_t>(legendre(evi(0), evi(1)));
     }
+    if (name == "jacobi") {
+        if (args.size() != 2)
+            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
+        return static_cast<int64_t>(jacobi(evi(0), evi(1)));
+    }
+    if (name == "kronecker") {
+        if (args.size() != 2)
+            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
+        return static_cast<int64_t>(kronecker(evi(0), evi(1)));
+    }
     if (name == "sigma") {
         if (args.size() == 1)
             return sigma(static_cast<int>(evi(0)), 1);
         if (args.size() == 2)
             return sigma(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
         throw std::runtime_error(runtimeErr(name, "expected sigma(n) or sigma(n,k)"));
+    }
+    if (name == "divisors") {
+        if (args.size() != 1)
+            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
+        auto d = divisors(static_cast<int>(evi(0)));
+        std::cout << "[";
+        for (size_t i = 0; i < d.size(); ++i) {
+            if (i > 0) std::cout << ", ";
+            std::cout << d[i];
+        }
+        std::cout << "]" << std::endl;
+        return DisplayOnly{};
+    }
+    if (name == "mobius") {
+        if (args.size() != 1)
+            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
+        return static_cast<int64_t>(mobius(static_cast<int>(evi(0))));
+    }
+    if (name == "euler_phi") {
+        if (args.size() != 1)
+            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
+        return static_cast<int64_t>(euler_phi(static_cast<int>(evi(0))));
+    }
+    if (name == "eisenstein") {
+        if (args.size() != 2)
+            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
+        return eisenstein(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
+    }
+    if (name == "partition") {
+        if (args.size() != 1)
+            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
+        Frac p = partition_number(static_cast<int>(evi(0)));
+        std::cout << p.str() << std::endl;
+        return DisplayOnly{};
+    }
+    if (name == "qdiff") {
+        if (args.size() != 1)
+            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
+        return qdiff(ev(0));
     }
     if (name == "subs_q") {
         if (args.size() != 2)
@@ -657,6 +747,7 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
                     return l.pow(static_cast<int>(expVal));
                 }
             }
+            __builtin_unreachable();
         }
         case Expr::Tag::UnOp: {
             Series s = std::get<Series>(eval(e->operand.get(), env, sumIndices));
@@ -913,10 +1004,12 @@ inline void handleTabCompletion(std::string& line, size_t& pos, const Environmen
     redrawLineRaw(line, pos);
 }
 
-inline std::optional<std::string> readLineRaw(Environment& env) {
+inline std::optional<std::string> readLineRaw(Environment& env, const std::deque<std::string>& history) {
     RawModeGuard guard;
     std::string line;
     size_t pos = 0;
+    size_t histIdx = history.size();
+    std::string savedLine;
     for (;;) {
         int c = readOneChar();
         if (c < 0) {
@@ -928,12 +1021,26 @@ inline std::optional<std::string> readLineRaw(Environment& env) {
             int c2 = readOneChar();
             if (c2 == '[') {
                 int c3 = readOneChar();
-                if (c3 == 68) {  // left
+                if (c3 == 65) {  // up arrow
+                    if (!history.empty() && histIdx > 0) {
+                        if (histIdx == history.size()) savedLine = line;
+                        --histIdx;
+                        line = history[histIdx];
+                        pos = line.size();
+                        redrawLineRaw(line, pos);
+                    }
+                } else if (c3 == 66) {  // down arrow
+                    if (histIdx < history.size()) {
+                        ++histIdx;
+                        line = (histIdx == history.size()) ? savedLine : history[histIdx];
+                        pos = line.size();
+                        redrawLineRaw(line, pos);
+                    }
+                } else if (c3 == 68) {  // left
                     if (pos > 0) { --pos; redrawLineRaw(line, pos); }
                 } else if (c3 == 67) {  // right
                     if (pos < line.size()) { ++pos; redrawLineRaw(line, pos); }
                 }
-                // Consume and ignore other ESC [ X (e.g. Home/End/Delete)
             }
             // If first char after ESC is not '[', treat as standalone; do nothing
             continue;
@@ -1018,13 +1125,13 @@ inline void runRepl() {
  _                                           
 | |                                          
 | | ____ _ _ __   __ _  __ _ _ __ ___   ___  
-| |/ / _` | '_ \ / _` |/ _` | '__/ _ \ / _ \ 
+| |/ / _` | '_ \ / _` |/ _` | '__/ _ \ / _ \
 |   < (_| | | | | (_| | (_| | | | (_) | (_) |
 |_|\_\__,_|_| |_|\__, |\__,_|_|  \___/ \___/ 
                   __/ |                      
                  |___/                       
 
- q-series REPL (Maple-like), version 1.0
+ q-series REPL (Maple-like), version 1.9
 )banner" << std::endl;
     }
 
@@ -1039,7 +1146,8 @@ inline void runRepl() {
         std::string line;
         if (stdin_is_tty()) {
             std::cout << "qseries> " << std::flush;
-            auto opt = readLineRaw(env);
+            auto opt = readLineRaw(env, history);
+            std::cout << std::endl;
             if (!opt) break;
             line = *opt;
         } else {
@@ -1060,7 +1168,8 @@ inline void runRepl() {
                 break;
             if (stdin_is_tty()) {
                 std::cout << "  > " << std::flush;
-                auto nextOpt = readLineRaw(env);
+                auto nextOpt = readLineRaw(env, history);
+                std::cout << std::endl;
                 if (!nextOpt) break;
                 line += " " + *nextOpt;
             } else {

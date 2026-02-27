@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v1.5 (REPL improvements) — Phase 29 complete
+**Current focus:** Milestone v1.9 (Manual Update & Testing)
 
 ## Current Position
 
-Phase: 29 (Optional-arg audit)
-Plan: 01 complete
-Status: Plan 29-01 executed; etaq(k), checkprod(f), checkmult(f), findmaxind(L) 1-arg forms
-Last activity: 2026-02-26 — Phase 29 Plan 01 complete (REPL-OPTS-03)
+Phase: 40-acceptance-tests-v18
+Plan: 01 — COMPLETED
+Status: Phase 40 complete; Milestone v1.9 complete
+Last activity: 2026-02-27 — Phase 40 executed (acceptance-v18.sh with 12 tests)
 
-Progress: [██░░░░░░░░] ~21%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -64,6 +64,24 @@ Progress: [██░░░░░░░░] ~21%
 - [Phase 27-suppress-output-semicolon]: Plan 27-01: Trailing colon suppresses output; REPL-layer only; strip before parse; display and timing skipped; acceptance-suppress-output.sh
 - [Phase 28-arrow-key-line-navigation]: Plan 28-01: readLineRaw cursor pos, redrawLineRaw, ESC left/right, handleTabCompletion(line,pos,env); acceptance-arrow-keys.sh via script/PTY
 - [Phase 29-optional-arg-audit]: Plan 29-01: etaq(k), checkprod(f), checkmult(f), findmaxind(L) 1-arg forms; acceptance-optional-args.sh; getHelpTable updates
+
+### Roadmap Evolution
+
+- Phase 30 added: Output on next line after input
+- Phase 31 added: Up-down arrows for history
+- Milestone v1.6 started: etaq Performance
+- Phase 32 added: etaq memoization (PERF-01)
+- Phase 33 added: Euler pentagonal optimization (PERF-02)
+- Milestone v1.7 started: Polish & Documentation
+- Phase 34 added: Fix compiler warnings (POLISH-01, POLISH-02)
+- Phase 35 added: User manual (DOC-01, DOC-02)
+- Milestone v1.8 started: More Math Functions
+- Phase 36 added: Expose NT helpers (MATH-01, MATH-02, MATH-03)
+- Phase 37 added: Convenience functions (MATH-04 through MATH-07)
+- Phase 38 added: Math enrichment (MATH-08, MATH-09, MATH-10)
+- Milestone v1.9 started: Manual Update & Testing
+- Phase 39 added: Update MANUAL.md (DOC-03, DOC-04)
+- Phase 40 added: Acceptance tests for v1.8 (TEST-01, TEST-02)
 
 ### Pending Todos
 

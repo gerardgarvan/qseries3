@@ -8,11 +8,64 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 **Rogers-Ramanujan must work.** Given `Σ q^(n²) / (q;q)_n`, prodmake must recover the product form with denominators only at exponents ≡ ±1 (mod 5). If this test passes, the core math is correct. Everything else builds on it.
 
+## Current Milestone: v1.9 Manual Update & Testing
+
+**Goal:** Update MANUAL.md for all v1.8 functions and add acceptance tests.
+
+**Target features:**
+- Document 10 new built-ins: coeff, dissect, divisors, eisenstein, euler_phi, jacobi, kronecker, mobius, partition, qdiff
+- Update version references to 1.9
+- Acceptance tests for all new functions
+
+---
+
+## Previous Milestone: v1.8 More Math Functions ✓
+
+**Shipped:** divisors, mobius, euler_phi, coeff, dissect, jacobi, kronecker, eisenstein, partition, qdiff; fixed Series::str() double-negative display bug
+
+---
+
+## Previous Milestone: v1.7 Polish & Documentation ✓
+
+**Shipped:** Zero-warning build under -Wall -Wextra -Wpedantic; comprehensive MANUAL.md with all 37 built-ins, 4 workflow tutorials
+
+---
+
+## Previous Milestone: v1.6 etaq Performance ✓
+
+**Shipped:** etaq memoization, Euler pentagonal optimization (O(√T) for etaq(1,T))
+
+---
+
+## Previous Milestone: v1.5 REPL improvements ✓
+
+**Shipped:** Suppress output (colon), arrow-key line navigation, optional-arg audit, output-on-next-line, up/down arrow history navigation
+
+---
+
+## Previous: v1.4 Close more gaps ✓
+
+**Shipped:** mprodmake, checkprod, checkmult, findmaxind
+
+---
+
+## Previous: v1.3 Quick wins ✓
+
+**Shipped:** version, qdegree, lqdegree, jac2series, findlincombo, Makefile CXX default, acceptance-wins
+
+---
+
+## Previous: v1.1 Garvan Demo ✓
+
+**Shipped:** Demo artifact, Rogers-Ramanujan, product conversion, relations, sifting/product identities
+
+---
+
 ## Requirements
 
 ### Validated
 
-(None yet — ship to validate)
+- v1.0: All 9 SPEC acceptance tests pass; REPL fully functional
 
 ### Active
 
@@ -31,8 +84,8 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 ### Out of Scope
 
-- Memoization of etaq(k,T) — defer to post-v1 optimization
-- Euler pentagonal optimization for etaq(1,T) — O(T·√T) acceptable for v1
+- ~~Memoization of etaq(k,T)~~ — now in scope (v1.6)
+- ~~Euler pentagonal optimization for etaq(1,T)~~ — now in scope (v1.6)
 - LaTeX output — plain text sufficient
 - Script mode (qseries < file.qs) — REPL only for v1
 - Tab completion — simple getline + history sufficient
@@ -64,4 +117,4 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 | jacprodmake 80% periodicity threshold | Don't demand exact match; verify reconstruction | — Pending |
 
 ---
-*Last updated: 2025-02-24 after initialization*
+*Last updated: 2026-02-26 after v1.6 milestone start*

@@ -311,7 +311,9 @@ class Parser {
                 if (name == "sum" || name == "add")
                     return parseSumCall(name);
                 consume();
-                auto args = parseCommaSeparatedExprs();
+                std::vector<ExprPtr> args;
+                if (peek().kind != Token::Kind::RPAREN)
+                    args = parseCommaSeparatedExprs();
                 expect(Token::Kind::RPAREN);
                 return Expr::makeCall(name, std::move(args));
             }
