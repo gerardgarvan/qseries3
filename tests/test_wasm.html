@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<!--
+  qseries Wasm Test Page
+  Usage: Copy this file to build/wasm/ (or serve from project root adjusting the path).
+  Then open in a browser: http://localhost:8080/test_wasm.html
+
+  Quick start:
+    cp tests/test_wasm.html build/wasm/
+    cd build/wasm && python3 -m http.server 8080
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>qseries Wasm Tests</title>
+<style>
+  body { font-family: 'Menlo', 'Consolas', monospace; background: #1a1a2e; color: #e0e0e0; margin: 2rem; }
+  h1 { color: #64ffda; margin-bottom: 0.5rem; }
+  #status { font-size: 1.2rem; margin: 1rem 0; padding: 0.5rem 1rem; border-radius: 4px; display: inline-block; }
+  .pass-summary { background: #1b5e20; color: #a5d6a7; }
+  .fail-summary { background: #b71c1c; color: #ef9a9a; }
+  .loading { background: #37474f; color: #b0bec5; }
+  pre { background: #0d1117; padding: 1rem; border-radius: 6px; overflow-x: auto; line-height: 1.6; }
+  .pass { color: #66bb6a; }
+  .fail { color: #ef5350; font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>qseries Wasm Test Suite</h1>
+<div id="status" class="loading">Loading Wasm module...</div>
+<pre id="output"></pre>
+
+<script type="module">
+const out = document.getElementById('output');
+const status = document.getElementById('status');
+let passed = 0, failed = 0;
+
+function log(cls, msg) {
+    const span = document.createElement('span');
+    span.className = cls;
+    span.textContent = msg + '\n';
+    out.appendChild(span);
+}
+
+function test(name, condition) {
+    if (condition) { log('pass', `PASS: ${name}`); passed++; }
+    else { log('fail', `FAIL: ${name}`); failed++; }
+}
+
+try {
+    const { default: createQSeries } = await import('./qseries.js');
+    const Module = await createQSeries();
+
+    // 1. Banner
+    test("get_banner() === 'qseries v2.0'",
+        Module.get_banner() === "qseries v2.0");
+
+    // 2. Basic arithmetic
+    test("evaluate('1+1') contains '2'",
+        Module.evaluate("1+1").includes("2"));
+    test("evaluate('3*7') contains '21'",
+        Module.evaluate("3*7").includes("21"));
+
+    // 3. Series creation
+    {
+        const r = Module.evaluate("etaq(1,20)");
+        test("etaq(1,20) — no error", !r.startsWith("error:"));
+        test("etaq(1,20) contains 'q'", r.includes("q"));
+    }
+
+    // 4. Error handling
+    test("etaq(0,50) returns error",
+        Module.evaluate("etaq(0,50)").startsWith("error:"));
+    test("1/0 returns error",
+        Module.evaluate("1/0").startsWith("error:"));
+    test("xyz_undefined returns error",
+        Module.evaluate("xyz_undefined").startsWith("error:"));
+
+    // 5. Statefulness
+    {
+        Module.evaluate("x := etaq(1,20)");
+        const r = Module.evaluate("prodmake(x,15)");
+        test("prodmake(x,15) after assignment — no error",
+            !r.startsWith("error:"));
+    }
+
+    // 6. Rogers-Ramanujan
+    {
+        Module.evaluate("rr := sum(q^(n^2)/aqprod(q,q,n,50), n, 0, 8)");
+        const pm = Module.evaluate("prodmake(rr,40)");
+        test("prodmake(rr,40) contains '(1-q' (product form)",
+            pm.includes("(1-q"));
+    }
+
+    // Summary
+    const total = passed + failed;
+    const msg = `${passed}/${total} tests passed`;
+    log(failed === 0 ? 'pass' : 'fail', `\n${msg}`);
+    status.textContent = failed === 0 ? `ALL TESTS PASSED (${total})` : `${failed} FAILED — ${msg}`;
+    status.className = failed === 0 ? 'pass-summary' : 'fail-summary';
+
+} catch (e) {
+    log('fail', `Module load error: ${e.message}`);
+    status.textContent = 'ERROR: Could not load Wasm module';
+    status.className = 'fail-summary';
+}
+</script>
+</body>
+</html>
