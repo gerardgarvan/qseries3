@@ -230,6 +230,8 @@ qseries> winquist(q, q^2, q^5, 50)
 
 #### `T(r, n)` or `T(r, n, T)` — Finite q-product T_{r,n}
 
+Computes the finite q-product T_{r,n} from the qseriesdoc recurrence. Uses memoization internally; large values like `T(0, 30, 50)` compute efficiently.
+
 ```
 qseries> T(8, 8, 50)
 q⁶ + q⁷ + 2q⁸ + 3q⁹ + 5q¹⁰ + ... + O(q⁵⁰)
@@ -562,6 +564,26 @@ qseries> partition(5)
 7
 qseries> partition(100)
 190569292
+```
+
+### Integer Utilities
+
+#### `min(a, b, ...)` — Minimum
+
+Returns the minimum of two or more integer arguments.
+
+```
+qseries> min(3, 1, 4, 1, 5)
+1
+```
+
+#### `max(a, b, ...)` — Maximum
+
+Returns the maximum of two or more integer arguments.
+
+```
+qseries> max(3, 1, 4, 1, 5)
+5
 ```
 
 ### Utilities
