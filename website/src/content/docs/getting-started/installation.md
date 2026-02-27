@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Download, build, and install the qseries REPL
+description: How to download and build qseries from source
 ---
 
 Content for this section is being prepared. Check back soon.

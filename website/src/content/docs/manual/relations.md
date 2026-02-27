@@ -1,6 +1,6 @@
 ---
 title: Relation Finding
-description: Discover polynomial relations among q-series with findhom, findnonhom, and findpoly
+description: "findhom, findnonhom, findpoly for discovering identities among q-series"
 ---
 
 Content for this section is being prepared. Check back soon.

@@ -1,6 +1,6 @@
 ---
 title: q-Functions
-description: "aqprod, etaq, theta2, theta3, theta4, tripleprod, quinprod, and Jacobi products"
+description: "aqprod, etaq, theta, tripleprod, quinprod, and Jacobi product functions"
 ---
 
 Content for this section is being prepared. Check back soon.

@@ -1,6 +1,6 @@
 ---
 title: Modular Equations
-description: Find and verify modular equations using relation-finding tools
+description: Deriving modular equations using q-series relations
 ---
 
 Content for this section is being prepared. Check back soon.

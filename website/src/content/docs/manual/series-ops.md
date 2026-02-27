@@ -1,6 +1,6 @@
 ---
 title: Series Operations
-description: Truncated power series arithmetic — addition, multiplication, inverse, and composition
+description: Truncated formal power series arithmetic and manipulation
 ---
 
 Content for this section is being prepared. Check back soon.

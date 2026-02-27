@@ -1,6 +1,6 @@
 ---
 title: Sifting & Extraction
-description: Extract subsequences and components with sift, pickpart, terms, and series
+description: "sift, pickpart, terms, and series for coefficient extraction and subseries"
 ---
 
 Content for this section is being prepared. Check back soon.
