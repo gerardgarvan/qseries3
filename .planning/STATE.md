@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v2.0 (Robustness & Tutorial Coverage)
+**Current focus:** Milestone v2.1 (Website)
 
 ## Current Position
 
-Phase: 42-garvan-tutorial-coverage
-Plan: 02 -- COMPLETE
-Status: Milestone v2.0 complete — version bumped, MANUAL.md updated, all tests pass
-Last activity: 2026-02-27 -- 42-02 executed (2 tasks, 4 files)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for v2.1 Website milestone
+Last activity: 2026-02-27 — Milestone v2.1 started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 

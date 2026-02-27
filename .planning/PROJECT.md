@@ -8,14 +8,29 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 **Rogers-Ramanujan must work.** Given `Σ q^(n²) / (q;q)_n`, prodmake must recover the product form with denominators only at exponents ≡ ±1 (mod 5). If this test passes, the core math is correct. Everything else builds on it.
 
-## Current Milestone: v1.9 Manual Update & Testing
+## Current Milestone: v2.1 Website
 
-**Goal:** Update MANUAL.md for all v1.8 functions and add acceptance tests.
+**Goal:** Create a modern documentation website with live WebAssembly playground so users can try qseries in the browser and read docs online.
 
 **Target features:**
-- Document 10 new built-ins: coeff, dissect, divisors, eisenstein, euler_phi, jacobi, kronecker, mobius, partition, qdiff
-- Update version references to 1.9
-- Acceptance tests for all new functions
+- Astro Starlight documentation site with modern dev-tool aesthetic
+- Landing page: feature highlights, download link, project overview
+- Online documentation: MANUAL.md converted to HTML pages
+- Garvan tutorial examples with commentary as interactive walkthrough
+- Live playground: qseries compiled to WebAssembly via Emscripten, browser-based REPL
+- Custom domain support (domain TBD)
+
+---
+
+## Previous Milestone: v2.0 Robustness & Tutorial Coverage ✓
+
+**Shipped:** 9 robustness fixes (etaq/sift guards, div-by-zero, parser depth, int overflow, pow limit, safe variant access, Levenshtein suggestions, integer assignment), T_rn memoization, min/max builtins, version 2.0
+
+---
+
+## Previous Milestone: v1.9 Manual Update & Testing ✓
+
+**Shipped:** Documentation for 10 v1.8 built-ins, acceptance-v18.sh with 11 tests, version strings to 1.9
 
 ---
 
@@ -117,4 +132,4 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 | jacprodmake 80% periodicity threshold | Don't demand exact match; verify reconstruction | — Pending |
 
 ---
-*Last updated: 2026-02-26 after v1.6 milestone start*
+*Last updated: 2026-02-27 after v2.1 milestone start*
