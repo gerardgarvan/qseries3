@@ -1,243 +1,235 @@
-# Domain Pitfalls: Q-Series REPL
+# Pitfalls Research
 
-**Domain:** Arbitrary precision arithmetic, formal power series, q-series / Andrews-style series-to-product conversion  
-**Researched:** 2025-02-24  
-**Confidence:** HIGH (SPEC + authoritative sources; WebSearch for ecosystem)
-
----
+**Domain:** Adding WebAssembly playground + Astro Starlight documentation site to existing C++20 CLI REPL
+**Researched:** 2026-02-27
+**Confidence:** HIGH (Emscripten, deployment) / MEDIUM (Astro Starlight integration specifics)
 
 ## Critical Pitfalls
 
-### Pitfall 1: Series Inverse Recurrence Index Error (j=0 vs j=1)
+### Pitfall 1: Terminal I/O Does Not Exist in the Browser
 
-**What goes wrong:**  
-Implementing `g[n] = -(1/c₀) Σ c_j · g[n-j]` with `j` from 0 to `n` instead of 1 to `n` produces wrong coefficients. Including `j=0` adds `c₀·g[n]` on the RHS, making the equation circular (you are solving for `g[n]`).
+**What goes wrong:**
+The existing REPL uses raw terminal I/O (termios on POSIX, `SetConsoleMode` / `ReadFile` on Windows) for character-by-character input, arrow key handling, tab completion, and history navigation. None of this exists in WebAssembly. Compiling the REPL as-is produces a binary that immediately fails — `tcgetattr` returns errors, `STDIN_FILENO` is a stub, and `stdin_is_tty()` returns false. The program falls back to `std::getline(std::cin, line)` which triggers the browser's `prompt()` popup — an unusable experience.
 
-**Why it happens:**  
-Off-by-one confusion: the recurrence arises from `(f·g)_n = δ_{n0}`. For n≥1, `Σ_{j=0}^n c_j g_{n-j} = 0`, so `c₀ g_n = -Σ_{j=1}^n c_j g_{n-j}`. Starting the loop at 0 is a natural coding mistake.
+**Why it happens:**
+Developers assume the existing REPL loop can be compiled straight to Wasm. The `#ifdef _WIN32` / `#ifdef __CYGWIN__` guards handle two platforms but not the browser. Emscripten provides a partial stdin/stdout emulation, but it's nowhere near a real terminal. The `RawModeGuard`, `readOneChar()`, `readLineRaw()` functions in `repl.h` (lines 48-98, 1073+) are all dead code in Wasm.
 
-**Prevention:**  
-- Implement the recurrence as `g[n] = -(1/c₀) Σ_{j=1}^{n} c[j]*g[n-j]` and add an assertion or comment: `// j MUST start at 1 — j=0 would include c₀*g[n] (circular)`.  
-- Unit test: `(1-q) * (1/(1-q))` must equal 1 to truncation.  
-- Reference: EmergentMind (2025), Math Stack Exchange 710252.
+**How to avoid:**
+Build a separate Wasm entry point that bypasses `runRepl()` entirely. Instead, expose an `evaluate(const char* input) -> const char*` function via Emscripten's `EXPORTED_FUNCTIONS` or embind. The JavaScript side (xterm.js or a textarea) handles all I/O: it collects user input, calls the C++ evaluate function, and displays the result. The C++ code becomes a pure function: string in, string out.
 
-**Warning signs:**  
-- `(1-q)^{-1}` produces wrong coefficients beyond the first few terms  
-- Rogers-Ramanujan or partition function tests fail despite correct `aqprod`/`etaq`
+Concretely:
+1. Create a `wasm_api.cpp` that includes `parser.h` and `repl.h`'s `Environment` / `evalStatement` but NOT `runRepl`
+2. Expose `extern "C" { const char* wasm_eval(const char* input); }` 
+3. Compile with `-sEXPORTED_FUNCTIONS=_wasm_eval -sEXPORTED_RUNTIME_METHODS=ccall,cwrap`
+4. On the JS side: `const result = Module.ccall('wasm_eval', 'string', ['string'], [userInput]);`
 
-**Phase to address:** Phase 3 (series.h)
+**Warning signs:**
+- `RawModeGuard` constructor runs but `active` stays false
+- Browser shows `prompt()` dialogs
+- Console errors about `tcgetattr` or `read(STDIN_FILENO)` failing
+- Output appears in browser console instead of the page
 
----
-
-### Pitfall 2: BigInt Division — Long Division Edge Cases
-
-**What goes wrong:**  
-Quotient or remainder is wrong for: (a) dividend &lt; divisor, (b) divisor with leading zeros, (c) negative operands, (d) base-boundary cases (`1000000000/1`, `999999999/1000000000`).
-
-**Why it happens:**  
-Long division in base 10⁹ is the hardest BigInt operation. Common mistakes: wrong iteration-dividend width (should be `n_d+1` digits when divisor has `n_d` digits), poor quotient-digit guess (use binary search over `[0,BASE-1]`), not normalizing out leading zeros, incorrect sign propagation.
-
-**Prevention:**  
-- Use binary search for each quotient digit: largest `k` s.t. `k*divisor ≤ remainder`.  
-- Ensure `0 ≤ remainder < divisor` after each step.  
-- Test: `1000000000/1`, `999999999/1000000000`, `123456789012345/123`, negative cases, `0` dividend.  
-- Reference: janmr.com (2014), Knuth TAOCP Vol 2.
-
-**Warning signs:**  
-- Frac arithmetic or GCD produces wrong results for “nice” fractions  
-- prodmake or etaq fails with odd rationals
-
-**Phase to address:** Phase 1 (bigint.h)
+**Phase to address:**
+Wasm compilation phase (earliest Wasm work). This is the first thing to get right — nothing else works until I/O is solved.
 
 ---
 
-### Pitfall 3: Frac Reduction Omitted — Exponential BigInt Growth
+### Pitfall 2: Long-Running Computations Freeze the Browser Tab
 
-**What goes wrong:**  
-Numerators and denominators blow up exponentially if `reduce()` is not called after every Frac construction and arithmetic operation. Operations like `a/b + c/d = (ad+bc)/(bd)` produce unreduced fractions; without GCD normalization, subsequent operations compound the size.
+**What goes wrong:**
+Functions like `etaq(q, 1, 500)`, `prodmake(f, 200)`, `findnonhomcombo(...)`, or deeply nested `sum()` calls can take seconds to minutes on native. In the browser, they block the main thread, freezing the UI completely. The tab becomes unresponsive, the browser may show a "page unresponsive" dialog, and the user cannot even cancel. Even `etaq(q, 1, 100)` — a common operation — takes noticeable time.
 
-**Why it happens:**  
-GNU MP Rational docs state: “casting out common factors at each stage is optimal… it’s better to perform several small GCDs than one large GCD later.” Skipping reduction “optimizes” by avoiding GCD, but the cost of one large GCD later far exceeds many small ones.
+**Why it happens:**
+WebAssembly runs on the main thread by default. JavaScript is single-threaded. The browser needs the main thread free every ~16ms to handle input events and rendering. A computation taking even 200ms causes visible jank; anything over 5 seconds triggers browser kill dialogs.
 
-**Prevention:**  
-- Call `reduce()` in every Frac constructor and at the end of every `operator+`, `operator-`, `operator*`, `operator/`.  
-- Enforce: `den > 0`, `gcd(|num|, den) = 1`, and `0/1` for zero.  
-- Reference: GMP Rational Internals, Python `fractions`.
+**How to avoid:**
+Run the Wasm module in a Web Worker. The architecture should be:
 
-**Warning signs:**  
-- `etaq(1, 100)` or `prodmake` becomes very slow or runs out of memory  
-- Coefficient strings grow unexpectedly (e.g. hundreds of digits)
+```
+Main Thread (UI)         Web Worker
+  xterm.js / textarea  → postMessage(input)
+  show "computing..."  ← postMessage(result)
+  display result
+```
 
-**Phase to address:** Phase 2 (frac.h)
+This keeps the UI responsive. For cancellation of runaway computations, two options:
+1. **Cooperative cancellation:** Add a `volatile` or atomic check variable in the C++ inner loops (Series multiplication, `etaq` loop, `prodmake` recurrence). Poll a SharedArrayBuffer flag periodically. Main thread sets the flag; worker code checks it.
+2. **Worker termination:** Call `worker.terminate()` as a last resort. This destroys the worker — you lose the Environment state and must recreate it. Acceptable for an MVP playground.
 
----
+For MVP, option 2 (terminate + restart) is simpler and sufficient. Add cooperative cancellation only if UX demands it.
 
-### Pitfall 4: Truncation Not Propagated Correctly
+**Warning signs:**
+- Browser shows "page unresponsive" warning
+- `etaq(q, 1, 50)` works but `etaq(q, 1, 200)` hangs the tab
+- Users cannot type while computation runs
+- "Stop" button does nothing because main thread is blocked
 
-**What goes wrong:**  
-Result series get `trunc` set incorrectly. Binary ops must use `result.trunc = min(a.trunc, b.trunc)`. If the result keeps the larger truncation, coefficients beyond the valid range are treated as meaningful, producing garbage in downstream computations.
-
-**Why it happens:**  
-Truncation is metadata that’s easy to forget. New code paths (e.g. `subs_q`, composition, custom functions) may copy only one operand’s trunc or use a default.
-
-**Prevention:**  
-- Centralize rule: for `f op g`, `result.trunc = min(f.trunc, g.trunc)`.  
-- For `subs_q(k)`: `result.trunc = f.trunc * k` (exponents scale).  
-- For `inverse()`: if `f` starts at exponent `m`, effective trunc is `T - m`.  
-- Add a lint/comment checklist for every new Series-returning function.
-
-**Warning signs:**  
-- prodmake or relation finding behaves differently with “higher” truncation  
-- Terms beyond trunc appear to influence results
-
-**Phase to address:** Phase 3 (series.h), Phase 4 (qfuncs.h)
+**Phase to address:**
+Wasm playground integration phase. The Web Worker architecture must be the foundation of the playground, not an afterthought.
 
 ---
 
-### Pitfall 5: prodmake Divisor Sum Includes d=n
+### Pitfall 3: Emscripten Exception Handling Disabled By Default — Silent Aborts
 
-**What goes wrong:**  
-Implementing `a[n] = (c[n] - Σ_{d|n} d·a[d]) / n` instead of `Σ_{d|n, d<n}` yields wrong `a[n]`. Including `d=n` puts `n·a[n]` on the RHS, making the equation self-referential.
+**What goes wrong:**
+The existing codebase uses `throw std::invalid_argument(...)` and `throw std::runtime_error(...)` extensively — in `bigint.h` (division by zero), `frac.h` (zero denominator), `series.h` (inverse of zero), `parser.h` (parse errors), and `repl.h` (runtime errors, ~85 catch sites). Emscripten disables C++ exception catching by default at `-O1` and above. When an exception is thrown, the program aborts instead of catching it. User input errors like `1/0` or `prodmake(0, 50)` crash the entire Wasm module instead of showing an error message.
 
-**Why it happens:**  
-The recurrence solves `c[n] = Σ_{d|n} d·a[d]` for `a[n]`. Since `n|n`, we have `c[n] = n·a[n] + Σ_{d|n, d<n} d·a[d]`. Solving for `a[n]` requires excluding `d=n` from the sum.
+**Why it happens:**
+Emscripten's FAQ explains: exception handling has "relatively high overhead" in Wasm. The JavaScript-based implementation adds wrapper code at every potentially-throwing call site. The project has ~85 catch sites in `repl.h` alone — all silently broken without `-fexceptions`.
 
-**Prevention:**  
-- Implement: `a[n] = (c[n] - Σ_{d|n, d<n} d·a[d]) / n`.  
-- Use `divisors(n)` and filter `d < n` or use a loop that explicitly skips `d == n`.  
-- Acceptance test: Rogers-Ramanujan must give denominators only at exponents ≡ ±1 (mod 5).
+**How to avoid:**
+Compile with `-fwasm-exceptions` (native Wasm exception handling, lower overhead than JavaScript-based `-fexceptions`). This requires browser support for the Wasm exceptions proposal — supported in Chrome 95+, Firefox 100+, Safari 15.2+. If targeting older browsers, use `-fexceptions` instead.
 
-**Warning signs:**  
-- prodmake output disagrees with known product forms  
-- Rogers-Ramanujan identity test fails
+Alternative: wrap the top-level `wasm_eval` function in a single try-catch that returns error strings. This limits the exception overhead to one catch site that's always active, while individual `throw` sites still work correctly.
 
-**Phase to address:** Phase 5 (convert.h — prodmake)
+```cpp
+extern "C" const char* wasm_eval(const char* input) {
+    try {
+        // ... evaluate input ...
+        return result.c_str();
+    } catch (const std::exception& e) {
+        return format_error(e.what());
+    }
+}
+```
 
----
+Test with: `1/0`, `prodmake(0, 10)`, `etaq(q, 0, 10)`, `sum(q^n, n, 0, -1)`.
 
-### Pitfall 6: Series Inverse with Non-Zero Leading Exponent
+**Warning signs:**
+- Module aborts (prints "Aborted()" to console) on invalid input
+- `Module.ccall` throws a JavaScript error instead of returning an error string
+- "exception catching is disabled, this exception cannot be caught" in console
+- Works fine at `-O0`, crashes at `-O2`
 
-**What goes wrong:**  
-If `f` starts at exponent `m > 0` (e.g. `f = q^m + …`), naively applying the recurrence to the raw series fails. The recurrence assumes constant term `c₀ ≠ 0`. Applying it to `f` directly or with wrong indexing yields wrong inverse.
-
-**Why it happens:**  
-The recurrence `g[n] = -(1/c₀) Σ_{j=1}^{n} c_j g[n-j]` requires `c₀ = f[0] ≠ 0`. For `f = q^m · h(q)` with `h[0] ≠ 0`, you must invert `h` first, then `1/f = q^{-m} · (1/h)`.
-
-**Prevention:**  
-- Detect `minExp() > 0`, form `h = f / q^m` (shift exponents by `-m`), invert `h`, then shift result by `-m`.  
-- Ensure effective truncation for the shifted series is `T - m`.  
-- Test: invert `q * (1 - q)`, `q^2 * (1 + q + q^2)`.
-
-**Warning signs:**  
-- Division by series with no constant term crashes or returns nonsense  
-- Eta/theta ratios produce wrong coefficients
-
-**Phase to address:** Phase 3 (series.h)
+**Phase to address:**
+Wasm compilation phase. Must be in the initial Emscripten build flags and tested immediately.
 
 ---
 
-### Pitfall 7: jacprodmake Periodicity Detection Too Strict
+### Pitfall 4: Wasm Binary Size Blowup — Multi-MB Downloads for a Playground
 
-**What goes wrong:**  
-Requiring `e[n+b] == e[n]` for 100% of indices leads to false negatives when the series is a valid Jacobi product but numerical noise or truncation causes minor mismatches.
+**What goes wrong:**
+The complete qseries REPL compiled to Wasm with Asyncify and exception support can easily reach 2-5 MB (wasm) + 500KB-1MB (JS glue). Combined with xterm.js (~700KB), the playground page becomes 3-7 MB. On mobile or slow connections, users wait 10+ seconds before they can type their first command. This kills the "try it now" value proposition.
 
-**Why it happens:**  
-Periodicity is a structural property; at finite truncation, boundary effects or rounding can break exact equality. Overfitting to perfect match rejects correct identifications.
+**Why it happens:**
+- Asyncify alone inflates Wasm binary by ~70%
+- `-fexceptions` (JS-based) adds wrapper code at every call site
+- The REPL includes ~50 functions, many of which a playground user may never call
+- `std::map`, `std::vector`, `std::string`, and other STL containers pull in substantial code
+- Debug info or lack of optimization (`-O0`) makes it worse
 
-**Prevention:**  
-- Use ~80% match over a suitable range, then verify by reconstructing the series from the identified JAC factors and comparing to the original.  
-- SPEC: “check that e[n+b] == e[n] holds for at least 80% of the test range, then verify.”
+**How to avoid:**
+1. Compile with `-Os` or `-Oz` for size optimization, not `-O2`
+2. Use `-fwasm-exceptions` instead of `-fexceptions` (smaller code)
+3. Run `wasm-opt -Os` on the output (Binaryen post-processing)
+4. Use `--closure 1` to minify the JS glue code
+5. Serve `.wasm` files with gzip/brotli compression (60-75% reduction)
+6. Consider lazy-loading the Wasm module — show documentation immediately, load playground only when user clicks "Try It"
+7. Set a size budget: target <1.5 MB compressed for the complete playground
 
-**Warning signs:**  
-- jacprodmake fails on known Jacobi products (e.g. Rogers-Ramanujan)  
-- Output is empty when a plausible period exists
+Measure early. After the first successful Emscripten build, check the file sizes. If over budget, investigate which functions contribute most and whether module splitting (`-sSPLIT_MODULE`) is worthwhile.
 
-**Phase to address:** Phase 5 (convert.h — jacprodmake)
+**Warning signs:**
+- `.wasm` file exceeds 3 MB uncompressed
+- JS glue file exceeds 500 KB
+- Lighthouse performance score drops below 80 on the playground page
+- Time to Interactive exceeds 5 seconds on a throttled connection
 
----
-
-### Pitfall 8: etamake Infinite Loop on Non-Eta Input
-
-**What goes wrong:**  
-If the input is not an eta product, the algorithm never converges to 1 and loops forever.
-
-**Why it happens:**  
-etamake repeatedly cancels the smallest nonzero exponent by multiplying by the appropriate `etaq` power. For non-eta series, some terms never cancel.
-
-**Prevention:**  
-- Enforce a maximum iteration count (e.g. `T` or `2*T`).  
-- On exit without convergence, report “not an eta product” instead of looping.  
-- SPEC: “Add a maximum iteration count and report failure.”
-
-**Warning signs:**  
-- REPL hangs on `etamake` for arbitrary series  
-- No timeout or failure message
-
-**Phase to address:** Phase 5 (convert.h — etamake)
+**Phase to address:**
+Wasm compilation phase (initial build) and deployment phase (compression, lazy loading).
 
 ---
 
-## Moderate Pitfalls
+### Pitfall 5: Memory Growth Causes Performance Regression in Wasm
 
-### Series Multiplication: Skipping Truncation Early
+**What goes wrong:**
+BigInt operations allocate `std::vector<uint32_t>` dynamically. Series operations create `std::map<int, Frac>` entries. Heavy computations like `etaq(q, 1, 500)` or `prodmake(f, 200)` allocate megabytes of temporaries. If compiled with `ALLOW_MEMORY_GROWTH=1`, every allocation that grows the heap causes a performance penalty — benchmarks show up to 2x slowdown. If compiled with a fixed heap, memory-intensive computations crash with OOM.
 
-**What goes wrong:**  
-Inner loop accumulates `c1*c2` at `e1+e2` even when `e1+e2 >= trunc`. This wastes Frac multiplies and can pollute a dense coefficient map.
+**Why it happens:**
+Wasm linear memory cannot be shrunk, only grown. Growing memory may require copying the entire heap to a new location (depending on the browser engine). With `ALLOW_MEMORY_GROWTH=0`, the heap is fixed at compile time (default 16 MB), which is insufficient for large truncation values.
 
-**Prevention:**  
-Skip pairs where `e1+e2 >= min(trunc_a, trunc_b)` before the multiply. SPEC: “Skip if e1+e2 >= trunc EARLY (inner loop optimization).”
+**How to avoid:**
+Use `ALLOW_MEMORY_GROWTH=1` with a generous initial allocation:
+```
+-sINITIAL_MEMORY=64MB -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=256MB
+```
 
-**Phase to address:** Phase 3 (series.h)
+This starts with 64 MB (enough for most operations) and grows only when needed, up to 256 MB. The initial allocation avoids frequent growth during normal use. The maximum prevents runaway allocations from consuming the user's entire browser memory.
 
----
+For the playground, also limit the truncation value (`set_trunc`) to a reasonable maximum (e.g., 500) to prevent users from accidentally requesting enormous computations.
 
-### prodmake c[n] Recurrence Sum Bounds
+**Warning signs:**
+- `etaq(q, 1, 200)` is 2-3x slower in the browser than native
+- Browser tab memory usage spikes to 500+ MB
+- "out of memory" errors in the console
+- Performance degrades over multiple computations without page refresh
 
-**What goes wrong:**  
-The recurrence `c[n] = n·b[n] - Σ_{j=1}^{n-1} b[n-j]·c[j]` uses `j` from 1 to `n-1`. Using `j` from 1 to `n` would include `b[0]·c[n]` and make the recurrence circular.
-
-**Prevention:**  
-Use `Σ_{j=1}^{n-1}`. Add a comment referencing Andrews’ logarithmic derivative derivation.
-
-**Phase to address:** Phase 5 (convert.h — prodmake)
-
----
-
-### findhom / findnonhom Matrix Size Blow-Up
-
-**What goes wrong:**  
-For `k` series and degree `n`, monomial count is `C(n+k-1, k-1)`. With k=6, n=4 this is 126 monomials; the coefficient matrix grows quickly. Kernel computation can become slow or memory-bound.
-
-**Prevention:**  
-Document the scaling. Consider truncation limits or degree caps for interactive use. SPEC: “make sure the kernel computation handles this.”
-
-**Phase to address:** Phase 7 (relations.h)
+**Phase to address:**
+Wasm compilation phase (memory flags) and playground UI phase (truncation limits, memory reset).
 
 ---
 
-## Minor Pitfalls
+### Pitfall 6: COOP/COEP Headers Required for SharedArrayBuffer — Breaks CDN/Hosting
 
-### BigInt Sign Handling
+**What goes wrong:**
+If the Web Worker approach uses `SharedArrayBuffer` (needed for cooperative cancellation via shared memory, or for Emscripten pthreads), the hosting server must serve specific HTTP headers: `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`. Without these, `SharedArrayBuffer` is undefined and the playground crashes on load. Worse: these headers break loading of any cross-origin resources (Google Fonts, CDN scripts, analytics) unless those resources also have CORS headers.
 
-**What goes wrong:**  
-Zero should be non-negative. Edge cases: `(-a)*(-b)=ab`, `0*anything=0`, division by zero, `abs()` of negative.
+**Why it happens:**
+Browsers gate `SharedArrayBuffer` behind cross-origin isolation as a Spectre mitigation. This is enforced in Chrome 92+, Firefox 79+, Safari 15.2+. It's easy to develop locally (where restrictions may be relaxed) and only discover the issue in production.
 
-**Prevention:**  
-Test sign rules explicitly. Normalize zero to `neg=false`.
+**How to avoid:**
+For MVP, **avoid SharedArrayBuffer entirely**:
+- Use simple `postMessage` between main thread and Web Worker (no shared memory needed)
+- For cancellation, use `worker.terminate()` + create new worker (crude but works)
+- This eliminates the COOP/COEP requirement entirely
 
-**Phase to address:** Phase 1 (bigint.h)
+If cooperative cancellation is later needed:
+- Use a `_headers` file for Cloudflare Pages or server config for Nginx/Apache
+- Audit all cross-origin resources: Google Fonts, CDN links, analytics scripts
+- Use `credentialless` COEP as a more permissive alternative: `Cross-Origin-Embedder-Policy: credentialless`
+
+**Warning signs:**
+- `SharedArrayBuffer is not defined` in browser console
+- Playground works on localhost but not in production
+- Google Fonts or CDN resources stop loading after adding headers
+- `self.crossOriginIsolated` returns false in production
+
+**Phase to address:**
+Deployment phase. Design for no SharedArrayBuffer initially; add only if cooperative cancellation becomes a requirement.
 
 ---
 
-### subs_q Truncation Update
+### Pitfall 7: Astro Starlight Component Islands — Client Hydration Gotchas
 
-**What goes wrong:**  
-`subs_q(k)` multiplies exponents by `k`. Truncation must scale: `result.trunc = f.trunc * k`, otherwise high exponents are incorrectly included or dropped.
+**What goes wrong:**
+Starlight is built on Astro, which defaults to zero client-side JavaScript. The Wasm playground requires a fully interactive client component (xterm.js or textarea + Wasm module). Developers embed the playground component but forget `client:load` or `client:visible` directives, resulting in a component that renders server-side HTML but never hydrates — the terminal appears but keyboard input doesn't work. Alternatively, using `client:load` on a heavy component (xterm.js + Wasm) delays page load for all documentation pages.
 
-**Prevention:**  
-Always set `trunc = f.trunc * k` in `subs_q(k)`.
+**Why it happens:**
+Astro's "Islands Architecture" is opt-in interactivity. Starlight documentation pages are static by default. Interactive components must explicitly declare their hydration strategy. This is different from React/Next.js where everything is interactive by default.
 
-**Phase to address:** Phase 3 (series.h)
+**How to avoid:**
+1. Use `client:visible` (not `client:load`) for the playground component — this loads the Wasm module only when the user scrolls to the playground, keeping documentation pages fast
+2. Create the playground as a standalone Astro component that imports xterm.js and the Wasm module
+3. Use the playground component only on specific pages (e.g., `/playground/`) via MDX import, not globally
+4. Test both: documentation pages WITHOUT the playground (should be fast, zero JS) and the playground page (should be interactive)
+
+```astro
+---
+// In a documentation page with playground
+import QseriesPlayground from '../../components/QseriesPlayground.astro';
+---
+
+<QseriesPlayground client:visible />
+```
+
+**Warning signs:**
+- Playground renders but keyboard input is ignored
+- Documentation pages load slowly (pulling in Wasm module on every page)
+- `client:load` is used on the playground, adding 3+ MB to every page's JS bundle
+- Console shows "hydration mismatch" warnings
+
+**Phase to address:**
+Documentation site setup phase. Decide the component strategy early; test hydration before building the full playground.
 
 ---
 
@@ -245,89 +237,113 @@ Always set `trunc = f.trunc * k` in `subs_q(k)`.
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Skip Frac::reduce() in “hot” paths | Fewer GCD calls | Exponential BigInt growth, slowdowns | Never |
-| Hardcode truncation instead of min(T₁,T₂) | Simpler code | Wrong results in composed expressions | Never |
-| Use j=0 in series inverse sum | “Symmetric” loop | Wrong coefficients, failed tests | Never |
-| Relax jacprodmake to 100% match | Simpler logic | Misses valid Jacobi products | Never — use 80% + verify |
-| No max iterations in etamake | One less parameter | Infinite loop on bad input | Never |
+| Running Wasm on main thread (no Worker) | Simpler architecture, no message passing | UI freezes on any non-trivial computation | Never for production. Only for initial "does it compile?" validation |
+| Using `worker.terminate()` instead of cooperative cancellation | No shared memory needed, no COOP/COEP headers | Loses environment state (variables, truncation) on cancel; must reinitialize | MVP — acceptable if cancel is rare. Add cooperative cancellation if users complain |
+| Hardcoded truncation limit in browser (e.g., max T=200) | Prevents OOM and long-running computations | Limits what users can explore; different behavior from CLI | MVP — acceptable with clear UI messaging ("browser limited to T≤200") |
+| Single `.wasm` file (no module splitting) | Simpler build, simpler deployment | Larger initial download, slower first load | Acceptable if compressed size stays under 1.5 MB |
+| Skipping xterm.js, using a simple textarea | No terminal emulation dependency, smaller bundle | No syntax coloring, no real terminal feel, no cursor movement | MVP — can upgrade later without architectural changes |
 
----
+## Integration Gotchas
+
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| Astro + Wasm module | Importing `.wasm` file in Astro's build pipeline — Vite doesn't handle raw Wasm well | Place `.wasm` in `public/` directory; load at runtime via `fetch()` in client-side JS |
+| Starlight + custom pages | Adding playground as a Starlight documentation page — inherits sidebar/layout constraints | Create a custom Astro page at `/playground/` outside Starlight's content collection, or use Starlight overrides for layout-free pages |
+| xterm.js + Emscripten | Assuming Emscripten's stdin/stdout hooks work with xterm.js directly | Use the `wasm_eval` API pattern: xterm.js captures input → calls Wasm function → displays result. Don't try to pipe stdin/stdout |
+| GitHub Pages + Wasm | Assuming `.wasm` files serve correctly | GitHub Pages serves `.wasm` with wrong MIME type (`text/html`). Use Cloudflare Pages, Netlify, or Vercel instead — all handle `application/wasm` correctly |
+| Emscripten + existing Makefile | Adding Wasm target to existing Makefile that uses `g++` | Create a separate `Makefile.wasm` or a build script. Emscripten uses `emcc`/`em++` with different flags (`-sEXPORTED_FUNCTIONS`, `-sASYNCIFY`, etc.). Keep native and Wasm builds completely separate |
+| Web Worker + Wasm module | Loading the Wasm module on the main thread, then trying to move it to a Worker | Load and instantiate the Wasm module inside the Worker. The Worker script should `importScripts('qseries.js')` or use ES module import. The main thread never touches the Wasm module directly |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Dense series mult without trunc skip | Slow mult, large maps | Skip pairs with e1+e2 ≥ trunc | T ~ 200+ |
-| Unreduced Fracs in series coeffs | Gradual slowdown, huge strings | Always reduce after Frac ops | After 10–20 mults |
-| findhom with many series/degree | Long kernel computation | Cap degree or document scaling | k≥4, n≥3 |
-| Naive etaq(1,T) as product of (1-q^n) | O(T·√T) for pentagonal | Consider Euler pentagonal theorem (stretch) | T ~ 500+ |
+| No Wasm compression | 3-5 MB download, 10+ second load on mobile | Serve with gzip/brotli. Most CDNs do this automatically. Verify with DevTools Network tab | Always — there's no reason not to compress |
+| Loading Wasm eagerly on every page | All documentation pages become slow | Lazy-load: only load Wasm on the playground page, use `client:visible` for the component | As soon as you have more than 3 documentation pages |
+| Static memoization caches grow unbounded in browser | `etaq` cache (`std::map<pair<int,int>, Series>`) grows without limit across multiple computations | Either clear caches periodically, expose `clear_cache()` to the playground, or set a cache size limit for Wasm builds | After 20+ sequential computations in one session |
+| Allocating fresh `std::string` for every `wasm_eval` return | Memory leak — returned strings are never freed from the Wasm heap | Use a static return buffer, or have the JS side call `Module._free()` after reading the result | After hundreds of evaluations in one session |
 
----
+## Security Mistakes
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| No computation timeout in Wasm | User enters `sum(q^(n^2), n, 0, 999999)` — tab hangs forever, possible DOS of their browser | Implement timeout via Worker termination. Kill worker after 30 seconds of computation |
+| No input length limit | User pastes a 10 MB expression — parser allocates enormous AST | Limit input to 10,000 characters in the JS layer before sending to Wasm |
+| Exposing raw Emscripten Module to page | `Module.ccall` can call any exported function; crafted input could probe memory | Only expose the `wasm_eval` wrapper. Don't export internal functions. Use `-sEXPORTED_FUNCTIONS=_wasm_eval` exclusively |
+| Serving Wasm over HTTP (not HTTPS) | Modern browsers restrict Wasm loading over insecure connections; also no Service Worker support | Always serve from HTTPS. Static site hosts (Cloudflare, Netlify, Vercel) provide this by default |
+
+## UX Pitfalls
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| No loading indicator while Wasm downloads | User sees an empty/broken playground for 3-10 seconds | Show a spinner or "Loading playground..." message. Hide the input area until Wasm is ready |
+| No "computing..." feedback during evaluation | User types `etaq(q,1,100)`, nothing happens for 2 seconds, user types it again | Show a "Computing..." indicator immediately on submit. Disable input until result returns |
+| Different behavior between CLI and browser | CLI supports `set_trunc(1000)` but browser limits to 200 — user is confused | Clearly document browser limitations. Show a message: "Browser playground limited to T≤200. Download the CLI for larger computations." |
+| No way to clear state / reset environment | User's variables accumulate, `q` gets overwritten, they're stuck | Add a "Reset" button that terminates the Worker and creates a fresh one |
+| Playground input doesn't support multi-line / backslash continuation | CLI supports `\` continuation but the playground textarea doesn't | Either support multi-line input (textarea with Shift+Enter) or document that the playground is single-expression only |
+| Output formatting differs between CLI and browser | CLI shows aligned columns; browser textarea has different font/width | Use a monospace font for output. Match the CLI's output formatting. Test with the longest expected output (e.g., `coeffs(f, 0, 50)`) |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Series inverse:** Off-by-one in sum index (j=1..n) — verify with `(1-q)*(1/(1-q))=1`
-- [ ] **prodmake:** Divisor sum excludes d=n — verify with Rogers-Ramanujan
-- [ ] **Truncation:** All binary ops use `min(T₁,T₂)` — grep for `trunc =`
-- [ ] **Frac reduction:** Every constructor and op calls `reduce()` — grep for `reduce`
-- [ ] **BigInt division:** Handles 0, negatives, base boundaries — run division test suite
-- [ ] **etamake:** Has max iteration and failure reporting — try on non-eta series
-- [ ] **jacprodmake:** Uses ~80% match + reconstruction check — verify on Rogers-Ramanujan
-
----
+- [ ] **Wasm eval:** Works for basic expressions but crashes on error input — verify `1/0`, `prodmake(0,10)`, `parse("(((")`
+- [ ] **Web Worker:** Computes correctly but has no timeout — verify with `sum(q^n, n, 0, 1000000)` that it doesn't hang forever
+- [ ] **Playground UI:** Terminal renders but doesn't handle paste — verify Ctrl+V works in xterm.js / textarea
+- [ ] **Compression:** Wasm is served but not compressed — check Content-Encoding header in DevTools
+- [ ] **Mobile:** Works on desktop but playground is unusable on mobile — test on actual phone/tablet (virtual keyboard, small screen)
+- [ ] **MIME types:** Works on dev server but `.wasm` 404s or wrong MIME in production — verify with `curl -I https://site/qseries.wasm`
+- [ ] **Memory cleanup:** Individual evaluations work but 50 sequential evaluations leak memory — check Wasm heap size after extended use
+- [ ] **Error messages:** C++ exceptions produce error strings but they're raw `what()` text — wrap in user-friendly messages
+- [ ] **Variable persistence:** Variables set in one evaluation are available in the next — verify `x := etaq(q,1,50)` then `prodmake(x, 40)` works
+- [ ] **Cache behavior:** Browser caches old `.wasm` file after deployment — verify cache-busting (content hash in filename or proper Cache-Control headers)
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Series inverse j=0 bug | LOW | Change loop to j=1..n; re-run `(1-q)*(1/(1-q))` test |
-| BigInt division wrong | MEDIUM | Add targeted division tests; fix quotient digit guess and remainder |
-| Frac growth | LOW | Add `reduce()` everywhere; may need to refactor Frac ops |
-| Truncation drift | LOW | Audit all Series-returning code; enforce `min(trunc)` rule |
-| prodmake divisor sum | LOW | Change sum to exclude d==n; re-run Rogers-Ramanujan |
-| etamake infinite loop | LOW | Add max iterations and failure path |
-| jacprodmake too strict | LOW | Implement 80% threshold and reconstruction check |
-
----
+| Main-thread Wasm (no Worker) | MEDIUM | Refactor to Worker-based architecture. The `wasm_eval` API doesn't change — only where it runs changes. 1-2 day refactor |
+| Wrong MIME type on hosting | LOW | Switch hosting provider or add `_headers` file. No code changes needed |
+| Binary size too large | MEDIUM | Add `-Os`, `--closure 1`, compression. May need module splitting if still too large. 1 day |
+| Exceptions disabled | LOW | Add `-fwasm-exceptions` flag. Test all error paths. Half-day fix |
+| Memory leak from string returns | LOW | Add `Module._free()` call in JS after reading result, or use static buffer. 1-2 hours |
+| xterm.js hydration failure | LOW | Add correct `client:visible` directive. 30-minute fix |
+| COOP/COEP breaks CDN resources | MEDIUM | Audit all cross-origin resources, add CORS headers, or switch to `credentialless` COEP. 1 day |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Series inverse index (j=1) | Phase 3 (series.h) | `(1-q)*(1/(1-q)) = 1` to truncation |
-| BigInt division edge cases | Phase 1 (bigint.h) | Division test suite (SPEC §Common Pitfalls) |
-| Frac reduction | Phase 2 (frac.h) | 6/4 → 3/2; 0/5 → 0/1; no growth in long chains |
-| Truncation propagation | Phase 3, 4 (series, qfuncs) | prodmake, findhom stable across truncations |
-| prodmake divisor sum (d<n) | Phase 5 (convert) | Rogers-Ramanujan → ±1 mod 5 denominators |
-| Inverse with minExp>0 | Phase 3 (series.h) | Invert q·(1-q), q²·(1+q) |
-| jacprodmake periodicity | Phase 5 (convert) | jacprodmake on Rogers-Ramanujan |
-| etamake infinite loop | Phase 5 (convert) | etamake on non-eta series returns failure |
-| Series mult trunc skip | Phase 3 (series.h) | Benchmark mult at T=200 |
-| findhom matrix size | Phase 7 (relations) | Document/compute monomial count |
-
----
-
-## Phase-Specific Warnings
-
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|----------------|------------|
-| bigint.h | Division, sign, base boundaries | Test 10⁹/1, 999999999/10⁹, negatives |
-| frac.h | Missing reduce, den≤0 | Reduce in every constructor and op |
-| series.h | Inverse j=0, trunc propagation, mult skip | Unit tests, checklist |
-| qfuncs.h | Truncation in subs_q, products | Propagate trunc in all helpers |
-| prodmake | Divisor sum d=n, c[n] sum j=n | Rogers-Ramanujan acceptance test |
-| etamake | No max iterations | Cap iterations, report failure |
-| jacprodmake | 100% periodicity | 80% match + reconstruction verify |
-| relations | Matrix explosion | Document C(n+k-1,k-1), consider caps |
-
----
+| Terminal I/O doesn't exist in browser | Wasm API design (earliest) | `wasm_eval("1+1")` returns `"2"` without any stdin/stdout |
+| Long computations freeze browser | Playground architecture (Web Worker setup) | `etaq(q,1,200)` completes without freezing UI; "Stop" button works |
+| Exceptions disabled by default | Wasm compilation (build flags) | `wasm_eval("1/0")` returns error string, doesn't abort module |
+| Binary size blowup | Wasm compilation + deployment | Compressed `.wasm` + JS < 1.5 MB total |
+| Memory growth performance | Wasm compilation (memory flags) | `etaq(q,1,100)` runs within 2x of native speed |
+| COOP/COEP header requirements | Deployment (hosting config) | `self.crossOriginIsolated` matches expectation; no console errors |
+| Astro component hydration | Documentation site setup | Playground page is interactive; doc pages have zero JS overhead |
+| GitHub Pages wrong MIME | Deployment (hosting choice) | `curl -I` returns `application/wasm` for `.wasm` files |
+| Unbounded memoization cache | Playground UX polish | "Reset" button clears state; memory doesn't grow indefinitely |
+| No computation timeout | Playground UX (cancel mechanism) | 30-second timeout terminates worker; user can continue |
 
 ## Sources
 
-- SPEC.md — Common Pitfalls and Warnings (project specification)
-- .cursorrules — Common Bugs to Avoid
-- EmergentMind: Multiplicative Inverse of Power Series (2025) — recurrence c_n = -(1/b₀) Σ_{k=1}^n b_k c_{n-k}
-- Math Stack Exchange 710252 — Power series reciprocal recurrence
-- janmr.com: Basic Multiple-Precision Long Division (2014) — iteration-dividend width, remainder invariant
-- GMP Rational Internals — GCD at each stage optimal; delay causes large GCDs
-- Andrews q-series (qseries.org, arXiv) — prodmake algorithm structure
+- [Emscripten Portability Guidelines](https://emscripten.org/docs/porting/guidelines/portability_guidelines.html) — code patterns that won't compile or run slowly in Wasm
+- [Emscripten C++ Exceptions Support](https://emscripten.org/docs/porting/exceptions.html) — `-fexceptions` vs `-fwasm-exceptions`, overhead analysis
+- [Emscripten Asyncify](https://emscripten.org/docs/porting/asyncify.html) — ~70% code size increase, runtime overhead analysis
+- [Emscripten Interacting with Code](https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html) — `ccall`, `cwrap`, `EXPORTED_FUNCTIONS`
+- [Emscripten Memory Settings](https://emscripten.org/docs/tools_reference/settings_reference.html) — `ALLOW_MEMORY_GROWTH`, `INITIAL_MEMORY`, `MAXIMUM_MEMORY`
+- [Emscripten Module Splitting](https://emscripten.org/docs/optimizing/Module-Splitting.html) — lazy loading of Wasm code
+- [Emscripten Pthreads / SharedArrayBuffer](https://emscripten.org/docs/porting/pthreads.html) — COOP/COEP header requirements
+- [xterm-pty](https://xterm-pty.netlify.app/) — bridge for xterm.js + Emscripten programs
+- [wasm-webterm](https://github.com/cryptool-org/wasm-webterm) — alternative xterm.js + Wasm integration
+- [web.dev: COOP and COEP](https://web.dev/articles/coop-coep) — cross-origin isolation requirements
+- [Starlight Customization Guide](https://starlight.astro.build/guides/customization) — component overrides, CSS layers
+- [Starlight CSS & Styling](https://starlight.astro.build/guides/css-and-tailwind) — cascade layer gotchas
+- [Starlight Overrides Reference](https://starlight.astro.build/reference/overrides/) — component override complexity warnings
+- [GitHub Pages WASM MIME issue](https://stackoverflow.com/questions/79381719/github-pages-page-wrong-mime-type) — confirmed `text/html` served for `.wasm`
+- [Cloudflare Pages Headers](https://developers.cloudflare.com/pages/configuration/headers) — `_headers` file for MIME type configuration
+- [Emscripten Deploying Pages](https://emscripten.org/docs/compiling/Deploying-Pages.html) — gzip compression for Wasm (60-75% reduction)
+- [StackOverflow: Cancel Wasm in Worker](https://stackoverflow.com/questions/57365381/how-to-cancel-a-wasm-process-from-within-a-webworker) — `worker.terminate()` vs cooperative cancellation
+- [ALLOW_MEMORY_GROWTH performance](https://emscripten-discuss.narkive.com/t2ZA8bo5) — 2x slowdown benchmark
+
+---
+*Pitfalls research for: C++20 REPL → WebAssembly playground + Astro Starlight documentation site*
+*Researched: 2026-02-27*

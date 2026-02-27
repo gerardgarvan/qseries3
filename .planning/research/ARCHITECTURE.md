@@ -1,288 +1,570 @@
-# Architecture Patterns: Mathematical Computation Systems
+# Architecture: Q-Series Documentation Website with Wasm Playground
 
-**Domain:** Layered mathematical computation (CAS, symbolic math, formal power series)
-**Researched:** 2025-02-24
-**Confidence:** MEDIUM–HIGH (project-specific layers from SPEC; ecosystem patterns from SymPy, FLINT, NTL)
+**Domain:** Documentation website with live WebAssembly playground for a C++20 CLI REPL
+**Researched:** 2026-02-27
+**Confidence:** HIGH (Astro Starlight, Emscripten, xterm.js are mature; xterm-pty is proven for this exact use case)
 
-## Standard Architecture
+## System Overview
 
-### System Overview
-
-Mathematical computation systems—CAS, number theory libraries, and formal power series tools—share a layered architecture. Data flows upward: each layer consumes types from the layer below and produces types consumed by the layer above.
+The website adds two new build targets to the existing qseries repo: (1) an Astro Starlight static documentation site, and (2) an Emscripten-compiled Wasm binary of the REPL. The Wasm binary runs inside a browser terminal (xterm.js + xterm-pty) embedded as a React island in the Starlight site.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        USER / REPL / PARSER                              │
-│  Commands, expressions, variable bindings, help                          │
-├─────────────────────────────────────────────────────────────────────────┤
-│                     ALGORITHM / DOMAIN LAYER                             │
-│  prodmake, etamake, jacprodmake, findhom, findnonhom, findpoly           │
-│  (Series → product/relation representations)                             │
-├─────────────────────────────────────────────────────────────────────────┤
-│                     FUNCTION / BUILDING-BLOCK LAYER                      │
-│  aqprod, qbin, etaq, theta2/3/4, tripleprod, quinprod, winquist, sift   │
-│  (Series in → Series out)                                                │
-├─────────────────────────────────────────────────────────────────────────┤
-│                     SERIES / POLYNOMIAL LAYER                            │
-│  Truncated power series: map<int, Coeff> + trunc                         │
-│  Arithmetic: +, -, *, /, inverse, pow, compose                           │
-├─────────────────────────────────────────────────────────────────────────┤
-│                     RATIONAL / COEFFICIENT LAYER                         │
-│  Exact rationals (Frac), auto-reduced via GCD                            │
-├─────────────────────────────────────────────────────────────────────────┤
-│                     INTEGER / FOUNDATION LAYER                           │
-│  BigInt: arbitrary precision signed integer                              │
-└─────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                        DEPLOYED STATIC SITE                          │
+│  ┌────────────────────┐  ┌─────────────────────────────────────────┐ │
+│  │  Starlight Pages   │  │         Playground Page                 │ │
+│  │  (HTML/CSS/JS)     │  │  ┌──────────────────────────────────┐  │ │
+│  │                    │  │  │  React Island (client:only)      │  │ │
+│  │  - Manual          │  │  │  ┌────────────┐ ┌─────────────┐ │  │ │
+│  │  - Function ref    │  │  │  │ xterm.js   │←│ xterm-pty   │ │  │ │
+│  │  - Tutorial        │  │  │  │ (terminal  │ │ (PTY layer  │ │  │ │
+│  │  - Examples        │  │  │  │  display)  │ │  + bridge)  │ │  │ │
+│  │                    │  │  │  └────────────┘ └──────┬──────┘ │  │ │
+│  │                    │  │  │                        │        │  │ │
+│  │                    │  │  │              ┌─────────▼──────┐ │  │ │
+│  │                    │  │  │              │ qseries.wasm   │ │  │ │
+│  │                    │  │  │              │ qseries.js     │ │  │ │
+│  │                    │  │  │              │ (Emscripten)   │ │  │ │
+│  │                    │  │  │              └────────────────┘ │  │ │
+│  │                    │  │  └──────────────────────────────────┘  │ │
+│  └────────────────────┘  └─────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-### Component Boundaries
+## Decision: Monorepo (website/ folder)
 
-| Component | Responsibility | Typical Implementation | Communicates With |
-|-----------|----------------|------------------------|-------------------|
-| **BigInt** | Arbitrary-precision integer arithmetic (+, -, *, divmod, gcd) | Base-10⁹ digits, `vector<uint32_t>`, schoolbook multiply/divide | Nothing (foundation) |
-| **Frac** | Exact rationals; normalize via GCD on every op | `num/den` with `BigInt`; `reduce()` after construction | BigInt |
-| **Series** | Truncated formal power series; sparse coeffs; propagate truncation | `map<int, Frac>` + `int trunc`; ordered iteration | Frac |
-| **qfuncs** | q-series building blocks (eta, theta, products) | Iterative products/sums producing Series | Series |
-| **convert** | Series → product forms (prodmake, etamake, jacprodmake) | Andrews recurrence, divisor extraction, period detection | Series, qfuncs, number-theory helpers |
-| **linalg** | Linear algebra over Q (Gaussian elimination, kernel) | Row reduction over `vector<vector<Frac>>` | Frac |
-| **relations** | Polynomial relations between series (findhom, findpoly) | Monomial generation, matrix build, kernel → relations | linalg, Series |
-| **parser** | Tokenize and parse expressions; recursive descent | AST; no math types | — |
-| **repl** | Read-eval-print loop; variable env; dispatch to functions | Orchestrates parser + eval + display | parser, all math |
+**Recommendation:** Single repo with a `website/` subfolder. Do NOT use a separate repo.
+
+**Rationale:**
+- The Wasm build compiles the same `src/*.h` + `src/main.cpp` files — a separate repo would need to pull them in
+- Documentation references code that changes with the REPL — keeping them in sync is automatic in a monorepo
+- Single CI workflow can build native binary, Wasm binary, and website in one pipeline
+- Astro Starlight projects are self-contained within their folder (own `node_modules/`, `package.json`)
+- No npm workspaces needed — `website/` is an independent Astro project that happens to live in the repo
+
+**Trade-off:** Repo gains ~200MB of `node_modules/` (gitignored) and ~50 files of website source. Acceptable for a project of this size.
+
+## Repository Structure (New Files)
+
+```
+qseries3/                          # ← existing repo root
+├── src/                            # ← existing C++ source (UNCHANGED)
+│   ├── bigint.h
+│   ├── frac.h
+│   ├── series.h
+│   ├── qfuncs.h
+│   ├── convert.h
+│   ├── linalg.h
+│   ├── relations.h
+│   ├── parser.h
+│   ├── repl.h
+│   └── main.cpp
+├── Makefile                        # ← existing (add wasm target)
+├── website/                        # ← NEW: Astro Starlight project
+│   ├── package.json
+│   ├── astro.config.mjs
+│   ├── tsconfig.json
+│   ├── src/
+│   │   ├── content/
+│   │   │   ├── docs/              # Markdown documentation pages
+│   │   │   │   ├── index.mdx      # Landing/intro page
+│   │   │   │   ├── getting-started.mdx
+│   │   │   │   ├── manual/        # User manual (from MANUAL.md)
+│   │   │   │   │   ├── basic-usage.mdx
+│   │   │   │   │   ├── functions.mdx
+│   │   │   │   │   └── examples.mdx
+│   │   │   │   ├── reference/     # Function reference
+│   │   │   │   │   ├── series-functions.mdx
+│   │   │   │   │   ├── product-functions.mdx
+│   │   │   │   │   └── relation-functions.mdx
+│   │   │   │   └── tutorial/      # Worked examples from qseriesdoc.md
+│   │   │   │       ├── rogers-ramanujan.mdx
+│   │   │   │       └── theta-identities.mdx
+│   │   │   └── config.ts
+│   │   ├── components/
+│   │   │   └── QSeriesPlayground.tsx  # React island: xterm.js + Wasm
+│   │   ├── pages/
+│   │   │   └── playground.astro       # Custom page hosting the React island
+│   │   └── styles/
+│   │       └── playground.css
+│   ├── public/
+│   │   ├── wasm/                  # Built Wasm artifacts (copied by build)
+│   │   │   ├── qseries.wasm
+│   │   │   ├── qseries.js
+│   │   │   └── qseries.worker.js
+│   │   ├── coi-serviceworker.js   # Cross-origin isolation for SharedArrayBuffer
+│   │   └── CNAME                  # Custom domain file
+│   └── node_modules/              # gitignored
+└── .github/
+    └── workflows/
+        └── deploy-website.yml     # NEW: CI/CD pipeline
+```
+
+### What's New vs Modified
+
+| Path | Status | Purpose |
+|------|--------|---------|
+| `website/` (entire tree) | **NEW** | Astro Starlight project |
+| `Makefile` | **MODIFIED** | Add `wasm` and `website` targets |
+| `.github/workflows/deploy-website.yml` | **NEW** | CI/CD: build wasm → build site → deploy |
+| `.gitignore` | **MODIFIED** | Add `website/node_modules/`, `website/dist/` |
+
+The `src/` directory is **not modified**. The Emscripten build reads the same source files as the native build.
+
+## Emscripten Build Pipeline
+
+### How It Works Alongside g++
+
+The existing build uses `g++ -std=c++20 -O2 -static`. The Emscripten build uses `em++ -std=c++20` with Wasm-specific flags. Both compile the same `src/main.cpp` which includes all headers.
+
+```
+                    src/main.cpp + src/*.h
+                           │
+              ┌────────────┴────────────┐
+              ▼                          ▼
+    g++ -std=c++20 -O2 -static    em++ -std=c++20 -O3 -sASYNCIFY
+              │                          │
+              ▼                          ▼
+    dist/qseries.exe              website/public/wasm/qseries.wasm
+    (native CLI binary)           website/public/wasm/qseries.js
+                                  (browser Wasm + JS glue)
+```
+
+### Emscripten Compilation Command
+
+```bash
+em++ -std=c++20 -O3 \
+  -sASYNCIFY \
+  -sFORCE_FILESYSTEM \
+  -sALLOW_MEMORY_GROWTH=1 \
+  -sEXPORTED_RUNTIME_METHODS='["callMain"]' \
+  -sMODULARIZE=1 \
+  -sEXPORT_NAME='createQSeries' \
+  --js-library=website/emscripten-pty.js \
+  -o website/public/wasm/qseries.mjs \
+  src/main.cpp
+```
+
+**Flag rationale:**
+
+| Flag | Why |
+|------|-----|
+| `-std=c++20` | Match native build; Emscripten supports C++20 via Clang/LLVM |
+| `-O3` | Critical with ASYNCIFY — unoptimized builds are 2-3x larger |
+| `-sASYNCIFY` | Allows blocking `getline()`/`fgets()` to yield to browser event loop |
+| `-sFORCE_FILESYSTEM` | REPL's `isatty()` checks need filesystem emulation |
+| `-sALLOW_MEMORY_GROWTH=1` | BigInt computations can use variable memory |
+| `-sMODULARIZE=1` | Exports a factory function, not global side effects |
+| `-sEXPORT_NAME='createQSeries'` | Clean import: `const mod = await createQSeries(...)` |
+| `--js-library=emscripten-pty.js` | xterm-pty's Emscripten integration library |
+
+### ASYNCIFY vs PROXY_TO_PTHREAD
+
+Two approaches exist for handling blocking stdin reads in the browser:
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| **ASYNCIFY** (recommended) | No SharedArrayBuffer needed, works everywhere, simpler deployment | ~70% Wasm size overhead, output not flushed during long computations |
+| **PROXY_TO_PTHREAD** | No size overhead, output streams in real-time | Requires SharedArrayBuffer → needs COOP/COEP headers → needs coi-serviceworker on GitHub Pages |
+
+**Recommendation: Start with ASYNCIFY.** It works on all browsers without special headers. The qseries REPL is interactive (short computations, then output) so the output-flushing limitation rarely matters. If binary size becomes a problem (>5MB), revisit PROXY_TO_PTHREAD.
+
+If switching to PROXY_TO_PTHREAD later, add `coi-serviceworker.js` to `website/public/` and a `<script>` tag in the layout. The architecture supports both without structural changes.
+
+### Source Compatibility Considerations
+
+The existing `src/repl.h` uses `isatty()` to distinguish interactive vs script mode:
+
+```cpp
+#ifdef _WIN32
+#define stdin_is_tty() _isatty(_fileno(stdin))
+#else
+#define stdin_is_tty() isatty(STDIN_FILENO)
+#endif
+```
+
+Under Emscripten with xterm-pty, `isatty()` returns `true` for the PTY-connected stdin — this is the correct behavior. The REPL will show the banner, prompt, and timing as if running in a real terminal. **No source modifications needed** for the basic Wasm build.
+
+The raw terminal input functions (`readLineRaw` with arrow keys, history) use platform-specific APIs that won't work under Emscripten. xterm-pty provides its own line discipline (input echo, line editing) so the REPL's non-TTY fallback path (`std::getline`) won't be hit. If `readLineRaw` uses `read(STDIN_FILENO, ...)` or Windows console APIs, a compile-time `#ifdef __EMSCRIPTEN__` guard may be needed to fall back to `std::getline`. This is a minor, localized change.
+
+## Astro Starlight Project Structure
+
+### Core Configuration
+
+`website/astro.config.mjs`:
+```javascript
+import { defineConfig } from 'astro/config';
+import starlight from '@astrojs/starlight';
+import react from '@astrojs/react';
+
+export default defineConfig({
+  site: 'https://qseries.example.com',
+  integrations: [
+    starlight({
+      title: 'Q-Series REPL',
+      sidebar: [
+        { label: 'Getting Started', link: '/getting-started/' },
+        {
+          label: 'Manual',
+          autogenerate: { directory: 'manual' },
+        },
+        {
+          label: 'Function Reference',
+          autogenerate: { directory: 'reference' },
+        },
+        {
+          label: 'Tutorial',
+          autogenerate: { directory: 'tutorial' },
+        },
+        { label: 'Playground', link: '/playground/' },
+      ],
+    }),
+    react(),
+  ],
+});
+```
+
+### Content Sources
+
+| Content | Source | Format |
+|---------|--------|--------|
+| User manual | Existing `MANUAL.md` (split into sections) | MDX |
+| Function reference | Generated from `help()` strings in `repl.h` | MDX |
+| Tutorial/examples | Existing `qseriesdoc.md` (Garvan tutorial) | MDX |
+| Playground | Custom Astro page with React island | `.astro` + `.tsx` |
+
+MDX is used instead of plain Markdown because the playground page and some reference pages need interactive components.
+
+## Wasm ↔ Browser Terminal Wiring
+
+### Component Stack
+
+```
+┌─────────────────────────────────────────────┐
+│  QSeriesPlayground.tsx (React component)     │
+│                                              │
+│  ┌──────────────────────────────────────┐   │
+│  │  xterm.js Terminal                    │   │
+│  │  - Renders terminal UI in a <div>     │   │
+│  │  - Handles keyboard input             │   │
+│  │  - Renders ANSI output                │   │
+│  └──────────┬───────────────────────────┘   │
+│             │ Terminal.onData / Terminal.write│
+│  ┌──────────▼───────────────────────────┐   │
+│  │  xterm-pty (PTY layer)                │   │
+│  │  - master ↔ slave pair                │   │
+│  │  - Line discipline (echo, editing)    │   │
+│  │  - Terminal signal handling (Ctrl+C)  │   │
+│  └──────────┬───────────────────────────┘   │
+│             │ emscripten-pty.js integration  │
+│  ┌──────────▼───────────────────────────┐   │
+│  │  Emscripten Runtime                   │   │
+│  │  - qseries.wasm (compiled REPL)       │   │
+│  │  - qseries.js (JS glue code)         │   │
+│  │  - Asyncify pause/resume on stdin     │   │
+│  └──────────────────────────────────────┘   │
+└─────────────────────────────────────────────┘
+```
 
 ### Data Flow
 
-**Upward flow (computation):**
-```
-User input (string)
-    ↓
-Parser → AST
-    ↓
-Eval: resolve vars, call built-ins
-    ↓
-qfuncs / convert / relations → Series (or product/relation representation)
-    ↓
-Series arithmetic (uses Frac → BigInt)
-    ↓
-Display: str(), series(), prodmake output, etc.
-```
+**User types `etaq(q,1,20)` + Enter:**
+1. xterm.js captures keystrokes → sends to PTY master
+2. PTY line discipline echoes characters, buffers until Enter
+3. PTY slave makes buffered line available to `read()` syscall
+4. Emscripten runtime (paused via Asyncify) resumes, `getline()` returns the line
+5. C++ REPL parses and evaluates → writes result to stdout
+6. Emscripten runtime's patched `write()` → PTY slave → line discipline → PTY master → xterm.js renders output
 
-**Algorithm-specific flows:**
-
-1. **prodmake (Andrews):** `Series` coeffs `b[0..T-1]` → recurrence `c[n]` → divisor extraction `a[n]` → product form. Depends on `divisors(n)`, `Frac` arithmetic.
-2. **findhom:** List of `Series` → monomial products → coefficient matrix → `kernel(M)` → relation polynomials. Depends on `linalg` kernel over `Frac`.
-3. **etamake:** `Series` → greedy cancellation with `etaq(k,T)` → eta-product representation. Depends on `qfuncs::etaq`.
-
-## Recommended Project Structure
-
-For Q-Series REPL (header-only, single binary):
+### React Component Architecture
 
 ```
-bigint.h       — Foundation: BigInt
-frac.h         — Rationals: Frac (uses BigInt)
-series.h       — Power series: Series (uses Frac)
-qfuncs.h       — aqprod, qbin, etaq, theta*, tripleprod, quinprod, winquist
-convert.h      — prodmake, etamake, jacprodmake, qfactor
-linalg.h       — Gaussian elimination, kernel over Q
-relations.h    — findhom, findnonhom, findhomcombo, findnonhomcombo, findpoly
-parser.h       — Tokenizer + recursive-descent parser
-repl.h         — REPL loop, variable env, help
-main.cpp       — Entry point
+website/src/components/QSeriesPlayground.tsx
 ```
 
-**Structure rationale:**
-- **bigint.h / frac.h / series.h:** Pure type + arithmetic. No domain logic. Each layer only imports the one below.
-- **qfuncs.h / convert.h:** Domain logic; depend only on Series (and number-theory helpers). No linalg.
-- **linalg.h:** Generic over Frac; used by relations only.
-- **relations.h:** Orchestrates Series + linalg + qfuncs (for etamake display).
-- **parser.h / repl.h:** Can be developed largely in parallel; depend on math APIs.
+```tsx
+// Pseudocode — structural outline, not final implementation
+import { useEffect, useRef } from 'react';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import { openpty } from 'xterm-pty';
 
-## Build Order and Dependencies
+export default function QSeriesPlayground() {
+  const termRef = useRef<HTMLDivElement>(null);
 
-**Recommended build order (bottom-up, each layer testable before the next):**
+  useEffect(() => {
+    const term = new Terminal({ cursorBlink: true, fontSize: 14 });
+    const fitAddon = new FitAddon();
+    term.loadAddon(fitAddon);
+    term.open(termRef.current!);
+    fitAddon.fit();
 
-| Phase | Components | Rationale |
-|-------|------------|-----------|
-| 1 | bigint.h | Foundation; no deps. Test division, sign handling, edge cases. |
-| 2 | frac.h | Needs BigInt. Test reduction, arithmetic. |
-| 3 | series.h | Needs Frac. Test (1-q)*(1/(1-q)) = 1, inverse recurrence. |
-| 4 | qfuncs.h | Needs Series. Test etaq(1,T) pentagonal, theta3, aqprod. |
-| 5 | convert.h | Needs Series, qfuncs (etaq), divisors. **prodmake is acceptance-critical** — Rogers–Ramanujan. |
-| 6 | linalg.h | Needs Frac. Test kernel over small rational matrices. |
-| 7 | relations.h | Needs linalg, Series, qfuncs. Test findhom for theta relations. |
-| 8 | parser.h | No math deps. Test expression parsing. |
-| 9 | repl.h | Needs parser + all math. Test full REPL. |
-| 10 | main.cpp | Entry point. |
+    const { master, slave } = openpty();
+    term.loadAddon(master);
 
-**Dependency DAG:**
-```
-BigInt
-  ↓
-Frac
-  ↓
-Series ← divisors, mobius (small helpers)
-  ↓
-qfuncs (aqprod, etaq, theta, ...)
-  ↓
-convert (prodmake, etamake, jacprodmake)
-  ↓
-relations (findhom, findpoly, ...)
-  ↑
-linalg (kernel over Q) — depends on Frac only
-```
+    // Load and run the Wasm REPL
+    import('/wasm/qseries.mjs').then(({ default: createQSeries }) => {
+      createQSeries({
+        pty: slave,           // xterm-pty slave for I/O
+        // Emscripten module overrides handled by emscripten-pty.js
+      }).then(module => {
+        module.callMain([]);  // Start the REPL
+      });
+    });
 
-**Critical constraint:** prodmake and relations cannot be tested meaningfully until Series and qfuncs are correct. The Rogers–Ramanujan prodmake test is the primary acceptance gate.
+    return () => { term.dispose(); };
+  }, []);
 
-## Architectural Patterns
-
-### Pattern 1: Bottom-Up Type Stack
-
-**What:** Each layer defines types whose coefficients or components come from the layer below (BigInt → Frac → Series).
-
-**When to use:** Any exact-arithmetic math system.
-
-**Trade-offs:** Clear dependencies; changes at the bottom can ripple up. Benefit: correctness of BigInt/Frac/Series guarantees correctness of higher layers.
-
-**Example:**
-```cpp
-// Frac uses BigInt
-struct Frac { BigInt num, den; };
-
-// Series uses Frac
-struct Series { std::map<int, Frac> c; int trunc; };
-```
-
-### Pattern 2: Truncation Propagation
-
-**What:** Every binary operation on truncated series sets `result.trunc = min(a.trunc, b.trunc)`. Unary ops preserve trunc. Never produce coefficients at or beyond trunc.
-
-**When to use:** Formal power series with explicit precision.
-
-**Trade-offs:** Simpler reasoning; no implicit precision. Must thread truncation through all Series APIs.
-
-**Example:**
-```cpp
-Series operator*(const Series& a, const Series& b) {
-    Series r;
-    r.trunc = std::min(a.trunc, b.trunc);
-    for (auto& [e1, c1] : a.c)
-        for (auto& [e2, c2] : b.c)
-            if (e1 + e2 < r.trunc)
-                r.c[e1 + e2] += c1 * c2;
-    return r;
+  return <div ref={termRef} style={{ height: '500px' }} />;
 }
 ```
 
-### Pattern 3: Sparse Series with Ordered Map
+### Playground Page
 
-**What:** Store only nonzero coefficients in `std::map<int, Coeff>`. Iteration is in exponent order.
+```
+website/src/pages/playground.astro
+```
 
-**When to use:** q-series and many special functions; coefficients are sparse.
+```astro
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import QSeriesPlayground from '../components/QSeriesPlayground';
+---
 
-**Trade-offs:** Memory-efficient for sparse series; ordered iteration needed for display, prodmake, and coefficient extraction. `std::map` (not `unordered_map`) is required.
+<StarlightPage frontmatter={{ title: 'Interactive Playground', description: 'Try qseries in your browser' }}>
+  <QSeriesPlayground client:only="react" />
+</StarlightPage>
+```
 
-### Pattern 4: Immutable Expression Trees (CAS-Style)
+**`client:only="react"`** is critical: the playground has no server-side representation (xterm.js, Wasm loading are browser-only). This directive skips SSR entirely and only hydrates in the browser.
 
-**What:** Expressions as trees; `expr.func(*expr.args) == expr`; immutability enables hashing and caching. (SymPy pattern.)
+## Build and Deployment Pipeline
 
-**When to use:** Full CAS with symbolic simplification. **Not used in Q-Series REPL** — we evaluate to Series immediately.
+### Makefile Additions
 
-**Trade-offs:** Flexible, extensible; heavier than direct Series evaluation. Q-Series REPL uses parse → eval → Series, not symbolic trees.
+```makefile
+# Wasm build (requires emsdk activated)
+wasm: website/public/wasm/qseries.mjs
 
-### Pattern 5: Algorithm Selection by Operand Size
+website/public/wasm/qseries.mjs: src/main.cpp src/*.h
+	mkdir -p website/public/wasm
+	em++ -std=c++20 -O3 \
+	  -sASYNCIFY -sFORCE_FILESYSTEM -sALLOW_MEMORY_GROWTH=1 \
+	  -sMODULARIZE=1 -sEXPORT_NAME='createQSeries' \
+	  --js-library=website/emscripten-pty.js \
+	  -o website/public/wasm/qseries.mjs \
+	  src/main.cpp
 
-**What:** Choose algorithms (schoolbook vs Karatsuba vs FFT) based on operand size. (FLINT/NTL pattern.)
+# Website dev server (for local development)
+website-dev:
+	cd website && npm run dev
 
-**When to use:** High-performance libraries. **Deferred for Q-Series** — schoolbook is sufficient for typical truncations (T ≤ 500).
+# Website production build
+website-build: wasm
+	cd website && npm run build
+```
 
-## Anti-Patterns to Avoid
+### GitHub Actions Pipeline
 
-### Anti-Pattern 1: Skipping Frac Reduction
+```
+.github/workflows/deploy-website.yml
+```
 
-**What people do:** Build Fracs without calling `reduce()` after each operation.
+```yaml
+name: Deploy Website
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
-**Why it's wrong:** Numerators and denominators grow exponentially; GCD and display become expensive; risk of overflow.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
-**Do this instead:** Call `reduce()` in every Frac constructor and after every arithmetic operation.
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
-### Anti-Pattern 2: Wrong Inverse Recurrence Index
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Checkout
+      - uses: actions/checkout@v4
 
-**What people do:** In `Series::inverse()`, use `Σ_{j=0}^{n} c_j * g[n-j]` (including j=0).
+      # 2. Setup Emscripten
+      - uses: mymindstorm/setup-emsdk@v14
 
-**Why it's wrong:** Mathematically incorrect; the recurrence is `g[n] = -(1/c₀) Σ_{j=1}^{n} c_j g[n-j]`.
+      # 3. Build Wasm binary
+      - name: Build qseries.wasm
+        run: make wasm
 
-**Do this instead:** Loop j from 1 to n, not 0 to n.
+      # 4. Setup Node.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-### Anti-Pattern 3: Divider Sum Including d=n in prodmake
+      # 5. Install website dependencies
+      - name: Install dependencies
+        working-directory: website
+        run: npm ci
 
-**What people do:** In prodmake step 3, use `Σ_{d|n} d*a[d]` including `d=n`.
+      # 6. Build Astro site
+      - name: Build website
+        working-directory: website
+        run: npm run build
 
-**Why it's wrong:** The inversion formula requires `Σ_{d|n, d<n} d*a[d]`; `a[n]` is solved from that.
+      # 7. Upload artifact
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: website/dist
 
-**Do this instead:** Exclude `d = n` in the divisor sum.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+```
 
-### Anti-Pattern 4: Dense Series for Sparse q-Series
+**Build order is strict:** Wasm binary must be built before `npm run build` because Astro copies `public/wasm/*` into the final `dist/` during its build step.
 
-**What people do:** Use `vector<Frac>` indexed by exponent.
+### Local Development Workflow
 
-**Why it's wrong:** Wastes memory; many q-series have few nonzero terms up to truncation.
+```bash
+# One-time setup
+cd website && npm install
 
-**Do this instead:** Use `std::map<int, Frac>` for sparse storage with ordered iteration.
+# Option A: Full rebuild (after C++ changes)
+make wasm              # Rebuild Wasm binary
+cd website && npm run dev  # Start Astro dev server with hot reload
 
-### Anti-Pattern 5: Building Layers Out of Order
+# Option B: Docs-only changes (no C++ changes)
+cd website && npm run dev  # Wasm binary already in public/wasm/
+```
 
-**What people do:** Implement prodmake or relations before Series arithmetic is verified.
+Astro's dev server hot-reloads Markdown and component changes. Wasm binary changes require a manual `make wasm` because Emscripten is not part of the Astro dev pipeline.
 
-**Why it's wrong:** Bugs in prodmake are indistinguishable from bugs in Series inverse or multiplication.
+## Dependency Summary
 
-**Do this instead:** Validate each layer before the next. Use `(1-q)*(1/(1-q)) = 1` as a Series sanity check.
+### Website npm Dependencies
 
-## Data Flow Summary
+| Package | Purpose | Required |
+|---------|---------|----------|
+| `astro` | Static site framework | Yes |
+| `@astrojs/starlight` | Documentation theme | Yes |
+| `@astrojs/react` | React integration for islands | Yes |
+| `react` + `react-dom` | UI framework for playground | Yes |
+| `@xterm/xterm` | Terminal emulator component | Yes |
+| `@xterm/addon-fit` | Auto-resize terminal to container | Yes |
+| `xterm-pty` | PTY bridge for Emscripten I/O | Yes |
 
-| Flow | Direction | Key Types |
-|------|-----------|-----------|
-| User → Eval | Down | string → AST |
-| Eval → Series | Down | AST → Series (via qfuncs/convert) |
-| Series → Product | Algorithm | Series coeffs → a[n] → product representation |
-| Relations | Algorithm | List&lt;Series&gt; → matrix → kernel → polynomials |
-| Display | Up | Series / product / relation → string |
+### Build-time Dependencies
 
-## Integration Points
+| Tool | Purpose | Where |
+|------|---------|-------|
+| `emsdk` / `em++` | Compile C++ to Wasm | CI + local dev |
+| Node.js 20+ | Run Astro build | CI + local dev |
+| `g++` (existing) | Native binary | Existing — unchanged |
 
-### Internal Boundaries
+### xterm-pty Integration File
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Parser ↔ REPL | AST, variable names | Parser is stateless; REPL holds env |
-| REPL ↔ Math | Function calls with Series/params | REPL resolves names, dispatches to qfuncs/convert/relations |
-| convert ↔ qfuncs | etaq(k,T) calls | etamake uses etaq for cancellation |
-| relations ↔ linalg | Matrix of Frac, kernel result | relations builds matrix, linalg returns kernel basis |
+The `emscripten-pty.js` file from the xterm-pty package is needed at Emscripten compile time (passed via `--js-library`). Place it at `website/emscripten-pty.js`. It can be copied from the xterm-pty npm package or downloaded from the xterm-pty GitHub repository.
 
-### Number Theory Helpers
+## Custom Domain Deployment
 
-Small helpers (`divisors`, `mobius`, `sigma`, `euler_phi`) are used by prodmake and optionally elsewhere. They belong in a lightweight utility layer (or inline in convert.h) — no BigInt needed for typical T.
+For GitHub Pages with a custom domain:
 
-## Scaling Considerations
+1. Set `site: 'https://yourdomain.com'` in `astro.config.mjs`
+2. Place a `CNAME` file in `website/public/` containing the domain name
+3. Configure DNS: CNAME record pointing to `username.github.io`
+4. Enable HTTPS in GitHub Pages settings (automatic with GitHub-managed certs)
 
-For a single-binary REPL targeting T ≤ 500:
+No `base` path needed when using a custom domain (unlike `username.github.io/repo-name` which requires `base: '/repo-name'`).
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| T ≤ 100 | Current design is sufficient. Schoolbook BigInt, no caching. |
-| T ~ 500 | Memoize etaq(k,T) for repeated k,T. Consider lazy coefficient evaluation only if needed. |
-| T > 1000 | Karatsuba for BigInt multiply; FFT-based series multiply; batch eta product construction. |
+## Integration Points Between Phases
 
-**First bottleneck:** Series multiplication (O(T²) coefficient pairs, each a Frac multiply). Optimize inner loop (skip e1+e2 ≥ trunc early).
+### Dependency Graph
 
-**Second bottleneck:** findhom monomial count C(n+k-1, k-1) and matrix size. Limit degree n and list size k in REPL.
+```
+Phase: Build Wasm Binary
+    │
+    ├── Depends on: existing src/*.h + src/main.cpp (no changes)
+    │   May need: small #ifdef __EMSCRIPTEN__ in repl.h for readLineRaw
+    │
+    ▼
+Phase: Scaffold Astro Starlight Site
+    │
+    ├── Independent of Wasm (can be done in parallel)
+    │   Produces: website/ skeleton with docs pages
+    │
+    ▼
+Phase: Build Playground Component
+    │
+    ├── Depends on: Wasm binary exists + Astro site exists
+    │   Wires: xterm.js + xterm-pty + qseries.wasm
+    │
+    ▼
+Phase: Write Documentation Content
+    │
+    ├── Independent (can be done in parallel with playground)
+    │   Sources: MANUAL.md, qseriesdoc.md
+    │
+    ▼
+Phase: CI/CD Pipeline
+    │
+    ├── Depends on: all above working locally
+    │   Produces: automated build + deploy
+    │
+    ▼
+Phase: Custom Domain + Polish
+    │
+    └── Depends on: site deployed to GitHub Pages
+```
+
+### Parallelization Opportunities
+
+| Can Run In Parallel | Why |
+|---------------------|-----|
+| Astro scaffold + Wasm build | No dependency between them |
+| Documentation content + Playground component | Content is Markdown; playground is React+Wasm |
+| CI pipeline setup + content writing | CI config doesn't block content |
+
+| Must Be Sequential | Why |
+|--------------------|-----|
+| Wasm build → Playground component | Playground needs the .wasm file to load |
+| Astro scaffold → Playground page | Playground page lives inside the Astro project |
+| Everything → CI/CD | CI automates what must already work locally |
+
+## Component Boundaries
+
+| Component | Responsibility | Inputs | Outputs | Communicates With |
+|-----------|---------------|--------|---------|-------------------|
+| **Emscripten build** | Compile C++ to Wasm | `src/*.h`, `src/main.cpp` | `qseries.wasm`, `qseries.js` | Makefile target |
+| **Astro Starlight** | Static site generation | MDX content, config | HTML/CSS/JS in `dist/` | Content authors |
+| **QSeriesPlayground** | Browser terminal UI | Wasm binary, user input | Terminal display | xterm.js, xterm-pty, Emscripten |
+| **xterm-pty** | PTY emulation layer | Keystrokes from xterm.js | Buffered lines to Wasm | xterm.js ↔ Emscripten runtime |
+| **coi-serviceworker** | COOP/COEP header injection | (none) | HTTP headers on first load | Only needed if using PROXY_TO_PTHREAD |
+| **GitHub Actions** | CI/CD automation | Push to main | Deployed site | emsdk, Node.js, GitHub Pages |
 
 ## Sources
 
-- [SymPy Architecture](https://www.cfm.brown.edu/people/dobrush/am33/SymPy/architecture.html) — expression trees, Basic class, immutability
-- [FLINT fmpz_poly](https://flintlib.org/doc/fmpz_poly.html) — polynomials over integers, coefficient types
-- [FLINT overview](https://flintlib.org/index.html) — layered rings: integers → rationals → polynomials
-- [NTL Library](https://libntl.org/) — C++ number theory, polynomials, similar layering
-- SPEC.md, .cursorrules — Q-Series REPL layer definitions and constraints
+- [Astro Starlight Project Structure](https://starlight.astro.build/guides/project-structure) — official docs, HIGH confidence
+- [Astro Starlight Custom Pages](https://starlight.astro.build/guides/pages) — StarlightPage wrapper for custom pages
+- [Astro Islands Architecture](https://docs.astro.build/ar/concepts/islands/) — client:only, client:load directives
+- [Emscripten Asyncify](https://emscripten.org/docs/porting/asyncify.html) — official docs on async C++ in browser
+- [Emscripten Pthreads](https://emscripten.org/docs/porting/pthreads.html) — PROXY_TO_PTHREAD alternative
+- [xterm-pty GitHub](https://github.com/mame/xterm-pty) — PTY bridge for Emscripten CUI programs, HIGH confidence (VIM demo proves it works)
+- [xterm-pty Emscripten integration](https://github.com/mame/xterm-pty#emscripten-integration) — exact compile flags and wiring
+- [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) — SharedArrayBuffer on static hosts
+- [Astro GitHub Pages Deployment](https://docs.astro.build/en/guides/deploy/github) — official withastro/action
+- [mymindstorm/setup-emsdk](https://github.com/mymindstorm/setup-emsdk) — GitHub Action for Emscripten in CI
+- [Emscripten C++20 Support](https://stackoverflow.com/questions/74508184/emscripten-and-c-20) — confirmed working with -std=c++20
 
 ---
-*Architecture research for: Layered mathematical computation (CAS, formal power series)*
-*Researched: 2025-02-24*
+*Architecture research for: Q-Series documentation website with Wasm playground*
+*Researched: 2026-02-27*

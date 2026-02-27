@@ -1,168 +1,273 @@
-# Technology Stack
+# Technology Stack — Q-Series Website + Wasm Playground
 
-**Project:** Q-Series REPL (zero-dependency C++ mathematical software)
-**Researched:** 2025-02-24
-**Confidence:** HIGH
-
-## Why Zero Dependencies?
-
-The project mandates ZERO external libraries (no GMP, Boost, package managers). Rationale:
-- **Portability** — Single binary runs anywhere with no install step
-- **Reproducibility** — No version drift, no dependency hell
-- **Binary size** — Target < 2MB; GMP adds significant bloat
-- **Learning/control** — All arithmetic is explicit and auditable
-
-This is a deliberate design choice, not a limitation. The q-series domain (partition theory, modular forms) operates on moderate-sized integers: coefficients rarely exceed ~100 digits. Roll-your-own BigInt and exact rationals are well within reach.
-
----
+**Project:** Q-Series REPL Documentation Website with WebAssembly Playground
+**Researched:** 2026-02-27
+**Focus:** NEW stack additions only (existing C++20 CLI stack is unchanged)
 
 ## Recommended Stack
 
-### Core Compiler & Standard
+### Documentation Site Framework
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| g++ (GCC) | 11+ (13.3 recommended) | Compiler | Full C++20 support (modules, coroutines, concepts). GCC 11+ implements all C++20 features used by q-series REPL; GCC 13.3 is specified in SPEC.md. |
-| C++20 | `-std=c++20` | Language standard | Structured bindings, `std::gcd` (C++17), `std::lcm`, concepts, `[[nodiscard]]`, three-way comparison. Required by project. |
+| Astro | ^5.7 | Static site generator | Zero-JS by default, islands architecture for selective hydration. Starlight is purpose-built for docs. |
+| @astrojs/starlight | ^0.37 | Docs theme/framework | Built-in search (Pagefind), dark mode, sidebar nav, mobile-responsive, MDX support. No custom theme work needed. |
+| @astrojs/react | ^4.4 | React integration | Needed for interactive playground island. `client:load` directive hydrates only the REPL component. |
+| react / react-dom | ^19.0 | UI framework (playground only) | Drives the interactive Wasm REPL component. Astro renders everything else as static HTML. |
 
-**GCC C++20 status:** GCC 11+ has solid C++20 support. C++20 is marked "experimental" in GCC docs through GCC 14, but in practice core features (concepts, coroutines, ranges) work. For this project, GCC 11+ is sufficient; GCC 13.3 is the project-specified version.
+### WebAssembly Compilation
 
-### Build Configuration
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| Emscripten (emsdk) | ^4.0 | C++ → Wasm compiler | Only viable C++20 → Wasm toolchain. Supports `-std=c++20`, `std::map`, all stdlib features used by the codebase. |
 
-| Flag | Purpose | Why |
-|------|---------|-----|
-| `-std=c++20` | Enable C++20 | Project requirement |
-| `-O2` | Optimization | Balances speed and compile time; `-O3` may increase binary size with little gain for this workload |
-| `-static` | Static linking | Produce single binary with no runtime DLLs |
-| `-Wall -Wextra` | Warnings | Catch bugs early |
-
-**Build command:**
+**Critical compile command:**
 ```bash
-g++ -std=c++20 -O2 -static -Wall -Wextra -o qseries main.cpp
+em++ -std=c++20 -O2 -s MODULARIZE=1 -s EXPORT_ES6=1 \
+     -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
+     --bind -o qseries.js src/main.cpp
 ```
 
-**Windows cross-compile:**
-```bash
-x86_64-w64-mingw32-g++ -std=c++20 -O2 -static -o qseries.exe main.cpp
+Key flags:
+- `-std=c++20` — Match existing build standard
+- `-O2` — Balance speed/size (expect ~1-3 MB .wasm for this codebase)
+- `--bind` — Enable Embind for exposing `evaluate(string) → string` to JS
+- `-s MODULARIZE=1 -s EXPORT_ES6=1` — ES module output for Astro import
+- `-s ALLOW_MEMORY_GROWTH=1` — BigInt arithmetic may need dynamic memory
+
+### Browser Terminal UI
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| @xterm/xterm | ^5.5 | Terminal emulator in browser | Industry standard (powers VS Code terminal). Handles input, output, ANSI, scrollback. |
+| @xterm/addon-fit | ^0.10 | Auto-resize terminal | Makes terminal fill its container responsively. |
+
+**Why NOT xterm-pty or wasm-webterm:** These provide full PTY emulation (for programs that use raw termios). Our REPL already has a non-tty `std::getline` fallback path — we'll use a simpler architecture:
+1. xterm.js captures user input line-by-line
+2. JavaScript calls `Module.evaluate(line)` via Embind
+3. Result string is written back to xterm.js
+
+This avoids SharedArrayBuffer/COOP/COEP requirements, Asyncify overhead, and threading complexity. The existing `!stdin_is_tty()` code path in `repl.h` already handles piped/non-interactive input via `std::getline` — the Wasm build leverages this same path.
+
+### Deployment
+
+| Technology | Version | Purpose | Why |
+|------------|---------|---------|-----|
+| Cloudflare Pages | Free tier | Static site hosting | Free custom domains, unlimited static bandwidth, 25 MiB max file (plenty for .wasm), global CDN, `_headers` file for custom headers. |
+| GitHub Actions | N/A | CI/CD | Builds site + Wasm on push, deploys to Cloudflare Pages via Wrangler. |
+| wrangler | ^4.0 | Cloudflare CLI | `npx wrangler pages deploy dist` from CI. |
+
+**Why Cloudflare Pages over GitHub Pages:**
+- Cloudflare Pages supports `_headers` files natively for COOP/COEP headers (needed if we ever upgrade to threaded Wasm)
+- Faster global CDN
+- Same free tier, more generous limits (20,000 files, 500 builds/month)
+- Better custom domain UX (DNS + SSL automatic)
+
+### Supporting Tools
+
+| Library | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| sharp | ^0.33 | Image optimization | Only if adding screenshots/diagrams to docs. Astro uses it for `<Image>`. Install only if needed. |
+| Pagefind | built-in | Full-text search | Bundled with Starlight. No install needed. Indexes all docs at build time. |
+
+## Architecture Decision: Embind vs. Full Terminal Emulation
+
+**Decision: Use Embind `evaluate()` function, NOT full stdin/stdout emulation.**
+
+| Approach | Complexity | Requirements | UX |
+|----------|-----------|--------------|-----|
+| Embind `evaluate(line) → string` | Low | No threading, no SharedArrayBuffer, no Asyncify | Line-by-line REPL (matches CLI behavior) |
+| xterm-pty + Asyncify | High | SharedArrayBuffer, COOP/COEP headers, Asyncify bloat (+50-100% wasm size) | Char-by-char (unnecessary for math REPL) |
+| PROXY_TO_PTHREAD | Very High | SharedArrayBuffer, Web Workers, complex I/O proxying | Full terminal (overkill) |
+
+Rationale:
+- Users type math expressions, hit Enter, see results. Line-by-line is the natural UX.
+- The C++ code already has eval-a-string-return-result logic in `evalLine()` and the non-tty path.
+- Asyncify adds 50-100% to .wasm size and introduces subtle bugs with complex C++ (templates, exceptions).
+- SharedArrayBuffer requires COOP/COEP headers which break third-party embeds and complicate deployment.
+
+### What This Means for C++ Changes
+
+A thin Wasm entry point is needed — roughly:
+
+```cpp
+#ifdef __EMSCRIPTEN__
+#include <emscripten/bind.h>
+static Environment wasmEnv;
+static bool wasmInitialized = false;
+
+std::string wasmEvaluate(const std::string& input) {
+    if (!wasmInitialized) {
+        wasmEnv.set("T", Value(Series::one(100)));
+        wasmInitialized = true;
+    }
+    // Reuse existing evalLine() logic
+    // Return result as string
+}
+
+EMSCRIPTEN_BINDINGS(qseries) {
+    emscripten::function("evaluate", &wasmEvaluate);
+}
+#endif
 ```
-Note: MinGW-w64 static linking may still pull in `libwinpthread` on some setups; test on target. For pure POSIX (Cygwin, Linux), `-static` produces a fully self-contained binary.
 
+Conditional compilation (`#ifdef __EMSCRIPTEN__`) keeps the native CLI build unchanged.
+
+## Alternatives Considered
+
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| Docs framework | Astro Starlight | Docusaurus, MkDocs, VitePress | Starlight is lighter, faster builds, better Wasm island support via Astro islands |
+| Terminal UI | @xterm/xterm | jquery.terminal, custom `<textarea>` | xterm.js is the standard; jquery.terminal is smaller but less maintained |
+| Wasm bridge | Embind (`evaluate()`) | ccall/cwrap, full stdio emulation | Embind handles std::string natively; ccall requires manual memory management |
+| Hosting | Cloudflare Pages | GitHub Pages, Vercel, Netlify | CF Pages: best free tier for static + custom domain + header control |
+| JS framework for playground | React | Preact, Svelte, Vanilla JS | React has best xterm.js ecosystem; Preact viable but smaller community |
+
+## Wasm Build Size Estimates
+
+| Component | Estimated Size |
+|-----------|---------------|
+| qseries.wasm (O2, no Asyncify) | 1–3 MB |
+| qseries.js (glue code) | 50–150 KB |
+| xterm.js + addon-fit | ~300 KB |
+| Total playground payload | ~2–4 MB |
+
+Optimization levers if too large:
+- `-Oz` instead of `-O2` (smaller but slower)
+- `-s MINIMAL_RUNTIME=1` (strips unused runtime)
+- gzip/brotli compression (Cloudflare does this automatically, ~60-70% reduction)
+- Lazy-load playground (only fetch .wasm when user navigates to playground page)
+
+## Project Structure (New Files Only)
+
+```
+website/                          # Astro project root
+├── astro.config.mjs              # Starlight + React config
+├── package.json
+├── public/
+│   └── wasm/
+│       ├── qseries.js            # Emscripten glue (build artifact)
+│       └── qseries.wasm          # Compiled Wasm (build artifact)
+├── src/
+│   ├── content/
+│   │   └── docs/
+│   │       ├── index.mdx         # Landing page
+│   │       ├── manual/           # MANUAL.md converted to pages
+│   │       ├── tutorial/         # Tutorial examples from qseriesdoc.md
+│   │       └── playground.mdx    # Wasm REPL page
+│   └── components/
+│       └── Playground.tsx        # React: xterm.js + Wasm evaluate()
+├── _headers                      # Cloudflare response headers (COOP/COEP if needed later)
+└── wasm-build.sh                 # em++ build script
+```
+
+## Installation
+
+```bash
+# 1. Create Astro project with Starlight
+npm create astro@latest -- --template starlight website
+cd website
+
+# 2. Add React integration
+npx astro add react
+
+# 3. Install terminal UI
+npm install @xterm/xterm @xterm/addon-fit
+
+# 4. Install Emscripten (one-time, outside project)
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk && ./emsdk install latest && ./emsdk activate latest
+source ./emsdk_env.sh
+
+# 5. Install deployment CLI
+npm install -D wrangler
+```
+
+## Key Integration Points
+
+### 1. Astro Config (astro.config.mjs)
+
+```javascript
+import { defineConfig } from 'astro/config';
+import starlight from '@astrojs/starlight';
+import react from '@astrojs/react';
+
+export default defineConfig({
+  site: 'https://qseries.example.com',
+  integrations: [
+    starlight({
+      title: 'Q-Series REPL',
+      sidebar: [
+        { label: 'Getting Started', link: '/' },
+        { label: 'Manual', autogenerate: { directory: 'manual' } },
+        { label: 'Tutorials', autogenerate: { directory: 'tutorial' } },
+        { label: 'Playground', link: '/playground' },
+      ],
+    }),
+    react(),
+  ],
+});
+```
+
+### 2. Playground Page (playground.mdx)
+
+```mdx
 ---
-
-## BigInt Implementation Strategy
-
-### Base Choice: 10^9
-
-| Option | Pros | Cons | Verdict |
-|--------|------|------|---------|
-| Base 10^9 | Two digits fit in `uint64_t` (9+9 decimal digits); trivial decimal I/O; cp-algorithms reference | Slightly larger limb count than base 2^32 | **Use this** |
-| Base 2^32 | Max limb utilization; bitwise ops | Awkward decimal conversion; more complex I/O | Skip |
-| Base 10 | Simplest I/O | 10x more limbs; very slow | Skip |
-
-**Implementation:** Store digits in `std::vector<uint32_t>`, least-significant first. Each digit in `[0, 999999999]`. Use `uint64_t` for intermediate products (e.g. `a[i] * b[j]` fits).
-
-**Reference:** [cp-algorithms Big Integer](https://cp-algorithms.com/algebra/big-integer.html) — canonical base-10^9 approach.
-
-### Multiplication: Schoolbook Only
-
-| Algorithm | Complexity | Crossover | Verdict |
-|-----------|------------|-----------|---------|
-| Schoolbook | O(n²) | — | **Use this** |
-| Karatsuba | O(n^1.585) | ~320–640 bits (~100–200 decimal digits) | Skip for q-series |
-
-**Rationale:** SPEC.md states "our numbers rarely exceed ~100 digits." Karatsuba's crossover is typically 100+ digits; implementation overhead and constant factors often make schoolbook faster at this scale. Stack Overflow benchmarks show schoolbook beating poorly optimized Karatsuba on 500-digit numbers. **Do not add Karatsuba** until profiling proves it necessary.
-
-### Division: Long Division with Binary-Search Quotient
-
-**Algorithm:** Standard long division in base 10^9. For each quotient digit, binary-search in `[0, BASE-1]` for the largest `k` where `k * divisor <= remainder`. This is the trickiest BigInt operation; get borrowing and normalization right.
-
-**Reference:** [janmr.com Multiple-Precision Long Division](https://janmr.com/blog/2014/04/basic-multiple-precision-long-division/), GMP Basecase Division docs. SPEC.md explicitly recommends binary-search quotient digit selection.
-
+title: Interactive Playground
+description: Try q-series computations in your browser
 ---
+import Playground from '../../components/Playground.tsx';
 
-## Rational Arithmetic (Frac)
+<Playground client:load />
+```
 
-### Strategy: BigInt-Based, GCD on Every Operation
+### 3. Wasm Build Script (wasm-build.sh)
 
-| Option | Use? | Reason |
-|--------|------|--------|
-| `std::ratio` | No | Compile-time only; cannot hold runtime BigInt values |
-| Boost.Rational | No | External dependency; ruled out |
-| GMP `mpq_class` | No | External dependency; ruled out |
-| **Roll your own** | **Yes** | `struct Frac { BigInt num, den; };` with `reduce()` after every constructor and arithmetic op |
+```bash
+#!/bin/bash
+em++ -std=c++20 -O2 \
+  -s MODULARIZE=1 \
+  -s EXPORT_ES6=1 \
+  -s ALLOW_MEMORY_GROWTH=1 \
+  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
+  --bind \
+  -I../src \
+  -o website/public/wasm/qseries.js \
+  wasm_entry.cpp
+```
 
-**Critical:** Call `reduce()` after every Frac operation. `reduce()` must: (1) ensure `den > 0` (flip signs if needed), (2) compute `g = gcd(|num|, den)` and divide both by `g`, (3) normalize zero as `0/1`. Forgetting reduce causes **exponential BigInt growth** — a common bug.
+### 4. Cloudflare Pages _headers
 
-**GCD:** Use Euclidean algorithm with `BigInt::divmod`. C++17 `std::gcd` only works with built-in integers; implement `bigGcd(BigInt a, BigInt b)` yourself.
+```
+/*
+  X-Content-Type-Options: nosniff
 
----
+/wasm/*
+  Cache-Control: public, max-age=31536000, immutable
+  Content-Type: application/wasm
+```
 
-## Header-Only Architecture
+## What NOT to Add
 
-| Pattern | Purpose |
-|---------|---------|
-| All code in `.h` files | Single `main.cpp` includes headers; one compilation unit |
-| `inline` on all functions | Avoid ODR violations when definitions appear in headers |
-| Structs with methods, no virtual | No vtable; zero abstraction overhead |
-| `#include` order matters | `bigint.h` → `frac.h` → `series.h` → ... (dependency order) |
-
-**Why header-only:** Simplifies build (no `.cpp` objects to link), keeps binary small, matches SPEC.md layout. Use `inline` so the linker can merge duplicate definitions.
-
----
-
-## REPL & Parser: Roll Your Own
-
-**No external parser libraries** — use recursive-descent. The expression language is small (assignments, arithmetic, function calls, `sum`). Recursive-descent is ~200–400 lines and gives full control. Libraries like Boost.Spirit or flex/bison add dependencies and complexity; avoid them.
-
-**Line editing:** Simple `std::getline` with a history buffer is sufficient. Do not add readline (external dep). Arrow-key editing is a stretch goal; basic history (up/down) can be implemented with a `std::vector<std::string>` and index.
-
----
-
-## What NOT to Use
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| GMP, libgmp | External dependency; violates zero-deps constraint | Roll BigInt + Frac |
-| Boost (any) | External dependency; large | std + roll your own |
-| Karatsuba/FFT for multiplication | Premature; numbers too small | Schoolbook |
-| `float` / `double` in math pipeline | Breaks exactness; q-series require exact rationals | Frac only |
-| Base 10 or base 2^64 for BigInt | Base 10 too slow; 2^64 overflows in digit product | Base 10^9 |
-| Separate .cpp files | Adds link step; header-only is simpler | All inline in headers |
-
----
-
-## Binary Size Target (< 2MB)
-
-With `-static` and only the standard library:
-- BigInt + Frac + Series + qfuncs + convert + linalg + relations + parser + repl: typically 500KB–1.5MB
-- Static libstdc++ adds ~1–2MB depending on what’s used
-- **Total < 2MB is achievable** if you avoid pulling in heavy STL features (e.g. regex, iostreams abuse). Prefer `printf`/`puts` for simple output if size becomes an issue.
-
----
-
-## Version Compatibility
-
-| Component | Minimum | Recommended | Notes |
-|-----------|---------|-------------|-------|
-| GCC | 11 | 13.3 | C++20 features used: concepts, `[[nodiscard]]`, structured bindings |
-| C++ standard | C++20 | C++20 | Non-negotiable |
-| Standard library | libstdc++ (GCC) | — | No libc++ required |
-
----
+| Don't Add | Why |
+|-----------|-----|
+| GMP / Boost | Violates zero-dependency constraint; BigInt.h handles all arithmetic |
+| node-pty | Server-side only; we need browser terminal |
+| Asyncify | Unnecessary complexity — Embind evaluate() is simpler and smaller |
+| SSR / server functions | Pure static site; all computation runs client-side in Wasm |
+| Database | No user accounts, no persistence beyond browser session |
+| Tailwind CSS | Starlight's built-in styles are sufficient for docs |
+| Monaco Editor | Overkill for single-line math expressions; xterm.js is better fit |
+| Service workers | Premature optimization; add only if offline support requested |
 
 ## Sources
 
-| Source | Confidence | Topics |
-|--------|------------|--------|
-| [cp-algorithms Big Integer](https://cp-algorithms.com/algebra/big-integer.html) | HIGH | Base 10^9, schoolbook algorithms |
-| [GCC C++ Standards Support](https://www.gnu.org/software/gcc/projects/cxx-status.html) | HIGH | C++20 feature availability |
-| [GCC Link Options (-static)](https://gcc.gnu.org/onlinedocs/gcc/Link-Options.html) | HIGH | Static linking |
-| [janmr.com Multiple-Precision Long Division](https://janmr.com/blog/2014/04/basic-multiple-precision-long-division/) | MEDIUM | Division algorithm |
-| [Stack Overflow: BigInteger performance](https://stackoverflow.com/questions/23967334/biginteger-numbers-implementation-and-performance/23967901) | MEDIUM | Schoolbook vs Karatsuba |
-| SPEC.md, .cursorrules (workspace) | HIGH | Project constraints, BigInt/Frac design |
-| WebSearch: C++ BigInt without GMP, GCC static, MinGW | MEDIUM | Ecosystem patterns |
-
----
-
-*Stack research for: Zero-dependency C++ q-series mathematical REPL*
-*Researched: 2025-02-24*
+- Astro Starlight docs: https://starlight.astro.build/ (HIGH confidence)
+- Emscripten Embind docs: https://emscripten.org/docs/porting/connecting_cpp_and_javascript/embind.html (HIGH confidence)
+- Emscripten Asyncify docs: https://emscripten.org/docs/porting/asyncify.html (HIGH confidence)
+- xterm.js: https://xtermjs.org/ (HIGH confidence)
+- xterm-pty: https://xterm-pty.netlify.app/ (HIGH confidence — evaluated and rejected)
+- Cloudflare Pages limits: https://developers.cloudflare.com/pages/platform/limits/ (HIGH confidence)
+- Cloudflare Pages headers: https://developers.cloudflare.com/pages/configuration/headers (HIGH confidence)
+- Emscripten npm: npmjs.com/package/@xterm/xterm (HIGH confidence)
+- Astro React integration: https://docs.astro.build/en/guides/integrations-guide/react (HIGH confidence)
