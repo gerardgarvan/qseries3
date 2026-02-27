@@ -666,3 +666,49 @@ Plans:
 
 Plans:
 - [x] 40-01-PLAN.md — Create acceptance-v18.sh test script + Makefile target
+
+---
+
+## Milestone v2.0 (Robustness & Tutorial Coverage)
+
+**Objective:** Fix critical crash/hang bugs, harden input validation, and improve Garvan tutorial coverage.
+**Requirements:** ROBUST-01 through ROBUST-06, TUTORIAL-01, TUTORIAL-02
+
+### Progress
+
+- [ ] **Phase 41: Robustness & edge cases** - Fix 6 critical bugs + medium-priority hardening
+- [ ] **Phase 42: Garvan tutorial coverage** - Character Eisenstein UE(k,p,T), T_rn memoization, min/max builtins
+
+### Phase 41: Robustness & edge cases
+**Goal**: Fix all critical crash/hang bugs and key medium-severity issues
+**Depends on**: Phase 40
+**Requirements**: ROBUST-01 through ROBUST-09
+**Success Criteria** (what must be TRUE):
+  1. `etaq(0, 50)` throws error instead of hanging
+  2. `sift(f, 0, 0, 50)` throws error instead of hanging
+  3. Integer division by zero in expressions throws "division by zero" error
+  4. Deeply nested input `(((((...))))` (256+ levels) throws error, no crash
+  5. Integer literals exceeding int64_t range throw error
+  6. `pow(INT_MIN)` handled safely (no UB)
+  7. `std::bad_variant_access` never leaks to user
+  8. Unknown built-in suggests closest match
+  9. Integer-valued builtins can be assigned to variables
+  10. All existing acceptance tests still pass
+**Plans**: 2 plans
+
+Plans:
+- [ ] 41-01-PLAN.md — Validation guards: etaq k>0, sift n>0, pow limit, parser depth/overflow
+- [ ] 41-02-PLAN.md — REPL fixes: div-by-zero, safe variant access, Levenshtein suggestions, int assignment + acceptance tests
+
+### Phase 42: Garvan tutorial coverage
+**Goal**: Implement features needed to reproduce more qseriesdoc examples
+**Depends on**: Phase 41
+**Requirements**: TUTORIAL-01, TUTORIAL-02
+**Success Criteria** (what must be TRUE):
+  1. `T_rn(r, n, T)` uses memoization; T(0,30,50) completes in <2s
+  2. `min(a,b,...)` and `max(a,b,...)` built-ins work
+  3. Tutorial §4.2 Eisenstein example can be partially reproduced
+  4. Version updated to 2.0
+  5. MANUAL.md updated with new features
+  6. All existing acceptance tests still pass
+**Plans**: not yet planned
