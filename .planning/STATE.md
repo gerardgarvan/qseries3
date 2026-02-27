@@ -9,10 +9,10 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 43 — Wasm compile
 Plan: —
-Status: Defining requirements for v2.1 Website milestone
-Last activity: 2026-02-27 — Milestone v2.1 started
+Status: Not started (roadmap created, awaiting planning)
+Last activity: 2026-02-27 — Milestone v2.1 roadmap created (phases 43–47)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -92,6 +92,13 @@ Progress: [░░░░░░░░░░] 0%
 - Milestone v2.0 started: Robustness & Tutorial Coverage
 - Phase 41 added: Robustness & edge cases (ROBUST-01 through ROBUST-06)
 - Phase 42 added: Garvan tutorial coverage (TUTORIAL-01, TUTORIAL-02)
+- v2.0 committed and tagged
+- Milestone v2.1 started: Website (docs site + Wasm playground)
+- Phase 43 added: Wasm compile (WASM-01, WASM-02, WASM-03)
+- Phase 44 added: Astro Starlight scaffold (SITE-01, SITE-05)
+- Phase 45 added: Documentation content (SITE-02, SITE-03, SITE-04)
+- Phase 46 added: Playground (PG-01, PG-02, PG-03, WASM-04)
+- Phase 47 added: CI/CD & deployment (DEPLOY-01, DEPLOY-02)
 
 ### Pending Todos
 
@@ -104,7 +111,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 42-02-PLAN.md (version bump 2.0, MANUAL.md updates — Milestone v2.0 complete)
+Stopped at: v2.1 roadmap created (phases 43–47: Wasm compile, Starlight scaffold, doc content, playground, CI/CD)
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 

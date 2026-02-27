@@ -422,5 +422,28 @@ Requirements for milestone v2.1 — documentation website with live WebAssembly 
 
 ---
 
+## Traceability (v2.1)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| WASM-01 | Phase 43 | Pending |
+| WASM-02 | Phase 43 | Pending |
+| WASM-03 | Phase 43 | Pending |
+| WASM-04 | Phase 46 | Pending |
+| SITE-01 | Phase 44 | Pending |
+| SITE-02 | Phase 45 | Pending |
+| SITE-03 | Phase 45 | Pending |
+| SITE-04 | Phase 45 | Pending |
+| SITE-05 | Phase 44 | Pending |
+| PG-01 | Phase 46 | Pending |
+| PG-02 | Phase 46 | Pending |
+| PG-03 | Phase 46 | Pending |
+| DEPLOY-01 | Phase 47 | Pending |
+| DEPLOY-02 | Phase 47 | Pending |
+
+**Coverage:** 14/14 v2.1 requirements mapped ✓
+
+---
+
 *Requirements defined: 2025-02-24*
-*Last updated: 2026-02-27 after v2.1 requirements*
+*Last updated: 2026-02-27 after v2.1 roadmap*

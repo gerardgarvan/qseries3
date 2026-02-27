@@ -494,6 +494,15 @@ Plans:
 | 36. Expose NT helpers | 0/? | Not started | - |
 | 37. Convenience functions | 0/? | Not started | - |
 | 38. Math enrichment | 0/? | Not started | - |
+| 39. Update MANUAL.md | 1/1 | Complete | 2026-02-26 |
+| 40. Acceptance tests v1.8 | 1/1 | Complete | 2026-02-26 |
+| 41. Robustness & edge cases | 2/2 | Complete | 2026-02-27 |
+| 42. Garvan tutorial coverage | 2/2 | Complete | 2026-02-27 |
+| 43. Wasm compile | 0/? | Not started | - |
+| 44. Astro Starlight scaffold | 0/? | Not started | - |
+| 45. Documentation content | 0/? | Not started | - |
+| 46. Playground | 0/? | Not started | - |
+| 47. CI/CD & deployment | 0/? | Not started | - |
 
 ### Phase 30: Output on next line after input
 
@@ -716,3 +725,68 @@ Plans:
 Plans:
 - [ ] 42-01-PLAN.md — T_rn memoization + min/max integer builtins
 - [ ] 42-02-PLAN.md — Version bump 1.9→2.0, MANUAL.md updates, acceptance tests
+
+---
+
+## Milestone v2.1 (Website) — phases 43–47:
+
+- [ ] **Phase 43: Wasm compile** - C++ → WebAssembly via Emscripten with evaluate() API and exception safety
+- [ ] **Phase 44: Astro Starlight scaffold** - Documentation site skeleton with responsive layout, sidebar, search
+- [ ] **Phase 45: Documentation content** - Landing page, MANUAL.md conversion, Garvan tutorial with KaTeX
+- [ ] **Phase 46: Playground** - xterm.js terminal UI, Web Worker Wasm execution, example dropdown
+- [ ] **Phase 47: CI/CD & deployment** - GitHub Actions pipeline, Cloudflare Pages with correct .wasm MIME
+
+### Phase 43: Wasm compile
+**Goal**: C++ codebase compiles to WebAssembly with a working evaluate(expr) → string API
+**Depends on**: Phase 42 (current codebase must be stable)
+**Requirements**: WASM-01, WASM-02, WASM-03
+**Success Criteria** (what must be TRUE):
+  1. `emcc` compiles a Wasm entry point (main_wasm.cpp with `#ifdef __EMSCRIPTEN__`) to .wasm/.js; `evaluate("1+1")` returns `"2"` in Node.js
+  2. `evaluate("etaq(0,50)")` returns an error message string, not a module abort or Wasm trap
+  3. Compressed .wasm file (gzip) is under 1.5 MB
+  4. All REPL-level expressions work via evaluate() — series arithmetic, prodmake, theta functions, relations
+**Plans**: TBD
+
+### Phase 44: Astro Starlight scaffold
+**Goal**: Documentation site skeleton exists with responsive layout and navigation
+**Depends on**: Nothing (can scaffold independently of Wasm)
+**Requirements**: SITE-01, SITE-05
+**Success Criteria** (what must be TRUE):
+  1. `npm run dev` in `website/` serves a Starlight site with sidebar navigation, dark mode toggle, and responsive layout
+  2. Placeholder pages exist for each documentation section (manual, tutorial, playground)
+  3. Pagefind full-text search is integrated and functional (Starlight built-in)
+  4. `npm run build` produces static output in `website/dist/`
+**Plans**: TBD
+
+### Phase 45: Documentation content
+**Goal**: Landing page, manual reference, and tutorial content with math rendering
+**Depends on**: Phase 44 (site scaffold must exist)
+**Requirements**: SITE-02, SITE-03, SITE-04
+**Success Criteria** (what must be TRUE):
+  1. Landing page displays project overview, feature highlights, and download link
+  2. MANUAL.md content is converted to navigable HTML documentation sections (all 50+ built-ins reachable via sidebar)
+  3. Garvan tutorial examples render with KaTeX mathematics and explanatory commentary
+  4. Navigation between landing page, manual sections, and tutorials works seamlessly
+**Plans**: TBD
+
+### Phase 46: Playground
+**Goal**: Users can run q-series computations live in the browser
+**Depends on**: Phase 43 (Wasm binary), Phase 44 (site scaffold)
+**Requirements**: PG-01, PG-02, PG-03, WASM-04
+**Success Criteria** (what must be TRUE):
+  1. Playground page has terminal-style UI using xterm.js with monospace input/output
+  2. Wasm runs in a Web Worker — UI never freezes during long computations (e.g. prodmake with T=200)
+  3. Example dropdown preloads Rogers-Ramanujan, prodmake, theta function, and relation-finding examples
+  4. Loading spinner shown while Wasm downloads; computing indicator shown while evaluating
+  5. User can type `prodmake(sum(q^(n^2)/aqprod(q,q,n),n,0,8),50)` and get correct output in the browser
+**Plans**: TBD
+
+### Phase 47: CI/CD & deployment
+**Goal**: Push-to-deploy pipeline with correct Wasm serving on Cloudflare Pages
+**Depends on**: Phase 43, 44, 45, 46 (everything must be buildable)
+**Requirements**: DEPLOY-01, DEPLOY-02
+**Success Criteria** (what must be TRUE):
+  1. GitHub Actions workflow: push to main → build Wasm (Emscripten) → build site (Astro) → deploy to Cloudflare Pages
+  2. Deployed site serves `.wasm` files with correct `application/wasm` MIME type
+  3. Playground works end-to-end on the deployed URL (Wasm loads, evaluates, returns results)
+**Plans**: TBD
