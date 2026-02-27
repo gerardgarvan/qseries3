@@ -677,7 +677,7 @@ Plans:
 ### Progress
 
 - [x] **Phase 41: Robustness & edge cases** - Fix 6 critical bugs + medium-priority hardening (completed 2026-02-27)
-- [ ] **Phase 42: Garvan tutorial coverage** - Character Eisenstein UE(k,p,T), T_rn memoization, min/max builtins
+- [x] **Phase 42: Garvan tutorial coverage** - Character Eisenstein UE(k,p,T), T_rn memoization, min/max builtins (completed 2026-02-27)
 
 ### Phase 41: Robustness & edge cases
 **Goal**: Fix all critical crash/hang bugs and key medium-severity issues
