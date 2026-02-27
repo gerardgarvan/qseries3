@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 ## Current Position
 
 Phase: 43 — Wasm compile
-Plan: 01 complete
-Status: Plan 43-01 executed (Wasm guards + entry point + Makefile target)
-Last activity: 2026-02-27 — Phase 43-01 complete
+Plan: 02 complete
+Status: Plan 43-02 executed (Wasm test suites — Node.js + browser; checkpoint deferred)
+Last activity: 2026-02-27 — Phase 43-02 complete
 
-Progress: [██░░░░░░░░] 20%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
@@ -36,6 +36,7 @@ Progress: [██░░░░░░░░] 20%
 | Phase 42-garvan-tutorial-coverage P01 | ~14 | 2 tasks | 2 files |
 | Phase 42-garvan-tutorial-coverage P02 | ~10 | 2 tasks | 4 files |
 | Phase 43-wasm-compile P01 | ~7 | 2 tasks | 3 files |
+| Phase 43-wasm-compile P02 | ~1 | 1 task | 2 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,7 @@ Progress: [██░░░░░░░░] 20%
 - [Phase 42-garvan-tutorial-coverage]: Plan 42-01: T_rn memoized via wrapper+helper with qbin_fast addition recurrence (no division); T(0,30,50) from intractable to ~2s; min/max integer builtins with variadic args
 - [Phase 42-garvan-tutorial-coverage]: Plan 42-02: Version bump 1.9→2.0 across 7 locations in 4 files; MANUAL.md gains Integer Utilities section (min/max) and T_rn memoization note; Milestone v2.0 complete
 - [Phase 43-wasm-compile]: Plan 43-01: Emscripten guards in repl.h (4 #ifndef blocks); main_wasm.cpp with Embind evaluate()/get_banner(); Makefile wasm target; emsdk not installed so Wasm build untested
+- [Phase 43-wasm-compile]: Plan 43-02: test_wasm.mjs (16 assertions, 10 categories) and test_wasm.html (browser test page); checkpoint deferred until emsdk available
 
 ### Roadmap Evolution
 
@@ -113,7 +115,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Phase 43-01 complete (Wasm guards + main_wasm.cpp + Makefile wasm target)
+Stopped at: Phase 43-02 complete (Wasm test suites — Node.js + browser; checkpoint deferred)
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
