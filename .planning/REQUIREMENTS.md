@@ -381,5 +381,46 @@ Requirements for milestone v2.0 — fix critical bugs, harden input validation, 
 | TUTORIAL-01, TUTORIAL-02 | Phase 42 | Pending |
 
 ---
+
+## v2.1 Requirements (Website)
+
+Requirements for milestone v2.1 — documentation website with live WebAssembly playground.
+
+### Wasm Build
+
+- [ ] **WASM-01**: C++ compiles to WebAssembly via Emscripten with `evaluate(expr) → string` API (Embind)
+- [ ] **WASM-02**: C++ exception handling works in Wasm — errors return messages, not module abort
+- [ ] **WASM-03**: Wasm binary is <1.5 MB compressed (gzip/brotli)
+- [ ] **WASM-04**: Computations run in a Web Worker — UI never freezes during long operations
+
+### Documentation Site
+
+- [ ] **SITE-01**: Astro Starlight project in `website/` folder with responsive layout, dark mode, sidebar navigation
+- [ ] **SITE-02**: Landing page with feature highlights, download link, project overview
+- [ ] **SITE-03**: MANUAL.md converted to HTML documentation sections
+- [ ] **SITE-04**: Garvan tutorial examples with KaTeX math rendering and commentary
+- [ ] **SITE-05**: Full-text search via Starlight's built-in Pagefind
+
+### Playground
+
+- [ ] **PG-01**: Dedicated playground page with terminal-style UI (xterm.js)
+- [ ] **PG-02**: Preloaded example dropdown (Rogers-Ramanujan, prodmake, theta functions, etc.)
+- [ ] **PG-03**: Loading indicator while Wasm downloads, computing indicator while executing
+
+### Deployment
+
+- [ ] **DEPLOY-01**: Site deploys to Cloudflare Pages with correct `.wasm` MIME type
+- [ ] **DEPLOY-02**: GitHub Actions CI/CD pipeline: push → build Wasm → build site → deploy
+
+### Future (deferred from v2.1)
+
+- Shareable permalinks (URL hash encoding)
+- Inline "Try It" buttons in documentation
+- Custom domain DNS setup
+- Terminal mode upgrade (xterm-pty for full interactive REPL)
+- LocalStorage draft persistence
+
+---
+
 *Requirements defined: 2025-02-24*
-*Last updated: 2026-02-27 after v2.0 requirements*
+*Last updated: 2026-02-27 after v2.1 requirements*
