@@ -175,6 +175,8 @@ inline void clear_etaq_cache() {
 }
 
 inline Series etaq(const Series& q, int k, int T) {
+    if (k <= 0)
+        throw std::runtime_error("etaq: k must be positive, got " + std::to_string(k));
     bool standardQ = (q.c.size() == 1
                       && q.c.begin()->first == 1
                       && q.c.begin()->second == Frac(1));

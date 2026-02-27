@@ -11,6 +11,8 @@
 
 // sift(f, n, k, T): extract coefficients a_{n*i+k}, return Series Σ_i a_{n*i+k} q^i
 inline Series sift(const Series& f, int n, int k, int T) {
+    if (n <= 0)
+        throw std::runtime_error("sift: modulus n must be positive, got " + std::to_string(n));
     Series result;
     int i = 0;
     while (n * i + k < T) {
