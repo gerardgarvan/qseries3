@@ -200,21 +200,110 @@ struct BigInt {
         return *this + (-o);
     }
 
+    static std::vector<uint32_t> mulSchoolbook(const std::vector<uint32_t>& a, const std::vector<uint32_t>& b) {
+        std::vector<uint32_t> r(a.size() + b.size(), 0);
+        for (size_t i = 0; i < a.size(); ++i) {
+            uint64_t carry = 0;
+            for (size_t j = 0; j < b.size() || carry; ++j) {
+                uint64_t cur = r[i + j] + carry;
+                if (j < b.size())
+                    cur += a[i] * 1ULL * b[j];
+                r[i + j] = static_cast<uint32_t>(cur % BASE);
+                carry = cur / BASE;
+            }
+        }
+        while (r.size() > 1 && r.back() == 0) r.pop_back();
+        return r;
+    }
+
+    static std::vector<uint32_t> addVec(const std::vector<uint32_t>& a, const std::vector<uint32_t>& b) {
+        std::vector<uint32_t> r;
+        uint64_t carry = 0;
+        size_t n = std::max(a.size(), b.size());
+        for (size_t i = 0; i < n || carry; ++i) {
+            uint64_t cur = carry;
+            if (i < a.size()) cur += a[i];
+            if (i < b.size()) cur += b[i];
+            r.push_back(static_cast<uint32_t>(cur % BASE));
+            carry = cur / BASE;
+        }
+        return r;
+    }
+
+    static std::vector<uint32_t> subVec(const std::vector<uint32_t>& a, const std::vector<uint32_t>& b) {
+        std::vector<uint32_t> r = a;
+        uint64_t borrow = 0;
+        for (size_t i = 0; i < r.size(); ++i) {
+            int64_t cur = static_cast<int64_t>(r[i]) - borrow;
+            if (i < b.size()) cur -= static_cast<int64_t>(b[i]);
+            borrow = 0;
+            if (cur < 0) { cur += BASE; borrow = 1; }
+            r[i] = static_cast<uint32_t>(cur);
+        }
+        while (r.size() > 1 && r.back() == 0) r.pop_back();
+        return r;
+    }
+
+    static constexpr size_t KARATSUBA_THRESHOLD = 32;
+
+    static std::vector<uint32_t> karatsubaMultiply(const std::vector<uint32_t>& x, const std::vector<uint32_t>& y) {
+        size_t n = std::max(x.size(), y.size());
+        if (n < KARATSUBA_THRESHOLD)
+            return mulSchoolbook(x, y);
+
+        size_t half = n / 2;
+
+        auto split = [](const std::vector<uint32_t>& v, size_t m)
+            -> std::pair<std::vector<uint32_t>, std::vector<uint32_t>> {
+            if (v.size() <= m)
+                return {v, {0}};
+            std::vector<uint32_t> lo(v.begin(), v.begin() + m);
+            std::vector<uint32_t> hi(v.begin() + m, v.end());
+            while (lo.size() > 1 && lo.back() == 0) lo.pop_back();
+            while (hi.size() > 1 && hi.back() == 0) hi.pop_back();
+            return {lo, hi};
+        };
+
+        auto [x0, x1] = split(x, half);
+        auto [y0, y1] = split(y, half);
+
+        auto z0 = karatsubaMultiply(x0, y0);
+        auto z2 = karatsubaMultiply(x1, y1);
+        auto z1 = karatsubaMultiply(addVec(x0, x1), addVec(y0, y1));
+
+        z1 = subVec(z1, z0);
+        z1 = subVec(z1, z2);
+
+        std::vector<uint32_t> result(2 * n + 1, 0);
+
+        for (size_t i = 0; i < z0.size(); ++i)
+            result[i] = z0[i];
+
+        uint64_t carry = 0;
+        for (size_t i = 0; i < z1.size() || carry; ++i) {
+            uint64_t cur = result[half + i] + carry;
+            if (i < z1.size()) cur += z1[i];
+            result[half + i] = static_cast<uint32_t>(cur % BASE);
+            carry = cur / BASE;
+        }
+
+        carry = 0;
+        for (size_t i = 0; i < z2.size() || carry; ++i) {
+            uint64_t cur = result[2 * half + i] + carry;
+            if (i < z2.size()) cur += z2[i];
+            result[2 * half + i] = static_cast<uint32_t>(cur % BASE);
+            carry = cur / BASE;
+        }
+
+        while (result.size() > 1 && result.back() == 0) result.pop_back();
+        return result;
+    }
+
     BigInt operator*(const BigInt& o) const {
         if (isZero() || o.isZero()) return BigInt();
         BigInt r;
         r.neg = (neg != o.neg);
-        r.d.assign(d.size() + o.d.size(), 0);
-        for (size_t i = 0; i < d.size(); ++i) {
-            uint64_t carry = 0;
-            for (size_t j = 0; j < o.d.size() || carry; ++j) {
-                uint64_t cur = r.d[i + j] + carry;
-                if (j < o.d.size())
-                    cur += d[i] * 1ULL * o.d[j];
-                r.d[i + j] = static_cast<uint32_t>(cur % BASE);
-                carry = cur / BASE;
-            }
-        }
+        r.d = karatsubaMultiply(d, o.d);
         r.normalize();
         return r;
     }

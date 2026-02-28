@@ -506,7 +506,7 @@ Plans:
 | 48. Cleanup | 0/? | Complete    | 2026-02-28 |
 | 49. Single-page website | 0/? | Complete    | 2026-02-28 |
 | 50. Example audit | 0/? | Complete    | 2026-02-28 |
-| 51. ANSI Color + Clear Screen | 0/? | Not started | - |
+| 51. ANSI Color + Clear Screen | 0/? | Complete    | 2026-02-28 |
 | 52. Karatsuba Multiplication | 0/? | Not started | - |
 | 53. Series Optimization | 0/? | Not started | - |
 | 54. Benchmarking Suite | 0/? | Not started | - |
@@ -863,7 +863,7 @@ Plans:
 
 ## Milestone v4.0 (Core Improvements) — phases 51–56:
 
-- [ ] **Phase 51: ANSI Color + Clear Screen** - Colored prompt/errors/timing, Ctrl+L and clear command, Windows VT enablement, ansi.h utility (completed -)
+- [x] **Phase 51: ANSI Color + Clear Screen** - Colored prompt/errors/timing, Ctrl+L and clear command, Windows VT enablement, ansi.h utility (completed -) (completed 2026-02-28)
 - [ ] **Phase 52: Karatsuba Multiplication** - O(n^1.585) BigInt multiply for large operands, hybrid threshold at ~32 limbs (completed -)
 - [ ] **Phase 53: Series Optimization** - Inner-loop early break for 2-4x speedup on series multiplication (completed -)
 - [ ] **Phase 54: Benchmarking Suite** - bench_main.cpp with micro-benchmarks for BigInt, Series, etaq, prodmake; median reporting (completed -)
