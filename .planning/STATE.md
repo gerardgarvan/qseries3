@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 
 ## Current Position
 
-Phase: 44 — Starlight scaffold ✓ Plan 01 COMPLETE
+Phase: 45 — Documentation content, Plan 01 COMPLETE
 Plan: 01 complete
-Status: Astro Starlight site scaffolded in website/ — 16 placeholder pages, 4-group sidebar, teal theme, Pagefind search
-Last activity: 2026-02-27 — Phase 44 Plan 01 executed
+Status: KaTeX math pipeline, landing page with feature cards + RR demo, installation and quick-start pages
+Last activity: 2026-02-28 — Phase 45 Plan 01 executed
 
-Progress: [████░░░░░░] 45%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -38,6 +38,7 @@ Progress: [████░░░░░░] 45%
 | Phase 43-wasm-compile P01 | ~7 | 2 tasks | 3 files |
 | Phase 43-wasm-compile P02 | ~1 | 1 task | 2 files |
 | Phase 44-starlight-scaffold P01 | ~7 | 2 tasks | 24 files |
+| Phase 45-doc-content P01 | ~5 | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,7 @@ Progress: [████░░░░░░] 45%
 - [Phase 43-wasm-compile]: Plan 43-01: Emscripten guards in repl.h (4 #ifndef blocks); main_wasm.cpp with Embind evaluate()/get_banner(); Makefile wasm target; emsdk not installed so Wasm build untested
 - [Phase 43-wasm-compile]: Plan 43-02: test_wasm.mjs (16 assertions, 10 categories) and test_wasm.html (browser test page); checkpoint deferred until emsdk available
 - [Phase 44-starlight-scaffold]: Plan 44-01: Astro Starlight site in website/ with manual sidebar (4 groups, 16 slugs), teal accent theme, 16 placeholder pages, Pagefind search; npm run build produces dist/ with 17 HTML files
+- [Phase 45-doc-content]: Plan 45-01: KaTeX math pipeline (remark-math + rehype-katex + CSS fix); landing page with hero, 4 feature cards, RR KaTeX demo, Garvan attribution; installation page with build one-liner and platform notes; quick-start page with 6 REPL examples
 
 ### Roadmap Evolution
 
@@ -116,8 +118,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-27
-Stopped at: Completed 44-01-PLAN.md
+Last session: 2026-02-28
+Stopped at: Completed 45-01-PLAN.md (KaTeX + landing + getting-started)
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
