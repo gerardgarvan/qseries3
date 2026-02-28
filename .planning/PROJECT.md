@@ -8,16 +8,24 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 **Rogers-Ramanujan must work.** Given `Σ q^(n²) / (q;q)_n`, prodmake must recover the product form with denominators only at exponents ≡ ±1 (mod 5). If this test passes, the core math is correct. Everything else builds on it.
 
-## Current Milestone: v3.0 Simple Website & Example Audit
+## Current Milestone: v4.0 Core Improvements
 
-**Goal:** Replace the complex Astro/Wasm website with a single self-contained HTML page using the kangaroo-banner aesthetic, and audit every example across the project to ensure correctness.
+**Goal:** Improve REPL user experience with colored output, smarter completion, session management, and boost performance with Karatsuba multiplication and faster series ops.
 
 **Target features:**
-- Delete entire website/ directory (Astro Starlight, playground, KaTeX, CI/CD)
-- Single comprehensive HTML page: kangaroo sunset banner as hero, project overview, build instructions, key examples, full 40+ function reference
-- Design language: outback sunset gradient (#1a0a2e → #d4451a → #f7a634), gold accents (#ffe066), Bebas Neue + Outfit fonts, dark theme
-- Audit all examples in demo/garvan-demo.sh, MANUAL.md, and website docs — fix any that don't produce correct output
-- Remove GitHub Actions deploy workflow (no longer needed)
+- Colored/styled ANSI output (series, products, errors)
+- Smarter tab completion (auto-parentheses, argument hints)
+- Save/load session (variables and state)
+- Clear screen command
+- Faster series multiplication (optimized inner loop)
+- BigInt Karatsuba multiplication
+- Benchmarking suite
+
+---
+
+## Previous Milestone: v3.0 Simple Website & Example Audit ✓
+
+**Shipped:** Deleted old Astro/Wasm website, created single-page kangaroo-banner HTML (53-function reference, 4 examples), audited all docs examples (6 fixes), pushed to GitHub.
 
 ---
 

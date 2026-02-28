@@ -493,5 +493,51 @@ Requirements for milestone v3.0 — replace complex website with single HTML pag
 
 ---
 
+## v4.0 Requirements (Core Improvements)
+
+Requirements for milestone v4.0 — REPL UX polish and performance optimizations.
+
+### REPL UX
+
+- [ ] **UX-01**: ANSI colored output — prompt in gold, errors in red, timing in dim; auto-disabled for pipes/script mode; respects `NO_COLOR` env var
+- [ ] **UX-02**: Clear screen — Ctrl+L in raw terminal mode and `clear` command; works on Unix and Windows
+- [ ] **UX-03**: History persistence — command history saved to `~/.qseries_history` on exit, loaded on startup; max 1000 lines
+- [ ] **UX-04**: Tab completion: longest-common-prefix fill — multiple candidates share common prefix, fill to common prefix before listing
+- [ ] **UX-05**: Tab completion: auto-parentheses — completing a function name appends `(` automatically
+- [ ] **UX-06**: Save/load session — `save(name)` serializes environment to `.qsession` file; `load(name)` restores variables; human-readable text format with version header
+
+### Performance
+
+- [ ] **PERF-04**: Series multiplication early-break — skip inner loop iterations where exponent sum exceeds truncation; 2-4x speedup
+- [ ] **PERF-05**: Karatsuba BigInt multiplication — hybrid schoolbook/Karatsuba with threshold at ~32 limbs; O(n^1.585) for large operands
+- [ ] **PERF-06**: Benchmarking suite — `bench_main.cpp` with micro-benchmarks for BigInt multiply, Series multiply, etaq, prodmake; median reporting; `DoNotOptimize` barriers
+
+### Regression
+
+- [ ] **REG-01**: All existing acceptance tests pass after all changes
+- [ ] **REG-02**: Script mode output unchanged (no ANSI codes in piped output)
+
+---
+
+## Traceability (v4.0)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| UX-01 | Phase 51 | Pending |
+| UX-02 | Phase 51 | Pending |
+| UX-03 | Phase 56 | Pending |
+| UX-04 | Phase 55 | Pending |
+| UX-05 | Phase 55 | Pending |
+| UX-06 | Phase 56 | Pending |
+| PERF-04 | Phase 53 | Pending |
+| PERF-05 | Phase 52 | Pending |
+| PERF-06 | Phase 54 | Pending |
+| REG-01 | Phase 56 | Pending |
+| REG-02 | Phase 51 | Pending |
+
+**Coverage:** 11/11 v4.0 requirements mapped ✓
+
+---
+
 *Requirements defined: 2025-02-24*
-*Last updated: 2026-02-28 after v3.0 requirements*
+*Last updated: 2026-02-28 after v4.0 requirements*

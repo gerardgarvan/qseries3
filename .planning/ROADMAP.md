@@ -506,6 +506,12 @@ Plans:
 | 48. Cleanup | 0/? | Complete    | 2026-02-28 |
 | 49. Single-page website | 0/? | Complete    | 2026-02-28 |
 | 50. Example audit | 0/? | Complete    | 2026-02-28 |
+| 51. ANSI Color + Clear Screen | 0/? | Not started | - |
+| 52. Karatsuba Multiplication | 0/? | Not started | - |
+| 53. Series Optimization | 0/? | Not started | - |
+| 54. Benchmarking Suite | 0/? | Not started | - |
+| 55. Smart Tab Completion | 0/? | Not started | - |
+| 56. Session Save/Load + History | 0/? | Not started | - |
 
 ### Phase 30: Output on next line after input
 
@@ -852,3 +858,82 @@ Plans:
   2. Every example in `MANUAL.md` runs without error and produces correct output
   3. Every code snippet in the single-page website runs without error and produces correct output
   4. Any failing or incorrect examples have been fixed (in the example text or in the REPL code)
+
+---
+
+## Milestone v4.0 (Core Improvements) — phases 51–56:
+
+- [ ] **Phase 51: ANSI Color + Clear Screen** - Colored prompt/errors/timing, Ctrl+L and clear command, Windows VT enablement, ansi.h utility (completed -)
+- [ ] **Phase 52: Karatsuba Multiplication** - O(n^1.585) BigInt multiply for large operands, hybrid threshold at ~32 limbs (completed -)
+- [ ] **Phase 53: Series Optimization** - Inner-loop early break for 2-4x speedup on series multiplication (completed -)
+- [ ] **Phase 54: Benchmarking Suite** - bench_main.cpp with micro-benchmarks for BigInt, Series, etaq, prodmake; median reporting (completed -)
+- [ ] **Phase 55: Smart Tab Completion** - Longest-common-prefix fill and auto-parentheses on function completion (completed -)
+- [ ] **Phase 56: Session Save/Load + History Persistence** - ~/.qseries_history persistence, save/load commands, final regression gate (completed -)
+
+### Phase 51: ANSI Color + Clear Screen
+**Goal**: REPL output uses color for visual clarity; user can clear the screen
+**Depends on**: Phase 50
+**Requirements**: UX-01, UX-02, REG-02
+**Success Criteria** (what must be TRUE):
+  1. Prompt displays in gold, errors in red, timing in dim gray — visually distinct at a glance
+  2. `Ctrl+L` clears the screen in raw terminal mode; `clear` command clears via `\033[2J\033[H`
+  3. Piping output (`qseries < script.qs | cat`) produces zero ANSI escape codes in the output stream
+  4. `NO_COLOR` environment variable disables all color when set
+  5. Windows terminal displays colors correctly (VT processing enabled via `SetConsoleMode`)
+**Plans**: TBD
+
+### Phase 52: Karatsuba Multiplication
+**Goal**: BigInt multiplication is asymptotically faster for large operands
+**Depends on**: Phase 51
+**Requirements**: PERF-05
+**Success Criteria** (what must be TRUE):
+  1. Multiplying two 100-limb (~900-digit) BigInts uses Karatsuba and is measurably faster than schoolbook
+  2. Small operands (< 32 limbs) still use schoolbook — no regression on typical REPL workloads
+  3. `karatsuba(a,b) == schoolbook(a,b)` for random inputs at all size boundaries (correctness invariant)
+  4. All existing acceptance tests still pass
+**Plans**: TBD
+
+### Phase 53: Series Optimization
+**Goal**: Series multiplication is 2-4x faster through inner-loop early termination
+**Depends on**: Phase 52
+**Requirements**: PERF-04
+**Success Criteria** (what must be TRUE):
+  1. Series multiplication skips inner-loop iterations where exponent sum exceeds truncation
+  2. `prodmake(rr, 200)` completes measurably faster than before optimization
+  3. Rogers-Ramanujan prodmake still produces correct output (truncation invariant preserved)
+  4. All existing acceptance tests still pass
+**Plans**: TBD
+
+### Phase 54: Benchmarking Suite
+**Goal**: Developers can measure and compare performance of core operations
+**Depends on**: Phase 53
+**Requirements**: PERF-06
+**Success Criteria** (what must be TRUE):
+  1. `bench_main.cpp` exists as a separate binary with micro-benchmarks for BigInt multiply, Series multiply, etaq, and prodmake
+  2. Benchmark uses `std::chrono::steady_clock` with `DoNotOptimize` compiler barriers
+  3. Results report median of multiple runs (not mean) for noise resistance
+  4. `make bench` builds and runs the benchmark suite
+**Plans**: TBD
+
+### Phase 55: Smart Tab Completion
+**Goal**: Tab completion fills longest common prefix and appends parentheses for functions
+**Depends on**: Phase 54
+**Requirements**: UX-04, UX-05
+**Success Criteria** (what must be TRUE):
+  1. Pressing Tab with multiple matches fills to the longest common prefix before listing candidates
+  2. Completing a unique function name appends `(` automatically (e.g., `prod` → `prodmake(`)
+  3. Completing a variable name does NOT append `(` — only known functions get auto-parens
+  4. Existing Tab behavior for unique match and no-match cases is preserved
+**Plans**: TBD
+
+### Phase 56: Session Save/Load + History Persistence
+**Goal**: User can persist command history across sessions and save/load variable state
+**Depends on**: Phase 55
+**Requirements**: UX-03, UX-06, REG-01
+**Success Criteria** (what must be TRUE):
+  1. Command history is saved to `~/.qseries_history` on exit and loaded on startup; max 1000 lines
+  2. `save("name")` serializes the current environment to a `.qsession` file in human-readable text format with version header
+  3. `load("name")` restores variables from a `.qsession` file; user sees confirmation message
+  4. All existing acceptance tests pass after all v4.0 changes (final regression gate)
+  5. History persistence works on both Unix and Windows (home directory resolution)
+**Plans**: TBD
