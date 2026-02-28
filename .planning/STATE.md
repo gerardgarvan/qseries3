@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v4.0 (Core Improvements)
+**Current focus:** Milestone v4.1 (Distribution)
 
 ## Current Position
 
-Phase: 52 — Karatsuba Multiplication
-Plan: 01 complete (1 of 1)
-Status: Phase complete
-Last activity: 2026-02-28 — Phase 52 complete (Karatsuba multiplication)
+Phase: 57 — CI/CD Release Pipeline
+Plan: —
+Status: Not started
+Last activity: 2026-02-28 — Roadmap created for v4.1 (phases 57–59)
 
-Progress: [████░░░░░░] 33% (2/6 phases)
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -137,6 +137,10 @@ Progress: [████░░░░░░] 33% (2/6 phases)
 - Phase 54 added: Benchmarking Suite (PERF-06)
 - Phase 55 added: Smart Tab Completion (UX-04, UX-05)
 - Phase 56 added: Session Save/Load + History Persistence (UX-03, UX-06, REG-01)
+- Milestone v4.1 started: Distribution
+- Phase 57 added: CI/CD Release Pipeline (DIST-07, DIST-08)
+- Phase 58 added: Docker (DIST-01, DIST-02, DIST-03, DIST-09, REG-03)
+- Phase 59 added: Install Script (DIST-04, DIST-05, DIST-06)
 
 ### Pending Todos
 

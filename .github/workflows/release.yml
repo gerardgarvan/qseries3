@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            name: linux-amd64
+            static: -static
+          - os: macos-14
+            name: darwin-arm64
+            static: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          g++ -std=c++20 -O2 -Wall -Wextra ${{ matrix.static }} -o qseries src/main.cpp
+          ./qseries --version
+
+      - name: Run acceptance tests
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          mkdir -p dist
+          cp qseries dist/qseries.exe
+          chmod +x dist/qseries.exe
+          bash tests/acceptance.sh
+
+      - name: Rename binary
+        run: mv qseries qseries-${{ matrix.name }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qseries-${{ matrix.name }}
+          path: qseries-${{ matrix.name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare assets
+        run: |
+          mkdir -p release
+          cp artifacts/qseries-linux-amd64/qseries-linux-amd64 release/
+          cp artifacts/qseries-darwin-arm64/qseries-darwin-arm64 release/
+          cd release
+          sha256sum qseries-* > checksums-sha256.txt
+          cat checksums-sha256.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            release/qseries-linux-amd64
+            release/qseries-darwin-arm64
+            release/checksums-sha256.txt

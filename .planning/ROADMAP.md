@@ -507,10 +507,10 @@ Plans:
 | 49. Single-page website | 0/? | Complete    | 2026-02-28 |
 | 50. Example audit | 0/? | Complete    | 2026-02-28 |
 | 51. ANSI Color + Clear Screen | 0/? | Complete    | 2026-02-28 |
-| 52. Karatsuba Multiplication | 0/? | Not started | - |
-| 53. Series Optimization | 0/? | Not started | - |
-| 54. Benchmarking Suite | 0/? | Not started | - |
-| 55. Smart Tab Completion | 0/? | Not started | - |
+| 52. Karatsuba Multiplication | 0/? | Complete    | 2026-02-28 |
+| 53. Series Optimization | 0/? | Complete    | 2026-02-28 |
+| 54. Benchmarking Suite | 0/? | Complete    | 2026-02-28 |
+| 55. Smart Tab Completion | 0/? | Complete    | 2026-02-28 |
 | 56. Session Save/Load + History | 0/? | Not started | - |
 
 ### Phase 30: Output on next line after input
@@ -864,11 +864,11 @@ Plans:
 ## Milestone v4.0 (Core Improvements) — phases 51–56:
 
 - [x] **Phase 51: ANSI Color + Clear Screen** - Colored prompt/errors/timing, Ctrl+L and clear command, Windows VT enablement, ansi.h utility (completed -) (completed 2026-02-28)
-- [ ] **Phase 52: Karatsuba Multiplication** - O(n^1.585) BigInt multiply for large operands, hybrid threshold at ~32 limbs (completed -)
-- [ ] **Phase 53: Series Optimization** - Inner-loop early break for 2-4x speedup on series multiplication (completed -)
-- [ ] **Phase 54: Benchmarking Suite** - bench_main.cpp with micro-benchmarks for BigInt, Series, etaq, prodmake; median reporting (completed -)
-- [ ] **Phase 55: Smart Tab Completion** - Longest-common-prefix fill and auto-parentheses on function completion (completed -)
-- [ ] **Phase 56: Session Save/Load + History Persistence** - ~/.qseries_history persistence, save/load commands, final regression gate (completed -)
+- [x] **Phase 52: Karatsuba Multiplication** - O(n^1.585) BigInt multiply for large operands, hybrid threshold at ~32 limbs (completed -) (completed 2026-02-28)
+- [x] **Phase 53: Series Optimization** - Inner-loop early break for 2-4x speedup on series multiplication (completed -) (completed 2026-02-28)
+- [x] **Phase 54: Benchmarking Suite** - bench_main.cpp with micro-benchmarks for BigInt, Series, etaq, prodmake; median reporting (completed -) (completed 2026-02-28)
+- [x] **Phase 55: Smart Tab Completion** - Longest-common-prefix fill and auto-parentheses on function completion (completed -) (completed 2026-02-28)
+- [x] **Phase 56: Session Save/Load + History Persistence** - ~/.qseries_history persistence, save/load commands, final regression gate (completed 2026-02-28)
 
 ### Phase 51: ANSI Color + Clear Screen
 **Goal**: REPL output uses color for visual clarity; user can clear the screen
@@ -937,3 +937,44 @@ Plans:
   4. All existing acceptance tests pass after all v4.0 changes (final regression gate)
   5. History persistence works on both Unix and Windows (home directory resolution)
 **Plans**: TBD
+
+---
+
+## Milestone v4.1 (Distribution) — phases 57–59:
+
+- [ ] **Phase 57: CI/CD Release Pipeline** — Tag-triggered GitHub Actions workflow builds cross-platform binaries and creates GitHub Release with assets
+- [ ] **Phase 58: Docker** — Multi-stage Dockerfile, ghcr.io publish, Makefile targets, acceptance tests in container
+- [ ] **Phase 59: Install Script** — One-liner curl install with platform detection, SHA256 verification, version selection
+
+### Phase 57: CI/CD Release Pipeline
+**Goal**: Pushing a version tag automatically builds cross-platform binaries and creates a GitHub Release
+**Depends on**: Phase 56
+**Requirements**: DIST-07, DIST-08
+**Success Criteria** (what must be TRUE):
+  1. Pushing a `v*` tag triggers a GitHub Actions workflow that builds and completes successfully
+  2. The workflow produces both a Linux x86_64 binary (static) and a macOS arm64 binary (dynamic, no `-static`)
+  3. A GitHub Release is automatically created with both binaries and a SHA256 checksums file attached as assets
+  4. The release page shows the tag name as title and includes a changelog or auto-generated notes
+**Plans**: TBD
+
+### Phase 58: Docker
+**Goal**: Users can run qseries in a Docker container with a single command
+**Depends on**: Phase 57
+**Requirements**: DIST-01, DIST-02, DIST-03, DIST-09, REG-03
+**Success Criteria** (what must be TRUE):
+  1. `make docker-build` builds a Docker image using a multi-stage Dockerfile (gcc build stage, scratch runtime) in under 2 minutes
+  2. `docker run -it ghcr.io/gerardgarvan/qseries3` launches an interactive REPL that responds to commands (e.g., `etaq(1,10)`)
+  3. Final Docker image size is under 5MB (`docker images` confirms)
+  4. CI workflow automatically builds and pushes the Docker image to ghcr.io on each release tag
+  5. All existing acceptance tests pass when run inside the Docker container
+**Plans**: TBD
+
+### Phase 59: Install Script
+**Goal**: Users can install qseries with a single curl command
+**Depends on**: Phase 57
+**Requirements**: DIST-04, DIST-05, DIST-06
+**Success Criteria** (what must be TRUE):
+  1. `curl -fsSL <url> | sh` downloads and installs the qseries binary to `~/.local/bin` on both Linux and macOS
+  2. The script detects the platform via `uname` and downloads the correct binary (Linux x86_64 or macOS arm64)
+  3. Downloaded binary is verified against published SHA256 checksums before being placed in PATH
+  4. `install.sh --version v2.1` installs a specific version; omitting `--version` installs latest

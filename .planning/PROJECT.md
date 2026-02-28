@@ -8,18 +8,19 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 **Rogers-Ramanujan must work.** Given `Σ q^(n²) / (q;q)_n`, prodmake must recover the product form with denominators only at exponents ≡ ±1 (mod 5). If this test passes, the core math is correct. Everything else builds on it.
 
-## Current Milestone: v4.0 Core Improvements
+## Current Milestone: v4.1 Distribution
 
-**Goal:** Improve REPL user experience with colored output, smarter completion, session management, and boost performance with Karatsuba multiplication and faster series ops.
+**Goal:** Make qseries easy to install and run on any platform with a one-liner install script and a Docker image.
 
 **Target features:**
-- Colored/styled ANSI output (series, products, errors)
-- Smarter tab completion (auto-parentheses, argument hints)
-- Save/load session (variables and state)
-- Clear screen command
-- Faster series multiplication (optimized inner loop)
-- BigInt Karatsuba multiplication
-- Benchmarking suite
+- Docker image (build + run qseries in a container)
+- One-liner install script (curl | bash for Linux/macOS, PowerShell for Windows)
+
+---
+
+## Previous Milestone: v4.0 Core Improvements ✓
+
+**Shipped:** ANSI colored output, clear screen, Karatsuba BigInt multiplication, series multiplication early-break (2-4x speedup), benchmarking suite (7 micro-benchmarks), smart tab completion (LCP fill + auto-parentheses), session save/load + history persistence.
 
 ---
 
@@ -145,4 +146,4 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 | jacprodmake 80% periodicity threshold | Don't demand exact match; verify reconstruction | — Pending |
 
 ---
-*Last updated: 2026-02-28 after v3.0 milestone start*
+*Last updated: 2026-02-28 after v4.1 milestone start*

@@ -539,5 +539,52 @@ Requirements for milestone v4.0 — REPL UX polish and performance optimizations
 
 ---
 
+## v4.1 Requirements (Distribution)
+
+Requirements for milestone v4.1 — Docker image, install script, and CI/CD release pipeline.
+
+### Docker
+
+- [ ] **DIST-01**: Dockerfile with multi-stage build — gcc build stage, scratch runtime, image < 5MB
+- [ ] **DIST-02**: Image published to ghcr.io — `docker run -it ghcr.io/gerardgarvan/qseries3` launches REPL
+- [ ] **DIST-03**: Makefile docker targets — `make docker-build` and `make docker-run` for local workflow
+
+### Install Script
+
+- [ ] **DIST-04**: One-liner install — `curl -fsSL <url> | sh` detects platform (Linux/macOS), downloads binary to ~/.local/bin
+- [ ] **DIST-05**: SHA256 checksum verification — install script verifies download integrity against published checksums
+- [ ] **DIST-06**: Version selection — `install.sh --version v2.1` installs specific version (defaults to latest)
+
+### CI/CD
+
+- [ ] **DIST-07**: Tag-triggered release builds — pushing `v*` tag builds binaries and creates GitHub Release with assets
+- [ ] **DIST-08**: Cross-platform build matrix — produces Linux x86_64 and macOS arm64 binaries
+- [ ] **DIST-09**: Automated Docker push — CI builds and pushes Docker image to ghcr.io on release
+
+### Regression
+
+- [ ] **REG-03**: All existing acceptance tests pass in Docker container
+
+---
+
+## Traceability (v4.1)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| DIST-01 | Phase 58 | Pending |
+| DIST-02 | Phase 58 | Pending |
+| DIST-03 | Phase 58 | Pending |
+| DIST-04 | Phase 59 | Pending |
+| DIST-05 | Phase 59 | Pending |
+| DIST-06 | Phase 59 | Pending |
+| DIST-07 | Phase 57 | Pending |
+| DIST-08 | Phase 57 | Pending |
+| DIST-09 | Phase 58 | Pending |
+| REG-03 | Phase 58 | Pending |
+
+**Coverage:** 10/10 v4.1 requirements mapped ✓
+
+---
+
 *Requirements defined: 2025-02-24*
-*Last updated: 2026-02-28 after v4.0 requirements*
+*Last updated: 2026-02-28 after v4.1 requirements*
