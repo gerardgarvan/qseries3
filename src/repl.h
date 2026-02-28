@@ -29,6 +29,7 @@
 #endif
 #include <algorithm>
 #include <sstream>
+#include <fstream>
 #include <chrono>
 #include <iomanip>
 #include <set>
@@ -144,6 +145,146 @@ struct Environment {
     }
 };
 
+// --- History persistence ---
+
+inline std::string getHomeDir() {
+#ifdef _WIN32
+    const char* home = std::getenv("USERPROFILE");
+    if (!home) {
+        const char* drive = std::getenv("HOMEDRIVE");
+        const char* path = std::getenv("HOMEPATH");
+        if (drive && path) {
+            static std::string buf;
+            buf = std::string(drive) + path;
+            return buf;
+        }
+        return ".";
+    }
+    return home;
+#else
+    const char* home = std::getenv("HOME");
+    return home ? home : ".";
+#endif
+}
+
+inline std::string getHistoryPath() {
+    std::string home = getHomeDir();
+    char sep = '/';
+#ifdef _WIN32
+    sep = '\\';
+#endif
+    return home + sep + ".qseries_history";
+}
+
+inline void loadHistory(std::deque<std::string>& history, size_t maxHistory) {
+    std::ifstream f(getHistoryPath());
+    if (!f) return;
+    std::string line;
+    while (std::getline(f, line)) {
+        if (!line.empty()) {
+            history.push_back(line);
+            if (history.size() > maxHistory)
+                history.pop_front();
+        }
+    }
+}
+
+inline void saveHistory(const std::deque<std::string>& history) {
+    std::ofstream f(getHistoryPath());
+    if (!f) return;
+    for (const auto& line : history)
+        f << line << "\n";
+}
+
+// --- Session save/load ---
+
+inline void saveSession(const std::string& name, const Environment& env) {
+    std::string path = name + ".qsession";
+    std::ofstream f(path);
+    if (!f)
+        throw std::runtime_error("save: cannot write to " + path);
+    f << "# qseries session\n";
+    f << "T " << env.T << "\n";
+    for (const auto& [varname, val] : env.env) {
+        if (varname == "q") continue;
+        if (std::holds_alternative<Series>(val)) {
+            const Series& s = std::get<Series>(val);
+            f << "S " << varname << " " << s.trunc;
+            for (const auto& [exp, coeff] : s.c)
+                f << " " << exp << ":" << coeff.str();
+            f << "\n";
+        } else {
+            const auto& jac = std::get<std::vector<JacFactor>>(val);
+            f << "J " << varname;
+            for (const auto& [a, b, exp] : jac)
+                f << " " << a << "," << b << "," << exp.str();
+            f << "\n";
+        }
+    }
+    std::cout << "Session saved to " << path << std::endl;
+}
+
+inline Frac parseFrac(const std::string& s) {
+    auto slash = s.find('/');
+    if (slash == std::string::npos)
+        return Frac(BigInt(s), BigInt(1));
+    return Frac(BigInt(s.substr(0, slash)), BigInt(s.substr(slash + 1)));
+}
+
+inline void loadSession(const std::string& name, Environment& env) {
+    std::string path = name + ".qsession";
+    std::ifstream f(path);
+    if (!f)
+        throw std::runtime_error("load: cannot open " + path);
+    std::string line;
+    int loaded = 0;
+    while (std::getline(f, line)) {
+        if (line.empty() || line[0] == '#') continue;
+        std::istringstream iss(line);
+        std::string tag;
+        iss >> tag;
+        if (tag == "T") {
+            int t;
+            iss >> t;
+            env.T = t;
+            env.env["q"] = Series::q(t);
+        } else if (tag == "S") {
+            std::string varname;
+            int trunc;
+            iss >> varname >> trunc;
+            Series s;
+            s.trunc = trunc;
+            std::string token;
+            while (iss >> token) {
+                auto colon = token.find(':');
+                if (colon == std::string::npos) continue;
+                int exp = std::stoi(token.substr(0, colon));
+                Frac coeff = parseFrac(token.substr(colon + 1));
+                s.setCoeff(exp, coeff);
+            }
+            env.env[varname] = s;
+            ++loaded;
+        } else if (tag == "J") {
+            std::string varname;
+            iss >> varname;
+            std::vector<JacFactor> jac;
+            std::string token;
+            while (iss >> token) {
+                auto c1 = token.find(',');
+                auto c2 = token.find(',', c1 + 1);
+                if (c1 == std::string::npos || c2 == std::string::npos) continue;
+                int a = std::stoi(token.substr(0, c1));
+                int b = std::stoi(token.substr(c1 + 1, c2 - c1 - 1));
+                Frac exp = parseFrac(token.substr(c2 + 1));
+                jac.push_back({a, b, exp});
+            }
+            env.env[varname] = jac;
+            ++loaded;
+        }
+    }
+    std::cout << "Session loaded from " << path << " (" << loaded << " variables)" << std::endl;
+}
+
 // EvalResult: union of all possible evaluation outcomes
 struct DisplayOnly {};  // tag for series/coeffs display-only built-ins
 
@@ -226,8 +367,10 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"jac2series", {"jac2series(var) or jac2series(var,T)", "convert Jacobi product (in var) to series"}},
         {"findlincombo", {"findlincombo(f,L,topshift)", "express f as linear combination of series in L"}},
         {"findmaxind", {"findmaxind(L) or findmaxind(L, topshift)", "maximal linearly independent subset of q-series in L; returns indices (1-based)"}},
+        {"load", {"load(name)", "restore session from name.qsession file"}},
         {"max", {"max(a, b, ...)", "maximum of 2 or more integers"}},
         {"min", {"min(a, b, ...)", "minimum of 2 or more integers"}},
+        {"save", {"save(name)", "save current session to name.qsession file"}},
     };
     return table;
 }
@@ -1268,8 +1411,11 @@ inline void runRepl() {
 
     Environment env;
     std::deque<std::string> history;
-    const size_t maxHistory = 100;
+    const size_t maxHistory = 1000;
     size_t inputLineNum = 0;
+
+    if (stdin_is_tty())
+        loadHistory(history, maxHistory);
 
     constexpr size_t maxContinuations = 100;
 
@@ -1329,6 +1475,32 @@ inline void runRepl() {
             continue;
         }
 
+        if (trimmed.size() > 6 && trimmed.substr(0, 5) == "save(" && trimmed.back() == ')') {
+            std::string arg = trimmed.substr(5, trimmed.size() - 6);
+            while (!arg.empty() && (arg.front() == ' ' || arg.front() == '"' || arg.front() == '\'')) arg.erase(arg.begin());
+            while (!arg.empty() && (arg.back() == ' ' || arg.back() == '"' || arg.back() == '\'')) arg.pop_back();
+            if (arg.empty()) {
+                std::cerr << ansi::red() << "error: " << ansi::reset() << "save: name required" << std::endl;
+            } else {
+                try { saveSession(arg, env); }
+                catch (const std::exception& e) { std::cerr << ansi::red() << "error: " << ansi::reset() << e.what() << std::endl; }
+            }
+            continue;
+        }
+
+        if (trimmed.size() > 6 && trimmed.substr(0, 5) == "load(" && trimmed.back() == ')') {
+            std::string arg = trimmed.substr(5, trimmed.size() - 6);
+            while (!arg.empty() && (arg.front() == ' ' || arg.front() == '"' || arg.front() == '\'')) arg.erase(arg.begin());
+            while (!arg.empty() && (arg.back() == ' ' || arg.back() == '"' || arg.back() == '\'')) arg.pop_back();
+            if (arg.empty()) {
+                std::cerr << ansi::red() << "error: " << ansi::reset() << "load: name required" << std::endl;
+            } else {
+                try { loadSession(arg, env); }
+                catch (const std::exception& e) { std::cerr << ansi::red() << "error: " << ansi::reset() << e.what() << std::endl; }
+            }
+            continue;
+        }
+
         ++inputLineNum;
         history.push_back(trimmed);
         if (history.size() > maxHistory) history.pop_front();
@@ -1353,6 +1525,9 @@ inline void runRepl() {
             std::cerr << e.what() << std::endl;
         }
     }
+
+    if (stdin_is_tty())
+        saveHistory(history);
 }
 #endif // __EMSCRIPTEN__
 
