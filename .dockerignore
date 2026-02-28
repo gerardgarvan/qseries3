@@ -1,0 +1,15 @@
+.git
+.github
+.planning
+.cursor
+build
+dist
+node_modules
+*.exe
+*.o
+*.obj
+qseries_debug
+qseries_bench
+qseries-demo
+test-package
+repl_test.txt

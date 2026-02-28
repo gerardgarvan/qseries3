@@ -4,7 +4,7 @@ CXX ?= g++
 CXXFLAGS = -std=c++20 -O2 -Wall -Wextra -Wpedantic
 LDFLAGS ?= 
 
-.PHONY: all clean test acceptance acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history demo test-package wasm bench
+.PHONY: all clean test acceptance acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history demo test-package wasm bench docker-build docker-run
 
 all: dist/qseries.exe dist-demo
 
@@ -89,6 +89,12 @@ package-demo: dist/qseries.exe
 	cp demo/garvan-demo.sh qseries-demo/
 	cp demo/README-dist.md qseries-demo/README.md
 	@echo "qseries-demo/ ready. Zip and share. Run: cd qseries-demo && bash garvan-demo.sh"
+
+docker-build:
+	docker build -t qseries .
+
+docker-run:
+	docker run -it --rm qseries
 
 clean:
 	rm -f dist/qseries.exe qseries_debug qseries_bench
