@@ -445,5 +445,53 @@ Requirements for milestone v2.1 — documentation website with live WebAssembly 
 
 ---
 
+## v3.0 Requirements (Simple Website & Example Audit)
+
+Requirements for milestone v3.0 — replace complex website with single HTML page, audit all examples.
+
+### Cleanup
+
+- [ ] **CLEAN-01**: Delete entire `website/` directory (Astro Starlight, playground, node_modules, etc.)
+- [ ] **CLEAN-02**: Delete `.github/workflows/deploy.yml` and `website/public/_headers` (Cloudflare CI/CD no longer needed)
+- [ ] **CLEAN-03**: Remove `wasm-website` Makefile target (no website to copy Wasm into)
+
+### Single-Page Website
+
+- [ ] **PAGE-01**: Single self-contained HTML file with kangaroo-banner hero section (sunset gradient, hopping kangaroo SVG, stars, boomerang, dust particles)
+- [ ] **PAGE-02**: Build instructions section: prerequisites, one-liner compile command, platform notes
+- [ ] **PAGE-03**: Key examples section: Rogers-Ramanujan, partition function, theta functions, relation finding — with REPL input/output
+- [ ] **PAGE-04**: Full function reference: all 40+ built-in functions with signature, description, and example
+- [ ] **PAGE-05**: Design follows kangaroo-banner aesthetic throughout: dark background (#0d0617), sunset accents, gold (#ffe066) headings, Bebas Neue + Outfit fonts
+
+### Example Audit
+
+- [ ] **AUDIT-01**: Every command in `demo/garvan-demo.sh` runs and produces correct output
+- [ ] **AUDIT-02**: Every example in `MANUAL.md` runs and produces correct output
+- [ ] **AUDIT-03**: Every code snippet in the single-page website runs and produces correct output
+- [ ] **AUDIT-04**: Fix any examples that fail or produce incorrect output
+
+---
+
+## Traceability (v3.0)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| CLEAN-01 | TBD | Pending |
+| CLEAN-02 | TBD | Pending |
+| CLEAN-03 | TBD | Pending |
+| PAGE-01 | TBD | Pending |
+| PAGE-02 | TBD | Pending |
+| PAGE-03 | TBD | Pending |
+| PAGE-04 | TBD | Pending |
+| PAGE-05 | TBD | Pending |
+| AUDIT-01 | TBD | Pending |
+| AUDIT-02 | TBD | Pending |
+| AUDIT-03 | TBD | Pending |
+| AUDIT-04 | TBD | Pending |
+
+**Coverage:** 12/12 v3.0 requirements mapped ✓
+
+---
+
 *Requirements defined: 2025-02-24*
-*Last updated: 2026-02-27 after v2.1 roadmap*
+*Last updated: 2026-02-28 after v3.0 requirements*
