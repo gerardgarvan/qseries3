@@ -1150,6 +1150,11 @@ inline std::optional<std::string> readLineRaw(Environment& env, const std::deque
             handleTabCompletion(line, pos, env);
             continue;
         }
+        if (c == 12) {  // Ctrl+L
+            std::cout << "\033[2J\033[H" << std::flush;
+            redrawLineRaw(line, pos);
+            continue;
+        }
         if (c == 8 || c == 127) {  // Backspace / DEL
             if (pos > 0) {
                 line.erase(pos - 1, 1);
@@ -1301,6 +1306,12 @@ inline void runRepl() {
             suppress_output = true;
         }
         if (trimmed.empty()) continue;
+
+        if (trimmed == "clear") {
+            if (stdin_is_tty())
+                std::cout << "\033[2J\033[H" << std::flush;
+            continue;
+        }
 
         ++inputLineNum;
         history.push_back(trimmed);
