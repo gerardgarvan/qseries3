@@ -9,10 +9,10 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 
 ## Current Position
 
-Phase: 49 — Single-Page Website
+Phase: 50 — Example Audit
 Plan: 01 of 01 complete
-Status: Phase 49 Plan 01 complete
-Last activity: 2026-02-28 — Completed 49-01 single-page website (index.html with kangaroo hero, examples, 53-function reference)
+Status: Phase 50 Plan 01 complete
+Last activity: 2026-02-28 — Completed 50-01 example audit (verified demo/manual/website examples, fixed version/help syntax)
 
 Progress: [███░░░░░░░] 33%
 
@@ -45,6 +45,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 47-cicd-deploy P01 | ~3 | 2 tasks | 2 files |
 | Phase 48-cleanup P01 | ~3 | 2 tasks | 28 files |
 | Phase 49-single-page-website P01 | ~10 | 2 tasks | 1 file |
+| Phase 50-example-audit P01 | ~10 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,7 @@ Progress: [███░░░░░░░] 33%
 - [Phase 47-cicd-deploy]: Plan 47-01: GitHub Actions single-job pipeline (checkout → emsdk 3.1.64 → wasm → wasm-website → Node 22 → npm ci → Astro → verify wasm → Cloudflare Pages); _headers for application/wasm + immutable caching
 - [Phase 48-cleanup]: Plan 48-01: Deleted website/ (27 files, 9818 lines), .github/ (CI/CD), wasm-website Makefile target; core build and wasm target preserved
 - [Phase 49-single-page-website]: Plan 49-01: Self-contained index.html (864 lines) with kangaroo-banner hero, 4 real REPL examples, 53-function reference; Eisenstein E4^2=E8 for relation-finding demo
+- [Phase 50-example-audit]: Plan 50-01: Audited all examples across demo/manual/website; fixed version 1.3→2.0, version→version(), help→help(); all REPL examples verified against binary output
 
 ### Roadmap Evolution
 
@@ -136,7 +138,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 49-01-PLAN.md — single-page website created, ready for Phase 50
+Stopped at: Completed 50-01-PLAN.md — example audit complete, all docs verified
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
