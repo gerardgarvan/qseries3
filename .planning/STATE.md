@@ -9,10 +9,10 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 
 ## Current Position
 
-Phase: 48 — Cleanup
+Phase: 49 — Single-Page Website
 Plan: 01 of 01 complete
-Status: Phase 48 Plan 01 complete
-Last activity: 2026-02-28 — Completed 48-01 cleanup (website, CI/CD, wasm-website target removed)
+Status: Phase 49 Plan 01 complete
+Last activity: 2026-02-28 — Completed 49-01 single-page website (index.html with kangaroo hero, examples, 53-function reference)
 
 Progress: [███░░░░░░░] 33%
 
@@ -44,6 +44,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 46-playground P01 | ~3 | 2 tasks | 8 files |
 | Phase 47-cicd-deploy P01 | ~3 | 2 tasks | 2 files |
 | Phase 48-cleanup P01 | ~3 | 2 tasks | 28 files |
+| Phase 49-single-page-website P01 | ~10 | 2 tasks | 1 file |
 
 ## Accumulated Context
 
@@ -88,6 +89,7 @@ Progress: [███░░░░░░░] 33%
 - [Phase 46-playground]: Plan 46-01: xterm.js playground at /playground/ with Worker-based Wasm evaluation; @xterm/xterm 5.5.0 + @xterm/addon-fit; Worker in public/wasm/ with importScripts; sequential example execution via queue; wasm-website Makefile target
 - [Phase 47-cicd-deploy]: Plan 47-01: GitHub Actions single-job pipeline (checkout → emsdk 3.1.64 → wasm → wasm-website → Node 22 → npm ci → Astro → verify wasm → Cloudflare Pages); _headers for application/wasm + immutable caching
 - [Phase 48-cleanup]: Plan 48-01: Deleted website/ (27 files, 9818 lines), .github/ (CI/CD), wasm-website Makefile target; core build and wasm target preserved
+- [Phase 49-single-page-website]: Plan 49-01: Self-contained index.html (864 lines) with kangaroo-banner hero, 4 real REPL examples, 53-function reference; Eisenstein E4^2=E8 for relation-finding demo
 
 ### Roadmap Evolution
 
@@ -134,7 +136,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 48-01-PLAN.md — website and CI/CD removed, ready for Phase 49
+Stopped at: Completed 49-01-PLAN.md — single-page website created, ready for Phase 50
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
