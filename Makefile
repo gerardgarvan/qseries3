@@ -4,7 +4,7 @@ CXX ?= g++
 CXXFLAGS = -std=c++20 -O2 -Wall -Wextra -Wpedantic
 LDFLAGS ?= 
 
-.PHONY: all clean test acceptance acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history demo test-package wasm wasm-website
+.PHONY: all clean test acceptance acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history demo test-package wasm
 
 all: dist/qseries.exe dist-demo
 
@@ -107,8 +107,3 @@ build/wasm:
 
 build/wasm/qseries.js: src/main_wasm.cpp src/repl.h src/parser.h src/series.h src/frac.h src/bigint.h src/qfuncs.h src/convert.h src/linalg.h src/relations.h | build/wasm
 	$(EMXX) $(WASM_FLAGS) -o build/wasm/qseries.js src/main_wasm.cpp
-
-wasm-website: build/wasm/qseries.js
-	mkdir -p website/public/wasm
-	cp build/wasm/qseries.js website/public/wasm/
-	cp build/wasm/qseries.wasm website/public/wasm/
