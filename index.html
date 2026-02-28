@@ -691,5 +691,174 @@
 </section>
 
 
+<!-- ═══ EXAMPLES ═══ -->
+<section id="examples" class="section">
+  <div class="container">
+    <h2 class="section-title">Examples</h2>
+    <hr class="section-rule">
+
+    <div class="example-block">
+      <h3 class="example-title">Rogers–Ramanujan Identity</h3>
+      <p class="example-desc">
+        Compute the Rogers–Ramanujan continued fraction sum and recover its infinite product
+        form using Andrews' algorithm. The denominators appear only at exponents ≡ ±1 (mod 5).
+      </p>
+      <div class="repl-block"><span class="p">qseries&gt; </span><span class="i">rr := sum(q^(n^2)/aqprod(q,q,n,50), n, 0, 8)</span>
+<span class="o">1 + q + q² + q³ + 2q⁴ + 2q⁵ + 3q⁶ + 3q⁷ + 4q⁸ + 5q⁹ + 6q¹⁰ + 7q¹¹ + 9q¹² + 10q¹³ + 12q¹⁴ + 14q¹⁵ + 17q¹⁶ + 19q¹⁷ + 23q¹⁸ + 26q¹⁹ + 31q²⁰ + 35q²¹ + 41q²² + 46q²³ + 54q²⁴ + 61q²⁵ + 70q²⁶ + 79q²⁷ + 91q²⁸ + 102q²⁹ + O(q⁵⁰)</span>
+
+<span class="p">qseries&gt; </span><span class="i">prodmake(rr, 50)</span>
+<span class="o">1 / (((1-q) (-q⁴+1) (-q⁶+1) (-q⁹+1) (-q¹¹+1) (-q¹⁴+1) (-q¹⁶+1) (-q¹⁹+1) (-q²¹+1) (-q²⁴+1) (-q²⁶+1) (-q²⁹+1) (-q³¹+1) (-q³⁴+1) (-q³⁶+1) (-q³⁹+1) (-q⁴¹+1) (-q⁴⁴+1) (-q⁴⁶+1) (-q⁴⁹+1)))</span></div>
+    </div>
+
+    <div class="example-block">
+      <h3 class="example-title">Partition Function</h3>
+      <p class="example-desc">
+        The partition generating function 1/(q;q)∞ encodes the number of partitions of n as the
+        coefficient of qⁿ. The first 30 partition numbers, plus p(100) computed directly.
+      </p>
+      <div class="repl-block"><span class="p">qseries&gt; </span><span class="i">f := 1/etaq(1,30)</span>
+<span class="o">1 + q + 2q² + 3q³ + 5q⁴ + 7q⁵ + 11q⁶ + 15q⁷ + 22q⁸ + 30q⁹ + 42q¹⁰ + 56q¹¹ + 77q¹² + 101q¹³ + 135q¹⁴ + 176q¹⁵ + 231q¹⁶ + 297q¹⁷ + 385q¹⁸ + 490q¹⁹ + 627q²⁰ + 792q²¹ + 1002q²² + 1255q²³ + 1575q²⁴ + 1958q²⁵ + 2436q²⁶ + 3010q²⁷ + 3718q²⁸ + 4565q²⁹ + O(q³⁰)</span>
+
+<span class="p">qseries&gt; </span><span class="i">partition(100)</span>
+<span class="o">190569292</span></div>
+    </div>
+
+    <div class="example-block">
+      <h3 class="example-title">Theta → Eta Product</h3>
+      <p class="example-desc">
+        Identify a Jacobi theta function as a product of Dedekind eta functions using <code>etamake</code>.
+      </p>
+      <div class="repl-block"><span class="p">qseries&gt; </span><span class="i">etamake(theta3(50), 50)</span>
+<span class="o">η(2τ)⁵ / (η(τ)⁻² η(4τ)⁻²)</span></div>
+    </div>
+
+    <div class="example-block">
+      <h3 class="example-title">Finding Relations: E₄² = E₈</h3>
+      <p class="example-desc">
+        Use <code>findpoly</code> to discover that the square of the Eisenstein series E₄ equals E₈ — a classical identity in the theory of modular forms.
+      </p>
+      <div class="repl-block"><span class="p">qseries&gt; </span><span class="i">x := eisenstein(2,50)</span>
+<span class="o">1 + 240q + 2160q² + 6720q³ + 17520q⁴ + 30240q⁵ + 60480q⁶ + 82560q⁷ + ...</span>
+
+<span class="p">qseries&gt; </span><span class="i">y := eisenstein(4,50)</span>
+<span class="o">1 + 480q + 61920q² + 1050240q³ + 7926240q⁴ + 37500480q⁵ + ...</span>
+
+<span class="p">qseries&gt; </span><span class="i">findpoly(x, y, 2, 3)</span>
+<span class="o">-X₁²+X₂</span></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══ REFERENCE ═══ -->
+<section id="reference" class="section">
+  <div class="container">
+    <h2 class="section-title">Function Reference</h2>
+    <hr class="section-rule">
+
+    <div class="ref-category">
+      <h3 class="ref-category-title">Series Construction</h3>
+      <table class="ref-table">
+        <tr><td class="fn-name">aqprod</td><td class="fn-sig">aqprod(a,q,n,T)</td><td class="fn-desc">Rising q-factorial (a;q)_n</td></tr>
+        <tr><td class="fn-name">etaq</td><td class="fn-sig">etaq(k) · etaq(k,T) · etaq(q,k,T)</td><td class="fn-desc">Eta product Π(1−q^{kn})</td></tr>
+        <tr><td class="fn-name">qbin</td><td class="fn-sig">qbin(m,n,T) · qbin(q,m,n,T)</td><td class="fn-desc">Gaussian polynomial [m;n]_q</td></tr>
+        <tr><td class="fn-name">T</td><td class="fn-sig">T(r,n) · T(r,n,T)</td><td class="fn-desc">Finite q-product T_{r,n}</td></tr>
+        <tr><td class="fn-name">theta</td><td class="fn-sig">theta(z,T) · theta(z,q,T)</td><td class="fn-desc">Generalized theta function</td></tr>
+        <tr><td class="fn-name">theta2</td><td class="fn-sig">theta2(T) · theta2(q,T)</td><td class="fn-desc">Jacobi θ₂</td></tr>
+        <tr><td class="fn-name">theta3</td><td class="fn-sig">theta3(T) · theta3(q,T)</td><td class="fn-desc">Jacobi θ₃</td></tr>
+        <tr><td class="fn-name">theta4</td><td class="fn-sig">theta4(T) · theta4(q,T)</td><td class="fn-desc">Jacobi θ₄</td></tr>
+        <tr><td class="fn-name">tripleprod</td><td class="fn-sig">tripleprod(z,q,T)</td><td class="fn-desc">Jacobi triple product</td></tr>
+        <tr><td class="fn-name">quinprod</td><td class="fn-sig">quinprod(z,q,T)</td><td class="fn-desc">Quintuple product</td></tr>
+        <tr><td class="fn-name">winquist</td><td class="fn-sig">winquist(a,b,q,T)</td><td class="fn-desc">Winquist identity</td></tr>
+        <tr><td class="fn-name">eisenstein</td><td class="fn-sig">eisenstein(k,T)</td><td class="fn-desc">Normalized Eisenstein series E_{2k}(q)</td></tr>
+      </table>
+    </div>
+
+    <div class="ref-category">
+      <h3 class="ref-category-title">Series Operations</h3>
+      <table class="ref-table">
+        <tr><td class="fn-name">series</td><td class="fn-sig">series(f) · series(f,T)</td><td class="fn-desc">Display series coefficients</td></tr>
+        <tr><td class="fn-name">coeffs</td><td class="fn-sig">coeffs(f,from,to)</td><td class="fn-desc">List coefficients from exponent <em>from</em> to <em>to</em></td></tr>
+        <tr><td class="fn-name">coeff</td><td class="fn-sig">coeff(f,n)</td><td class="fn-desc">Coefficient of q^n in series f</td></tr>
+        <tr><td class="fn-name">qdegree</td><td class="fn-sig">qdegree(f)</td><td class="fn-desc">Highest exponent with nonzero coefficient</td></tr>
+        <tr><td class="fn-name">lqdegree</td><td class="fn-sig">lqdegree(f)</td><td class="fn-desc">Lowest exponent with nonzero coefficient</td></tr>
+        <tr><td class="fn-name">subs_q</td><td class="fn-sig">subs_q(f,k)</td><td class="fn-desc">Substitute q^k for q</td></tr>
+        <tr><td class="fn-name">qdiff</td><td class="fn-sig">qdiff(f)</td><td class="fn-desc">q-derivative: θ_q f = Σ n·a_n·q^n</td></tr>
+        <tr><td class="fn-name">sift</td><td class="fn-sig">sift(f,n,k,T)</td><td class="fn-desc">Extract coefficients a_{ni+k}</td></tr>
+        <tr><td class="fn-name">dissect</td><td class="fn-sig">dissect(f,m,T)</td><td class="fn-desc">All m siftings of f: sift(f,m,k,T) for k=0..m−1</td></tr>
+      </table>
+    </div>
+
+    <div class="ref-category">
+      <h3 class="ref-category-title">Product Conversion</h3>
+      <table class="ref-table">
+        <tr><td class="fn-name">prodmake</td><td class="fn-sig">prodmake(f,T)</td><td class="fn-desc">Andrews' algorithm: series → infinite product</td></tr>
+        <tr><td class="fn-name">mprodmake</td><td class="fn-sig">mprodmake(f,T)</td><td class="fn-desc">Convert series to product (1+q^n₁)(1+q^n₂)...</td></tr>
+        <tr><td class="fn-name">etamake</td><td class="fn-sig">etamake(f,T)</td><td class="fn-desc">Identify f as eta product</td></tr>
+        <tr><td class="fn-name">jacprodmake</td><td class="fn-sig">jacprodmake(f,T)</td><td class="fn-desc">Identify f as Jacobi product</td></tr>
+        <tr><td class="fn-name">qfactor</td><td class="fn-sig">qfactor(f) · qfactor(f,T)</td><td class="fn-desc">Factorize finite q-product</td></tr>
+        <tr><td class="fn-name">jac2prod</td><td class="fn-sig">jac2prod(var)</td><td class="fn-desc">Display Jacobi product stored in variable</td></tr>
+        <tr><td class="fn-name">jac2series</td><td class="fn-sig">jac2series(var) · jac2series(var,T)</td><td class="fn-desc">Convert Jacobi product to series</td></tr>
+        <tr><td class="fn-name">checkprod</td><td class="fn-sig">checkprod(f) · checkprod(f,T) · checkprod(f,M,T)</td><td class="fn-desc">Check if f is a nice product (|a[n]| &lt; M)</td></tr>
+        <tr><td class="fn-name">checkmult</td><td class="fn-sig">checkmult(f) · checkmult(f,T) · checkmult(f,T,1)</td><td class="fn-desc">Check if coefficients are multiplicative</td></tr>
+      </table>
+    </div>
+
+    <div class="ref-category">
+      <h3 class="ref-category-title">Relation Finding</h3>
+      <table class="ref-table">
+        <tr><td class="fn-name">findhom</td><td class="fn-sig">findhom(L,n,topshift)</td><td class="fn-desc">Homogeneous polynomial relations between series in L</td></tr>
+        <tr><td class="fn-name">findnonhom</td><td class="fn-sig">findnonhom(L,n,topshift)</td><td class="fn-desc">Nonhomogeneous polynomial relations</td></tr>
+        <tr><td class="fn-name">findhomcombo</td><td class="fn-sig">findhomcombo(f,L,n,topshift[,etaopt])</td><td class="fn-desc">Express f as polynomial in L</td></tr>
+        <tr><td class="fn-name">findnonhomcombo</td><td class="fn-sig">findnonhomcombo(f,L,n_list,topshift[,etaopt])</td><td class="fn-desc">Express f as polynomial in L (nonhom)</td></tr>
+        <tr><td class="fn-name">findpoly</td><td class="fn-sig">findpoly(x,y,deg1,deg2[,check])</td><td class="fn-desc">Polynomial relation between two series</td></tr>
+        <tr><td class="fn-name">findlincombo</td><td class="fn-sig">findlincombo(f,L,topshift)</td><td class="fn-desc">Express f as linear combination of series in L</td></tr>
+        <tr><td class="fn-name">findmaxind</td><td class="fn-sig">findmaxind(L) · findmaxind(L,topshift)</td><td class="fn-desc">Maximal linearly independent subset (1-based indices)</td></tr>
+      </table>
+    </div>
+
+    <div class="ref-category">
+      <h3 class="ref-category-title">Number Theory</h3>
+      <table class="ref-table">
+        <tr><td class="fn-name">legendre</td><td class="fn-sig">legendre(a,p)</td><td class="fn-desc">Legendre symbol (a/p)</td></tr>
+        <tr><td class="fn-name">jacobi</td><td class="fn-sig">jacobi(a,n)</td><td class="fn-desc">Jacobi symbol (a/n) for odd positive n</td></tr>
+        <tr><td class="fn-name">kronecker</td><td class="fn-sig">kronecker(a,n)</td><td class="fn-desc">Kronecker symbol (a/n) for all integer n</td></tr>
+        <tr><td class="fn-name">sigma</td><td class="fn-sig">sigma(n) · sigma(n,k)</td><td class="fn-desc">Divisor sum σ_k(n)</td></tr>
+        <tr><td class="fn-name">divisors</td><td class="fn-sig">divisors(n)</td><td class="fn-desc">Sorted list of positive divisors of n</td></tr>
+        <tr><td class="fn-name">mobius</td><td class="fn-sig">mobius(n)</td><td class="fn-desc">Möbius function μ(n)</td></tr>
+        <tr><td class="fn-name">euler_phi</td><td class="fn-sig">euler_phi(n)</td><td class="fn-desc">Euler's totient φ(n)</td></tr>
+        <tr><td class="fn-name">partition</td><td class="fn-sig">partition(n)</td><td class="fn-desc">Partition number p(n)</td></tr>
+      </table>
+    </div>
+
+    <div class="ref-category">
+      <h3 class="ref-category-title">Summation</h3>
+      <table class="ref-table">
+        <tr><td class="fn-name">sum</td><td class="fn-sig">sum(expr, var, lo, hi)</td><td class="fn-desc">Σ expr as var runs from lo to hi</td></tr>
+        <tr><td class="fn-name">add</td><td class="fn-sig">add(expr, var, lo, hi)</td><td class="fn-desc">Summation (alias for sum)</td></tr>
+      </table>
+    </div>
+
+    <div class="ref-category">
+      <h3 class="ref-category-title">REPL Commands</h3>
+      <table class="ref-table">
+        <tr><td class="fn-name">set_trunc</td><td class="fn-sig">set_trunc(N)</td><td class="fn-desc">Set default truncation</td></tr>
+        <tr><td class="fn-name">version</td><td class="fn-sig">version</td><td class="fn-desc">Print package version</td></tr>
+        <tr><td class="fn-name">help</td><td class="fn-sig">help · help(func)</td><td class="fn-desc">List built-ins or show help for a function</td></tr>
+        <tr><td class="fn-name">clear_cache</td><td class="fn-sig">clear_cache()</td><td class="fn-desc">Clear memoization caches (etaq)</td></tr>
+        <tr><td class="fn-name">min</td><td class="fn-sig">min(a, b, ...)</td><td class="fn-desc">Minimum of 2 or more integers</td></tr>
+        <tr><td class="fn-name">max</td><td class="fn-sig">max(a, b, ...)</td><td class="fn-desc">Maximum of 2 or more integers</td></tr>
+      </table>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="footer">
+  <p>Based on Frank Garvan's <em>qseries</em> Maple package</p>
+  <p><a href="https://github.com/GarvanResearch/qseries3">GitHub</a></p>
+</footer>
+
 </body>
 </html>
