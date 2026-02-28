@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 
 ## Current Position
 
-Phase: 46 — Playground, Plan 01 COMPLETE
+Phase: 47 — CI/CD Deploy, Plan 01 COMPLETE
 Plan: 01 complete
-Status: Interactive xterm.js playground at /playground/ with Worker-based Wasm evaluation
-Last activity: 2026-02-28 — Phase 46 Plan 01 executed
+Status: GitHub Actions CI/CD workflow + Cloudflare Pages _headers for automated Wasm + Astro deploy
+Last activity: 2026-02-28 — Phase 47 Plan 01 executed
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -42,6 +42,7 @@ Progress: [████████░░] 80%
 | Phase 45-doc-content P02 | ~5 | 3 tasks | 7 files |
 | Phase 45-doc-content P03 | ~6 | 2 tasks | 5 files |
 | Phase 46-playground P01 | ~3 | 2 tasks | 8 files |
+| Phase 47-cicd-deploy P01 | ~3 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,7 @@ Progress: [████████░░] 80%
 - [Phase 45-doc-content]: Plan 45-02: 7 reference manual pages with typed signatures, KaTeX formulas, REPL examples for all 38+ built-ins; bigint-frac conceptual overview; q-functions grouped into 3 sections; standard function entry format (heading, math, syntax, params, example)
 - [Phase 45-doc-content]: Plan 45-03: 5 tutorial pages (overview, Rogers-Ramanujan, theta/eta, partition identities, modular equations); real REPL output for all examples; KaTeX math-then-REPL layout; sift T parameter is input truncation
 - [Phase 46-playground]: Plan 46-01: xterm.js playground at /playground/ with Worker-based Wasm evaluation; @xterm/xterm 5.5.0 + @xterm/addon-fit; Worker in public/wasm/ with importScripts; sequential example execution via queue; wasm-website Makefile target
+- [Phase 47-cicd-deploy]: Plan 47-01: GitHub Actions single-job pipeline (checkout → emsdk 3.1.64 → wasm → wasm-website → Node 22 → npm ci → Astro → verify wasm → Cloudflare Pages); _headers for application/wasm + immutable caching
 
 ### Roadmap Evolution
 
@@ -125,7 +127,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 46-01-PLAN.md (interactive playground with xterm.js + Worker Wasm evaluation)
+Stopped at: Completed 47-01-PLAN.md (GitHub Actions CI/CD workflow + Cloudflare Pages _headers)
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
