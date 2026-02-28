@@ -1,0 +1,31 @@
+# Build artifacts
+*.exe
+*.o
+*.obj
+build/
+
+# Emscripten SDK
+emsdk/
+
+# Distribution packages (generated)
+dist/
+qseries-demo/
+
+# Editor / IDE
+.cursor/
+*.swp
+*.swo
+*~
+
+# Planning docs (internal development)
+.planning/
+
+# Test output
+test_out.txt
+repl_test.txt
+demo/err.txt
+demo/errors.txt
+
+# OS files
+Thumbs.db
+.DS_Store
