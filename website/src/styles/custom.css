@@ -1,3 +1,5 @@
+@import 'katex/dist/katex.min.css';
+
 :root {
   --sl-color-accent-low: hsl(190, 60%, 15%);
   --sl-color-accent: hsl(190, 80%, 44%);
@@ -11,4 +13,8 @@
   --sl-color-accent-low: hsl(190, 60%, 88%);
   --sl-color-accent: hsl(190, 80%, 36%);
   --sl-color-accent-high: hsl(190, 60%, 18%);
+}
+
+.katex-html svg {
+  height: inherit;
 }
