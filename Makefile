@@ -4,7 +4,7 @@ CXX ?= g++
 CXXFLAGS = -std=c++20 -O2 -Wall -Wextra -Wpedantic
 LDFLAGS ?= 
 
-.PHONY: all clean test acceptance acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history demo test-package wasm
+.PHONY: all clean test acceptance acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history demo test-package wasm bench
 
 all: dist/qseries.exe dist-demo
 
@@ -23,6 +23,10 @@ dist-demo: | dist
 # Debug build (Cygwin g++, with sanitizers)
 debug: src/main.cpp
 	g++ -std=c++20 -g -O0 -Wall -Wextra -fsanitize=address,undefined -o qseries_debug src/main.cpp
+
+bench: src/bench_main.cpp
+	$(CXX) $(CXXFLAGS) -O2 -o qseries_bench src/bench_main.cpp
+	./qseries_bench
 
 # Quick test: run the Rogers-Ramanujan acceptance test
 test: dist/qseries.exe
@@ -87,7 +91,7 @@ package-demo: dist/qseries.exe
 	@echo "qseries-demo/ ready. Zip and share. Run: cd qseries-demo && bash garvan-demo.sh"
 
 clean:
-	rm -f dist/qseries.exe qseries_debug
+	rm -f dist/qseries.exe qseries_debug qseries_bench
 	rm -rf build/
 
 # Wasm build (requires emsdk activated: source emsdk_env.sh)
