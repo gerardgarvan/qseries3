@@ -1,0 +1,382 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+---
+<StarlightPage frontmatter={{ title: 'Playground', description: 'Try qseries in your browser' }}>
+  <div id="playground-wrapper">
+    <div id="toolbar">
+      <select id="examples">
+        <option value="">Load an example...</option>
+        <option value="rogers-ramanujan">Rogers-Ramanujan</option>
+        <option value="product-conversion">Product Conversion</option>
+        <option value="theta-functions">Theta Functions</option>
+        <option value="relations">Finding Relations</option>
+      </select>
+      <button id="run-example">Run</button>
+      <span id="status">Loading...</span>
+    </div>
+    <div id="terminal-container">
+      <div id="loading-overlay">
+        <div class="spinner"></div>
+        <span>Loading qseries engine...</span>
+      </div>
+    </div>
+  </div>
+</StarlightPage>
+
+<style>
+  #playground-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  #toolbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0;
+  }
+
+  #toolbar select {
+    background: #1e1e3a;
+    color: #e0e0e0;
+    border: 1px solid var(--sl-color-accent);
+    border-radius: 4px;
+    padding: 0.4rem 0.8rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  #toolbar button {
+    background: var(--sl-color-accent);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 0.4rem 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: opacity 0.15s;
+  }
+
+  #toolbar button:hover {
+    opacity: 0.85;
+  }
+
+  #toolbar button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  #status {
+    font-size: 0.85rem;
+    color: #999;
+  }
+
+  #status.computing {
+    color: var(--sl-color-accent);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  #terminal-container {
+    height: 500px;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    background: #1a1a2e;
+  }
+
+  #loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    z-index: 10;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    flex-direction: column;
+    gap: 1rem;
+    font-size: 0.95rem;
+  }
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(0, 188, 212, 0.2);
+    border-top-color: #00bcd4;
+    border-radius: 50%;
+    animation: spin 1.5s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+</style>
+
+<script>
+  import { Terminal } from '@xterm/xterm';
+  import { FitAddon } from '@xterm/addon-fit';
+
+  const PROMPT = 'qseries> ';
+
+  const EXAMPLES: Record<string, string[]> = {
+    'rogers-ramanujan': [
+      'G := sum(q^(n^2)/aqprod(q,q,n), n, 0, 8)',
+      'prodmake(G, 50)',
+    ],
+    'product-conversion': [
+      'p := 1/aqprod(q,q,50)',
+      'prodmake(p, 50)',
+    ],
+    'theta-functions': [
+      'theta2(q,100)',
+      'theta3(q,100)',
+      'theta4(q,100)',
+    ],
+    'relations': [
+      'f1 := etaq(1,100)*etaq(7,100)',
+      'f2 := etaq(2,100)*etaq(14,100)',
+      'findhom([f1,f2],4,100)',
+    ],
+  };
+
+  const container = document.getElementById('terminal-container')!;
+  const overlay = document.getElementById('loading-overlay')!;
+  const statusEl = document.getElementById('status')!;
+  const exampleSelect = document.getElementById('examples') as HTMLSelectElement;
+  const runBtn = document.getElementById('run-example') as HTMLButtonElement;
+
+  const term = new Terminal({
+    cursorBlink: true,
+    fontSize: 14,
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    theme: {
+      background: '#1a1a2e',
+      foreground: '#e0e0e0',
+      cursor: '#00bcd4',
+      cursorAccent: '#1a1a2e',
+      selectionBackground: 'rgba(0,188,212,0.3)',
+      black: '#1a1a2e',
+      brightBlack: '#4a4a6a',
+      cyan: '#00bcd4',
+      brightCyan: '#4dd0e1',
+      green: '#66bb6a',
+      brightGreen: '#81c784',
+      red: '#ef5350',
+      brightRed: '#e57373',
+      yellow: '#ffa726',
+      brightYellow: '#ffb74d',
+    },
+    scrollback: 5000,
+    convertEol: true,
+  });
+
+  const fitAddon = new FitAddon();
+  term.loadAddon(fitAddon);
+  term.open(container);
+  requestAnimationFrame(() => fitAddon.fit());
+  window.addEventListener('resize', () => fitAddon.fit());
+
+  let inputBuffer = '';
+  let cursorPos = 0;
+  let history: string[] = [];
+  let historyIndex = 0;
+  let isReady = false;
+  let isComputing = false;
+  let pendingExampleCommands: string[] = [];
+
+  const worker = new Worker('/wasm/qseries-worker.js');
+
+  function setStatus(text: string, computing = false) {
+    statusEl.textContent = text;
+    statusEl.classList.toggle('computing', computing);
+  }
+
+  function writePrompt() {
+    term.write(PROMPT);
+  }
+
+  function redrawLine() {
+    term.write('\r\x1b[K' + PROMPT + inputBuffer);
+    const moveBack = inputBuffer.length - cursorPos;
+    if (moveBack > 0) {
+      term.write('\x1b[' + moveBack + 'D');
+    }
+  }
+
+  function sendNextExample() {
+    if (pendingExampleCommands.length === 0) return;
+    const cmd = pendingExampleCommands.shift()!;
+    inputBuffer = '';
+    cursorPos = 0;
+    term.write(PROMPT + cmd + '\r\n');
+    history.push(cmd);
+    historyIndex = history.length;
+    isComputing = true;
+    setStatus('Computing...', true);
+    worker.postMessage({ type: 'evaluate', expr: cmd });
+  }
+
+  worker.onmessage = (e: MessageEvent) => {
+    const { type, banner, result, error } = e.data;
+
+    if (type === 'ready') {
+      overlay.style.display = 'none';
+      term.writeln(banner);
+      term.writeln('');
+      writePrompt();
+      isReady = true;
+      setStatus('Ready');
+
+      if (pendingExampleCommands.length > 0) {
+        sendNextExample();
+      }
+      return;
+    }
+
+    if (type === 'result') {
+      if (result) {
+        term.writeln(result);
+      }
+      isComputing = false;
+      setStatus('Ready');
+
+      if (pendingExampleCommands.length > 0) {
+        sendNextExample();
+      } else {
+        writePrompt();
+      }
+      return;
+    }
+
+    if (type === 'error') {
+      term.writeln('\x1b[31m' + error + '\x1b[0m');
+      isComputing = false;
+      setStatus('Ready');
+
+      if (pendingExampleCommands.length > 0) {
+        sendNextExample();
+      } else {
+        writePrompt();
+      }
+      return;
+    }
+  };
+
+  worker.onerror = (err: ErrorEvent) => {
+    term.writeln('\x1b[31mWorker error: ' + err.message + '\x1b[0m');
+  };
+
+  worker.postMessage({ type: 'init' });
+
+  term.onData((data: string) => {
+    if (!isReady || isComputing) return;
+
+    if (data === '\r') {
+      term.write('\r\n');
+      if (inputBuffer.trim()) {
+        history.push(inputBuffer);
+        historyIndex = history.length;
+        isComputing = true;
+        setStatus('Computing...', true);
+        worker.postMessage({ type: 'evaluate', expr: inputBuffer });
+      } else {
+        writePrompt();
+      }
+      inputBuffer = '';
+      cursorPos = 0;
+      return;
+    }
+
+    if (data === '\x7f') {
+      if (cursorPos > 0) {
+        inputBuffer = inputBuffer.slice(0, cursorPos - 1) + inputBuffer.slice(cursorPos);
+        cursorPos--;
+        redrawLine();
+      }
+      return;
+    }
+
+    if (data === '\x1b[A') {
+      if (historyIndex > 0) {
+        historyIndex--;
+        inputBuffer = history[historyIndex];
+        cursorPos = inputBuffer.length;
+        redrawLine();
+      }
+      return;
+    }
+
+    if (data === '\x1b[B') {
+      if (historyIndex < history.length - 1) {
+        historyIndex++;
+        inputBuffer = history[historyIndex];
+        cursorPos = inputBuffer.length;
+        redrawLine();
+      } else {
+        historyIndex = history.length;
+        inputBuffer = '';
+        cursorPos = 0;
+        redrawLine();
+      }
+      return;
+    }
+
+    if (data === '\x1b[D') {
+      if (cursorPos > 0) {
+        cursorPos--;
+        term.write('\x1b[D');
+      }
+      return;
+    }
+
+    if (data === '\x1b[C') {
+      if (cursorPos < inputBuffer.length) {
+        cursorPos++;
+        term.write('\x1b[C');
+      }
+      return;
+    }
+
+    if (data.length > 1 && !data.startsWith('\x1b')) {
+      const cleaned = data.replace(/[\r\n]/g, ' ').replace(/[^\x20-\x7e]/g, '');
+      if (cleaned.length > 0) {
+        inputBuffer = inputBuffer.slice(0, cursorPos) + cleaned + inputBuffer.slice(cursorPos);
+        cursorPos += cleaned.length;
+        redrawLine();
+      }
+      return;
+    }
+
+    if (data >= ' ' && data.length === 1) {
+      inputBuffer = inputBuffer.slice(0, cursorPos) + data + inputBuffer.slice(cursorPos);
+      cursorPos++;
+      redrawLine();
+      return;
+    }
+  });
+
+  runBtn.addEventListener('click', () => {
+    const key = exampleSelect.value;
+    if (!key || !EXAMPLES[key]) return;
+    if (!isReady) return;
+
+    pendingExampleCommands = [...EXAMPLES[key]];
+
+    if (!isComputing) {
+      inputBuffer = '';
+      cursorPos = 0;
+      term.write('\r\x1b[K');
+      sendNextExample();
+    }
+  });
+</script>
