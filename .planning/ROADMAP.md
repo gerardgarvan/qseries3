@@ -804,4 +804,7 @@ Plans:
   1. GitHub Actions workflow: push to main → build Wasm (Emscripten) → build site (Astro) → deploy to Cloudflare Pages
   2. Deployed site serves `.wasm` files with correct `application/wasm` MIME type
   3. Playground works end-to-end on the deployed URL (Wasm loads, evaluates, returns results)
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 47-01-PLAN.md — GitHub Actions workflow (Wasm → Astro → Cloudflare Pages deploy) + _headers for Wasm MIME type
