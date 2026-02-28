@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 ## Current Position
 
 Phase: 48 — Cleanup
-Plan: —
-Status: Ready to plan Phase 48
-Last activity: 2026-02-28 — v3.0 roadmap created (phases 48–50)
+Plan: 01 of 01 complete
+Status: Phase 48 Plan 01 complete
+Last activity: 2026-02-28 — Completed 48-01 cleanup (website, CI/CD, wasm-website target removed)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -43,6 +43,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 45-doc-content P03 | ~6 | 2 tasks | 5 files |
 | Phase 46-playground P01 | ~3 | 2 tasks | 8 files |
 | Phase 47-cicd-deploy P01 | ~3 | 2 tasks | 2 files |
+| Phase 48-cleanup P01 | ~3 | 2 tasks | 28 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,7 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 45-doc-content]: Plan 45-03: 5 tutorial pages (overview, Rogers-Ramanujan, theta/eta, partition identities, modular equations); real REPL output for all examples; KaTeX math-then-REPL layout; sift T parameter is input truncation
 - [Phase 46-playground]: Plan 46-01: xterm.js playground at /playground/ with Worker-based Wasm evaluation; @xterm/xterm 5.5.0 + @xterm/addon-fit; Worker in public/wasm/ with importScripts; sequential example execution via queue; wasm-website Makefile target
 - [Phase 47-cicd-deploy]: Plan 47-01: GitHub Actions single-job pipeline (checkout → emsdk 3.1.64 → wasm → wasm-website → Node 22 → npm ci → Astro → verify wasm → Cloudflare Pages); _headers for application/wasm + immutable caching
+- [Phase 48-cleanup]: Plan 48-01: Deleted website/ (27 files, 9818 lines), .github/ (CI/CD), wasm-website Makefile target; core build and wasm target preserved
 
 ### Roadmap Evolution
 
@@ -132,7 +134,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: v3.0 roadmap created — phases 48–50 ready for planning
+Stopped at: Completed 48-01-PLAN.md — website and CI/CD removed, ready for Phase 49
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
