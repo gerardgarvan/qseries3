@@ -1,165 +1,168 @@
-# Project Research Summary
+# Research Summary — Milestone v4.1: Distribution
 
-**Project:** qseries REPL v4.0 — Core Improvements
-**Domain:** Zero-dependency C++20 mathematical REPL (q-series / partition theory)
+**Project:** qseries REPL
+**Domain:** Distribution & packaging (Docker image + install script)
 **Researched:** 2026-02-28
 **Confidence:** HIGH
 
 ## Executive Summary
 
-The v4.0 milestone adds two categories of improvement to the existing qseries REPL: **visual polish** (ANSI color output, clear screen, smarter tab completion) and **computational performance** (Karatsuba multiplication, faster series operations, benchmarking infrastructure). All features are implementable within the zero-dependency C++20 constraint using only standard library facilities (`<chrono>`, `<fstream>`, `<sstream>`) and well-documented algorithms. No new external libraries, no build command changes, and no modifications to the mathematical core (frac.h, qfuncs.h, convert.h, relations.h, linalg.h) are required for the REPL enhancements. The performance work is confined to bigint.h and series.h. Session save/load adds persistence to repl.h.
+The qseries binary is already statically linked at ~1.5MB with zero runtime dependencies, which makes distribution trivially simple compared to most software. The Docker image is a two-stage build producing a ~1.5MB image on `scratch`. The install script is a POSIX shell script that downloads a pre-built binary from GitHub Releases. No changes to the C++ source code or existing build are required — this milestone adds only DevOps files (Dockerfile, CI workflows, install script).
 
-The recommended approach is **bottom-up by layer**: start with the lowest-level performance optimization (Karatsuba in bigint.h), then series optimization (series.h), then the REPL presentation layer (ansi color, clear screen, tab completion, session persistence, benchmarking — all in repl.h). ANSI color and clear screen share a Windows VT processing prerequisite and should ship together. The performance features (Karatsuba + series optimization) are independent of the REPL features and can be developed in parallel. The benchmarking suite is both a deliverable and a validation tool for the Karatsuba threshold tuning.
+The recommended approach is: build a GitHub Actions CI pipeline first (prerequisite for everything), then add the Dockerfile (testable locally), then the release workflow (cross-platform matrix builds uploaded to GitHub Releases), then the install script (downloads from those releases). All four researchers agree on this dependency chain. The key risks are macOS rejecting `-static` (must be omitted on Darwin), Docker containers needing `-it` flags for the REPL, and the install script needing robust platform detection.
 
-The key risks are: (1) **Karatsuba intermediate overflow** — base 10^9 limb arithmetic requires signed 64-bit intermediates to handle the subtraction step `z1 = z_mid - z_high - z_low`, and wrong threshold selection can cause performance regressions on real workloads; (2) **ANSI codes leaking into non-TTY output** — the codebase has ~51 `std::cout` call sites that must all be gated on `stdin_is_tty()` or ANSI will contaminate script mode and piped output; (3) **ANSI codes breaking the line editor** — colorizing the prompt changes its byte length without changing display width, breaking cursor positioning in `redrawLineRaw()`.
+## Consensus Findings
 
-## Key Findings
+All four researchers agree on these points:
 
-### Recommended Stack
+1. **`scratch` is the correct Docker runtime base** — not distroless (~9MB overhead for unused features), not Alpine (unnecessary package manager). The static binary IS the entire image.
+2. **GitHub Container Registry (ghcr.io)** over Docker Hub — free, no rate limits, integrated auth with GitHub Actions.
+3. **GitHub Releases** for binary hosting — free, unlimited bandwidth, stable download URLs, built-in versioning.
+4. **macOS cannot use `-static`** — Apple rejects static binaries. macOS builds must dynamically link libSystem (which is always present). This is standard practice.
+5. **No package manager submissions** (Homebrew, Scoop, AUR) — maintenance overhead disproportionate to the niche user base. Defer indefinitely.
+6. **Exec-form ENTRYPOINT** (`ENTRYPOINT ["/qseries"]`) — shell-form breaks signal handling, leaving users unable to Ctrl+C out of the container.
+7. **Tag-triggered releases** (`on: push: tags: ['v*']`) — git tag drives release version, Docker tag, and binary version string.
 
-No new dependencies. All v4.0 features use C++20 standard library headers already available or trivially addable: `<fstream>` and `<sstream>` for session persistence, `<chrono>` (already included) for benchmarking. The build command remains `g++ -std=c++20 -O2 -static -o qseries main.cpp`. An optional `bench_main.cpp` produces a separate benchmark binary for development-time performance testing.
+## Stack Additions
 
-**Core technologies:**
-- **C++20 / g++ 13+**: Unchanged toolchain — all new features use standard library only
-- **ANSI SGR escape codes**: Direct `\033[Nm` sequences for color; Windows requires one-time `SetConsoleMode()` call on stdout
-- **Karatsuba algorithm**: Textbook divide-and-conquer multiplication (Knuth 4.3.3 / GMP), threshold ~32 limbs
-- **`std::chrono::steady_clock`**: Monotonic clock for benchmarking (NOT `high_resolution_clock`, which is non-monotonic on libstdc++)
+No new C++ dependencies. Only DevOps files:
 
-### Expected Features
+| File | Purpose | Notes |
+|------|---------|-------|
+| `Dockerfile` | Multi-stage build: `gcc:14-bookworm` → `scratch` | Repo root |
+| `.dockerignore` | Exclude `.git/`, `.planning/`, `build/`, etc. | Keeps context small |
+| `.github/workflows/ci.yml` | Build + test on push/PR | Single platform, fast feedback |
+| `.github/workflows/release.yml` | Cross-platform matrix build → GitHub Release + Docker push | Triggered by `v*` tags |
+| `install.sh` | One-liner Unix installer | POSIX sh, `curl \| bash` pattern |
+| Makefile updates | `docker-build`, `docker-run` targets | Additive only |
+| README.md updates | Install instructions, Docker usage, CI badge | User-facing docs |
 
-**Must have (table stakes):**
-- ANSI colored output — prompt (cyan/green), errors (red), timing (dim gray), results in default color
-- Clear screen (`Ctrl+L` keypress + `clear` command) — universal REPL expectation
-- Longest common prefix tab completion — current behavior (list-only, no prefix fill) is below readline standard
-- Persistent history across sessions — `~/.qseries_history`, plain text, 1000 lines
+**Key versions to pin:**
+- `gcc:14-bookworm` (Docker build image)
+- `actions/checkout@v4`, `softprops/action-gh-release@v2`, `docker/build-push-action@v6`
+- `ubuntu-24.04` (CI runner — explicit, not `ubuntu-latest`)
 
-**Should have (differentiators):**
-- Auto-parentheses on function completion — append `(` after completing a known function name
-- Argument signature hints — show `etaq(k) or etaq(k,T)` when Tab pressed inside empty parens
-- `save("file")` / `load("file")` commands — save input history as replayable `.q` script
-- Karatsuba multiplication — O(n^1.585) for large BigInt operands (significant at T=200+)
-- Series inner-loop early break — trivial 3-line change for 2-4x speedup on high-truncation series
-- Benchmarking suite — separate `bench_main.cpp` with `doNotOptimize` barriers and median reporting
+## Feature Table Stakes
 
-**Defer (v2+):**
-- Input syntax highlighting — requires per-keystroke tokenization + colored redraw; massive complexity
-- Output syntax highlighting (coloring coefficients vs exponents) — unprecedented in math REPLs, distracting
-- Full workspace serialization (save all variables as structured data) — requires Series→expression serialization; fragile
-- Configurable color themes — overkill for 5-6 color uses
-- Toom-Cook / FFT multiplication — over-engineered; Karatsuba is the right next step from schoolbook
-- `NO_COLOR` env var support — nice-to-have, low priority (can add `--color=never` flag instead)
+### Install Script — minimum viable
+- Platform detection (`uname -s` + `uname -m` → OS/arch)
+- HTTP tool fallback (curl → wget)
+- SHA256 checksum verification
+- Install to `~/.local/bin` (no sudo by default)
+- `--version` flag for pinning
+- `set -euo pipefail` + wrap in `main()` function (partial-download protection)
+- POSIX sh compatible (`#!/bin/sh`)
+- Idempotent (safe to re-run)
 
-### Architecture Approach
+### Docker Image — minimum viable
+- Multi-stage build: `gcc:14-bookworm` → `scratch`
+- `ENTRYPOINT ["/qseries"]` (exec form, no shell wrapper)
+- Tagged versions (`:v3.1`, `:latest`)
+- Image size < 5MB
+- Works with `docker run -it`
 
-All REPL enhancements (color, clear, completion, session, benchmarking) are confined to `repl.h` with a thin new `ansi.h` utility header. Performance work modifies only `bigint.h` (Karatsuba) and `series.h` (dense fast-path, inner-loop early break). No interface changes — `operator*` signatures, `eval()` signatures, and `Environment` structure are preserved. The existing `stdin_is_tty()` macro gates all interactive-only behavior. WASM compatibility is maintained by disabling color and session I/O behind `#ifndef __EMSCRIPTEN__`.
+### CI/CD — minimum viable
+- `ci.yml`: build + acceptance tests on push/PR (Linux only)
+- `release.yml`: tag-triggered matrix build → GitHub Release with binaries + checksums → Docker push to ghcr.io
+- Platforms: linux-amd64, linux-arm64, darwin-amd64, darwin-arm64, windows-amd64
 
-**Major components modified:**
-1. **`bigint.h`** — Add `karatsubaMultiply()` static method with threshold dispatch; existing `addAbs`/`subAbs` reused for recombination
-2. **`series.h`** — Inner-loop early break (trivial), optional dense multiply path for series with density >50%
-3. **`repl.h`** — ANSI color wrapping (~15 call sites), `Ctrl+L` + `clear` command, smart tab completion (context analysis + LCP + auto-parens), history persistence, save/load commands, timing toggle, benchmark builtin
-4. **`ansi.h` (new)** — ~40 lines: color constants, `enabled` flag, helper functions returning empty strings when disabled
+### Defer
+- Windows PowerShell install script (WSL is sufficient)
+- Multi-arch Docker manifest (amd64-only image; ARM users use install script)
+- Self-update mechanism
+- `cosign` image signing
+- Homebrew/Scoop/AUR packages
 
-### Critical Pitfalls
+## Watch Out For
 
-1. **ANSI codes leaking into script/piped output** — Gate ALL color on `stdin_is_tty()`. Never embed `\033[` literals at call sites; centralize in `ansi.h` helpers that return empty strings when disabled. Add regression test: `qseries < demo.qs | xxd | grep '1b 5b'` must be empty.
+**Top 5 pitfalls, ranked by severity:**
 
-2. **ANSI codes breaking line editor cursor positioning** — Colorizing the prompt adds invisible bytes that break `redrawLineRaw()` cursor math. Track prompt **display width** separately from byte length. Never colorize user input text.
+1. **macOS rejects `-static`** — arm64 macOS kills static binaries with SIGKILL. CI matrix and Makefile must detect Darwin and omit `-static`. This blocks macOS distribution entirely if missed.
 
-3. **Karatsuba intermediate overflow with base 10^9** — The recombination `z1 = z_mid - z_high - z_low` produces negative limbs that wrap in `uint32_t`. Use `int64_t` signed intermediates, or implement Karatsuba at the vector-split level (half the limbs, delegate sub-products to existing `operator*`). Cross-check: `karatsuba(a,b) == schoolbook(a,b)` for random inputs at all size boundaries.
+2. **Docker without `-it` breaks the REPL** — bare `docker run qseries` gets no TTY, REPL enters script mode, exits immediately. Document `-it` prominently. Consider a wrapper that detects missing TTY and prints a helpful error.
 
-4. **Wrong Karatsuba threshold causing regression** — Most BigInt values in the REPL are 1-4 limbs. Start threshold at ~32 limbs (~288 digits). Benchmark real workloads (`etaq(1,500)`, `prodmake(rr,200)`) not synthetic inputs. Reject if any acceptance test regresses.
+3. **Signal handling in Docker** — shell-form ENTRYPOINT wraps the binary in `/bin/sh`, swallowing SIGINT. Users can't Ctrl+C. Must use exec-form: `ENTRYPOINT ["/qseries"]`.
 
-5. **Series optimization breaking truncation invariant** — A dense-array fast path must handle negative exponents (Laurent series from `inverse()`) and enforce `result.trunc = min(a.trunc, b.trunc)`. Run Rogers-Ramanujan after any series.h change.
+4. **Install script `curl | bash` security** — wrap entire script in a `main()` function called at the end (prevents partial-download execution). Use `set -euo pipefail`. Download to temp dir, verify checksum, then move to install dir. Never require sudo.
 
-## Implications for Roadmap
+5. **PATH management across shells** — `~/.local/bin` may not be on PATH. Don't silently modify shell configs. Print clear instructions for bash/zsh/fish. Let the user decide.
 
-Based on research, suggested phase structure:
+**Secondary concerns:**
+- QEMU-emulated arm64 builds are 10-50x slower than native — use `ubuntu-24.04-arm` runner or cross-compile with `aarch64-linux-gnu-g++`
+- Docker `-t` flag converts `\n` → `\r\n` — document that scripted usage needs `-i` without `-t`
+- Binary naming: Linux/macOS builds must NOT have `.exe` extension
 
-### Phase 1: ANSI Color + Clear Screen
-**Rationale:** Foundation for all visual improvements. Shares the Windows VT processing prerequisite with clear screen. Lowest complexity (~70 lines total). Transforms the REPL's visual impression immediately.
-**Delivers:** Colored prompt, errors, timing; `Ctrl+L` and `clear` command; Windows VT enablement; `ansi.h` utility header.
-**Addresses:** ANSI color (table stakes), clear screen (table stakes)
-**Avoids:** Pitfalls 1 (leak to pipes), 2 (cursor miscalculation), 8 (Windows VT), 13 (color scheme legibility), 17 (error format), 18 (Unicode interaction)
+## Proposed Phase Order
 
-### Phase 2: Karatsuba Multiplication
-**Rationale:** Self-contained change in `bigint.h`. No upstream dependencies. Must land before series optimization (Phase 3) to get combined benefit. Must land before benchmarking (Phase 4) because the benchmark suite validates the threshold.
-**Delivers:** O(n^1.585) BigInt multiply for operands ≥32 limbs; automatic speedup for Frac and Series at high truncation.
-**Avoids:** Pitfalls 3 (overflow), 4 (threshold regression), 16 (not tested)
+### Phase 1: Docker Image
+**Files:** `Dockerfile`, `.dockerignore`, Makefile docker targets
+**Rationale:** Self-contained, testable locally with `docker build . && docker run -it`. No CI dependency. Validates the static binary + scratch pattern immediately.
+**Delivers:** Working `docker run -it qseries` experience
+**Avoids:** Pitfalls #2 (TTY), #3 (signals), #14 (image bloat) by using exec-form ENTRYPOINT and multi-stage build from the start
+**Research needed:** No — straightforward, well-documented pattern
 
-### Phase 3: Faster Series Operations
-**Rationale:** Depends on Karatsuba being in place for combined benefit. Modifies only `series.h`. The inner-loop early break is trivial (3 lines) and delivers 2-4x on its own.
-**Delivers:** Inner-loop early break; optional dense multiply path for dense series; optimized `inverse()` coefficient access.
-**Avoids:** Pitfall 11 (truncation invariant breakage)
+### Phase 2: CI/CD Pipeline
+**Files:** `.github/workflows/ci.yml`, `.github/workflows/release.yml`
+**Rationale:** Prerequisite for install script. Establishes quality gate (CI) and produces the release artifacts (binaries + checksums on GitHub Releases + Docker image on ghcr.io).
+**Delivers:** Automated cross-platform builds, GitHub Releases with binaries, Docker image pushed to ghcr.io
+**Avoids:** Pitfall #1 (macOS static) by conditionally omitting `-static` in the matrix. Pitfall #8 (slow QEMU) by using native ARM runners or cross-compilation.
+**Research needed:** Possibly — verify exact GitHub Actions runner availability and MinGW g++ path on `windows-latest`
 
-### Phase 4: Benchmarking Suite
-**Rationale:** Validates Phases 2-3 performance gains. Provides infrastructure for future optimization work. Can be developed concurrently with Phases 2-3 but is most useful after they land.
-**Delivers:** `bench_main.cpp` with `doNotOptimize` barriers, median reporting, benchmarks for BigInt multiply (3/20/100 limbs), series multiply (T=50/200), etaq, prodmake. Timing toggle (`timing on/off`) in REPL.
-**Avoids:** Pitfalls 10 (benchmark noise), 15 (output interference)
-
-### Phase 5: Smart Tab Completion
-**Rationale:** Independent of performance work. Benefits from Phase 1 (dimmed hint text). Three sub-features of increasing complexity: LCP fill (LOW), auto-parens (LOW), arg hints (MEDIUM).
-**Delivers:** Longest-common-prefix fill on first Tab; auto-parentheses on single function match; argument signature hints when Tab pressed inside empty parens.
-**Avoids:** Pitfall 12 (new commands not registered in help table)
-
-### Phase 6: Session Save/Load + History Persistence
-**Rationale:** Largest REPL enhancement. Requires the most new code (~80 lines) and touches serialization, file I/O, and the REPL loop. Best done last to avoid churn from earlier phases modifying repl.h. History persistence is independent and can be split out.
-**Delivers:** `~/.qseries_history` persistence (1000 lines); `save("file")` writes input history as replayable `.q` script; `load("file")` replays a script from within the REPL.
-**Avoids:** Pitfalls 5 (format versioning), 6 (Series serialization), 7 (JacFactor serialization), 14 (unbounded growth)
+### Phase 3: Install Script + README
+**Files:** `install.sh`, `README.md` updates
+**Rationale:** Depends on Phase 2 (needs GitHub Releases to exist). Cannot be tested until at least one release is published.
+**Delivers:** `curl -fsSL .../install.sh | bash` one-liner install for Linux/macOS
+**Avoids:** Pitfall #4 (security) with `main()` wrapper and checksums. Pitfall #7 (PATH) by defaulting to `~/.local/bin` and printing instructions.
+**Research needed:** No — well-established patterns from Starship, Deno, etc.
 
 ### Phase Ordering Rationale
+- Docker → CI → Install follows the strict dependency chain: install script needs releases, releases need CI, Docker is independent but validates the build first
+- Each phase has a clear deliverable that can be verified before moving on
+- Docker first gives fastest local feedback loop
 
-- **Performance before presentation:** Karatsuba and series optimization are lower-layer changes with zero risk of conflicting with REPL-layer work. Landing them first means the benchmark suite (Phase 4) can validate them, and all subsequent testing runs faster.
-- **ANSI first among REPL features:** It's the thinnest REPL change and establishes the `ansi.h` utility used by later phases (dimmed hint text in tab completion, colored benchmark output).
-- **Tab completion before session:** Tab completion modifies `handleTabCompletion()` and `readLineRaw()`. Session save/load adds new builtins and serialization. Keeping them in separate phases reduces merge conflicts in the large `repl.h` file.
-- **Benchmarking as a tool phase:** The suite is needed to validate Karatsuba threshold and series optimization, but is also a deliverable. Positioning it after performance work means it can immediately report meaningful results.
+## Open Questions
 
-### Research Flags
+Decisions to make during requirements/planning:
 
-Phases likely needing deeper research during planning:
-- **Phase 2 (Karatsuba):** Threshold tuning is empirical — needs benchmark-driven experimentation. The signed-intermediate approach for the subtraction step requires careful implementation.
-- **Phase 3 (Series optimization):** Dense fast-path density threshold (50%?) needs empirical validation. Laurent series (negative exponents) handling in dense path needs design.
+1. **gcc/glibc vs Alpine/musl for Docker build stage?** STACK.md recommends gcc:14-bookworm (matches project toolchain). PITFALLS.md warns glibc-static isn't truly static (NSS issue). Since qseries does zero networking, the NSS concern is moot — but musl would produce a "purer" static binary. Recommendation: start with gcc:14-bookworm for consistency; switch to musl only if portability issues arise.
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1 (ANSI color):** Well-documented; project already uses ANSI escapes for cursor control. Pattern is established.
-- **Phase 4 (Benchmarking):** Standard `steady_clock` + compiler barrier pattern. `doNotOptimize` template is textbook.
-- **Phase 5 (Tab completion):** Readline conventions are well-documented; existing `handleTabCompletion()` provides clear extension points.
-- **Phase 6 (Session save/load):** Plain text I/O with `fstream`. The replay-based approach (save history, not variables) is straightforward.
+2. **Multi-arch Docker image (amd64 + arm64) or amd64-only?** FEATURES.md calls multi-arch a table stake. STACK.md says skip it. Recommendation: amd64-only for v4.1, add arm64 later if requested.
+
+3. **Version string injection at build time?** Currently hardcoded as `"qseries 2.0"` in main.cpp. CI should inject the git tag via `-DVERSION=...`. Needs a small source change (use `#ifndef VERSION` guard).
+
+4. **Should install script support `--global` (sudo to `/usr/local/bin`)?** STACK.md says yes. PITFALLS.md says never require sudo. Recommendation: default to `~/.local/bin`, offer `--global` as opt-in.
+
+5. **Windows install script (PowerShell)?** STACK.md includes one. FEATURES.md marks it as anti-feature. Recommendation: defer. Provide direct download link on GitHub Releases instead.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Zero new dependencies; all standard library. Verified against official docs. |
-| Features | HIGH | Conventions established by IPython, Julia, PARI/GP. Feature classification (table stakes vs differentiator) grounded in real REPL precedents. |
-| Architecture | HIGH | Based on direct source analysis of all 11 project files. Touch points identified by line number. |
-| Pitfalls | HIGH | Critical pitfalls verified against community reports (GMP Karatsuba docs, ANSI leak issues, readline width bugs). |
+| Stack | HIGH | Docker, GitHub Actions, GitHub Releases are mature, well-documented |
+| Features | HIGH | Clear table stakes; many reference implementations (Starship, Deno) |
+| Architecture | HIGH | Multi-stage Docker, CI matrix, install script are standard patterns |
+| Pitfalls | HIGH | Verified against official docs (Apple QA1118, Docker docs, glibc docs) |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
-
-- **Karatsuba threshold value:** Research recommends ~32 limbs but this is a starting estimate from GMP's data on 32-bit limbs. Actual optimal threshold depends on this codebase's `addAbs`/`subAbs` overhead and must be measured empirically with the benchmark suite.
-- **Dense series multiplication density cutoff:** The 50% density threshold for switching from sparse (map) to dense (vector) multiplication is an educated guess. Needs profiling on real q-series workloads (etaq products, theta functions) to find the actual crossover.
-- **Session save scope:** Research recommends Level 1 only (save input history as replayable script) over Level 2 (full workspace serialization). If users demand variable persistence, the structured text format from STACK.md provides a viable design, but it requires handling all `EnvValue` variants including future additions.
-- **`NO_COLOR` environment variable:** The no-color.org convention is becoming standard. Whether to support it in v4.0 or defer is a prioritization decision.
+- Windows CI build: MinGW g++ availability on `windows-latest` runner needs verification at implementation time
+- ARM64 cross-compilation: acceptance tests can't run for cross-compiled binaries without QEMU
+- Rosetta detection on macOS: `uname -m` may report x86_64 on ARM hardware under Rosetta
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Microsoft Learn: Console Virtual Terminal Sequences](https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences) — ANSI/VT processing on Windows
-- [Microsoft Learn: SetConsoleMode](https://learn.microsoft.com/en-us/windows/console/setconsolemode) — Windows API for enabling VT
-- [GMP Manual: Karatsuba Multiplication](https://gmplib.org/manual/Karatsuba-Multiplication) — Algorithm reference and threshold guidance
-- [GMP Tuneup Tables](https://gmplib.org/devel/thres/) — Empirical thresholds across architectures
-- [IPython documentation](https://ipython.readthedocs.io/en/stable/) — REPL color, history, and save conventions
-- [Julia REPL docs](https://docs.julialang.org/en/v1/stdlib/REPL) — Tab completion and color conventions
-- [PARI/GP defaults](https://pari.math.u-bordeaux.fr/dochtml/ref/GP_defaults.html) — Math REPL color and history conventions
-- Direct codebase analysis of all 11 source files (bigint.h, frac.h, series.h, qfuncs.h, convert.h, linalg.h, relations.h, parser.h, repl.h, main.cpp, main_wasm.cpp)
+- Docker multi-stage build guide — https://docs.docker.com/guides/cpp/multistage
+- Apple QA1118: Static linking not supported — https://developer.apple.com/library/archive/qa/qa1118
+- GitHub Actions runner images — https://github.com/actions/runner-images
+- softprops/action-gh-release — https://github.com/softprops/action-gh-release
+- Docker glibc/musl docs — https://docs.docker.com/dhi/core-concepts/glibc-musl/
 
 ### Secondary (MEDIUM confidence)
-- [Sandor Dargo: Clocks in C++](https://www.sandordargo.com/blog/2025/12/10/clocks-part-4-high_resolution_clock) — steady_clock vs high_resolution_clock analysis
-- [Stack Overflow: DoNotOptimize patterns](https://stackoverflow.com/questions/40122141) — Compiler barrier techniques for benchmarking
-- [no-color.org](https://no-color.org/) — Convention for disabling terminal colors
-- [OhMyREPL.jl](https://kristofferc.github.io/OhMyREPL.jl/latest/) — Julia REPL enhancement patterns
+- Starship install.sh — reference implementation for single-binary installers
+- PARI/GP Docker — same domain (number theory REPL in Docker)
+- scratch vs distroless comparison — https://oneuptime.com/blog/post/2026-02-08
 
 ---
 *Research completed: 2026-02-28*

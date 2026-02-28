@@ -1,430 +1,599 @@
-# Domain Pitfalls — v4.0 Core Improvements
+# Domain Pitfalls — Distribution Features (Docker Image + Install Script)
 
-**Domain:** Adding ANSI color output, smart tab completion, session save/load, clear screen, Karatsuba multiplication, faster series multiplication, and benchmarking to an existing zero-dependency C++20 q-series REPL.
+**Domain:** Adding Docker image and install script distribution to an existing zero-dependency C++20 REPL
 **Researched:** 2026-02-28
-**Overall confidence:** HIGH (based on codebase inspection + verified community experience)
+**Overall confidence:** HIGH (verified with official docs, Docker docs, Apple Developer docs, community experience)
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause regressions, silent data corruption, or cross-platform breakage.
+Mistakes that cause broken installs, non-functional Docker containers, or security vulnerabilities.
 
 ---
 
-### Pitfall 1: ANSI Escape Codes Contaminating Script Mode / Piped Output
+### Pitfall 1: macOS Does Not Support Fully Static Binaries
 
-**What goes wrong:** ANSI color codes (`\033[31m`, `\033[0m`, etc.) are emitted unconditionally via `std::cout`. When output is piped (`qseries < script.qs > out.txt`) or consumed by another program, the escape sequences appear as raw bytes in the output, breaking downstream parsers, diffs, and regression tests.
+**What goes wrong:** Using `-static` on macOS produces a binary that either fails to link or is killed on execution. On Apple Silicon (arm64), the XNU kernel's Mach-O loader explicitly rejects static binaries.
 
-**Why it happens:** The codebase currently has ~51 `std::cout` call sites in `repl.h` that produce mathematical output (series, products, relations, errors). If color codes are added inline at these sites without gating on TTY, every output path leaks ANSI.
+**Why it happens:** Apple does not guarantee binary compatibility at the kernel syscall level. All macOS programs must dynamically link to `libSystem.dylib` (which wraps libc, libpthread, etc.). Apple's official documentation (QA1118) states: "Apple does not support statically linked binaries on Mac OS X. A statically linked binary assumes binary compatibility at the kernel syscall interface, and we do not make any guarantees on that front." On arm64/Apple Silicon, the kernel enforces this — static executables are killed with `SIGKILL`.
 
 **Consequences:**
-- Script mode (`stdin_is_tty() == false`) produces garbled output files
-- Test harnesses comparing expected vs actual output fail on invisible characters
-- WASM build (`__EMSCRIPTEN__`) receives meaningless escape bytes
-- Piping `qseries < demo.qs | grep "theta"` matches ANSI fragments instead of math
+- The build command `g++ -std=c++20 -O2 -static -o qseries main.cpp` that works on Linux **will fail on macOS**
+- x86_64 macOS: binary may compile but is officially unsupported and may break on OS updates
+- arm64 macOS: binary is killed immediately on execution
+- Users or CI running on macOS get confusing build failures or runtime crashes
 
 **Prevention:**
-1. Gate ALL color output on `stdin_is_tty()` (already exists in codebase, line 22-29 of `repl.h`)
-2. Centralize color in a single output abstraction — never embed `\033[` literals at call sites
-3. Add `--color=never` / `--color=always` CLI flags for override
-4. Regression test: run acceptance scripts with `stdout` redirected to file, verify zero ANSI bytes (`grep -P '\x1b\[' out.txt` must be empty)
+1. On macOS, omit `-static` entirely — the resulting binary will dynamically link to system `libSystem.dylib` but nothing else (no external dependencies to worry about since the project has zero deps)
+2. In the Makefile, detect the OS and conditionally set `LDFLAGS`:
+   ```makefile
+   UNAME_S := $(shell uname -s)
+   ifeq ($(UNAME_S),Darwin)
+       LDFLAGS =
+   else
+       LDFLAGS = -static
+   endif
+   ```
+3. In the install script, do NOT pass `-static` when `uname` reports `Darwin`
+4. Document in README that macOS binaries are dynamically linked to system libraries (this is expected and fine)
 
-**Detection:** Run `qseries < demo.qs | xxd | grep '1b 5b'` — any match means ANSI leaked.
-
-**Phase assignment:** ANSI color phase — must be the gating concern for the entire color implementation.
+**Detection:** CI builds on macOS runners will fail or produce killed binaries if `-static` is passed.
+**Severity:** CRITICAL — blocks macOS distribution entirely if not handled
+**Phase:** Docker/install script phase — must be addressed in build matrix and install script logic
 
 ---
 
-### Pitfall 2: ANSI Codes Breaking Line Editor Width Calculation
+### Pitfall 2: Docker Container Lacks TTY — REPL Hangs or Crashes
 
-**What goes wrong:** The existing `redrawLineRaw()` (repl.h line 1028-1034) computes cursor position based on `line.size()`. If the prompt `"qseries> "` is colorized (e.g., green prompt), the ANSI escape bytes add to the byte count but not the visible width. Cursor positioning via `\033[<count>D` moves wrong number of columns. Left/right arrow, backspace, and tab completion all misalign.
+**What goes wrong:** Running `docker run qseries` (without `-it` flags) causes the REPL to either hang waiting for input, produce no output, or crash because `tcgetattr()` fails on a non-TTY stdin.
 
-**Why it happens:** `redrawLineRaw` uses `line.size()` for cursor math and `\033[K` for clear-to-end. These work because the current prompt is plain ASCII. Adding color to the prompt means the `\r` + prompt length calculation must exclude non-printing bytes.
+**Why it happens:** Docker containers don't allocate a pseudo-TTY by default. The qseries REPL uses `termios.h` functions (`tcgetattr`, `tcsetattr`) to enter raw mode for tab completion and arrow key navigation. Without a TTY, these calls fail. The REPL also checks `stdin_is_tty()` (`isatty(fileno(stdin))`) which returns false in a bare container.
 
 **Consequences:**
-- Cursor appears at wrong position after typing
-- Backspace deletes wrong character visually (correct in buffer, wrong on screen)
-- Tab completion redraws incorrectly — partial completions appear offset
-- History navigation (up/down arrows) shows garbled lines
+- `docker run qseries` with no flags: REPL detects non-TTY stdin, falls into script mode (reads stdin line-by-line), then exits immediately since stdin is empty
+- Users unfamiliar with Docker (mathematicians!) think the tool is broken
+- If the REPL doesn't gracefully handle `tcgetattr` failure, it could crash or enter an undefined state
 
 **Prevention:**
-1. Keep the prompt string in the `redrawLineRaw` function as a constant and track its **display width** separately from its **byte length**
-2. If prompt is colorized, wrap non-printing sequences in a helper that returns both raw bytes and display width
-3. Never colorize user input text in the line editor — only the prompt and output
-4. Test: type 20 characters, press Home, then type — cursor must land at position 0
+1. In `README.md` and Dockerfile, prominently document: `docker run -it qseries`
+2. In the Docker image's `ENTRYPOINT` or a wrapper script, detect missing TTY and print a helpful error:
+   ```bash
+   if [ ! -t 0 ]; then
+     echo "Error: qseries is interactive. Run with: docker run -it qseries"
+     exit 1
+   fi
+   ```
+3. Verify that the REPL's `RawModeGuard` constructor gracefully handles `tcgetattr` returning -1 (it currently does — sets `active = false`)
+4. Consider supporting `docker run qseries <<< "etaq(0,20)"` for non-interactive single-expression mode (script mode already handles this)
+5. Set `ENTRYPOINT ["/usr/local/bin/qseries"]` (exec form) in Dockerfile so signals propagate correctly
 
-**Detection:** Type a long line, press left arrow 5 times, type a character — if it appears in wrong position, width calculation is broken.
-
-**Phase assignment:** ANSI color phase — must be addressed before colorizing the prompt.
+**Detection:** Test `docker run qseries` without `-it` — it should produce a clear error message or sensible fallback, not a hang.
+**Severity:** CRITICAL — default `docker run` experience is completely broken without mitigation
+**Phase:** Docker image phase — Dockerfile and entry point script
 
 ---
 
-### Pitfall 3: Karatsuba Intermediate Overflow at Base 10^9
+### Pitfall 3: glibc Static Linking Warnings and NSS Runtime Failures
 
-**What goes wrong:** The existing `BigInt::operator*` (bigint.h line 203-220) uses `uint64_t` for `carry` and the accumulator `cur`. With base 10^9:
-- Single digit product: up to `(10^9-1)^2 ≈ 10^18` — fits in `uint64_t` (max ~1.8×10^19)
-- But the accumulator line `cur += d[i] * 1ULL * o.d[j]` also adds `r.d[i+j]` (up to 10^9-1) and `carry` (up to 10^9-1), totaling worst case ~10^18 + 2×10^9 — still fits
+**What goes wrong:** Compiling with `-static` on a glibc-based Linux system (Ubuntu, Debian) produces warnings about NSS (Name Service Switch) and may cause runtime failures for DNS-related functions. More importantly, the resulting "static" binary may still require shared libraries at runtime.
 
-Karatsuba introduces intermediate **additions and subtractions of partial products** before carries are resolved. The recombination step computes `z1 = z_mid - z_high - z_low` where each term can be a full-width number. If partial products are stored in the same base-10^9 vector, digits can temporarily exceed 10^9 before carry propagation — and they can also go **negative** (the subtraction `z_mid - z_high - z_low` can produce negative limbs).
+**Why it happens:** glibc's NSS subsystem (`/etc/nsswitch.conf`) dynamically loads `libnss_*.so` libraries at runtime, even when the binary is compiled with `-static`. This is an architectural decision in glibc — static linking doesn't fully work. The compiler emits: "Using 'getaddrinfo' in statically linked applications requires at runtime the shared libraries from the glibc version used for linking."
 
-**Consequences:**
-- Silent truncation of intermediate values → wrong multiplication results
-- Negative limbs stored in `uint32_t` wrap to large positive values → catastrophically wrong
-- The bug manifests only for specific operand sizes near the recursion boundary
-- Frac reduction depends on correct BigInt multiplication; wrong GCD → unreduced fractions → exponential coefficient growth → OOM or wrong series
+**Why this matters for qseries:** The qseries REPL itself does zero networking, so NSS/getaddrinfo isn't a direct concern. However, a glibc-static binary may not be truly portable across Linux distributions because glibc version compatibility is not guaranteed. The binary baked in one glibc version's symbols and layout.
 
 **Prevention:**
-1. Use `int64_t` (signed) for intermediate Karatsuba limbs, not `uint32_t`
-2. Defer carry propagation to a finalize step that runs after all additions/subtractions
-3. Alternatively: implement Karatsuba on top of the existing `operator*` by splitting at the **vector level** (half the limbs), computing three sub-products with the existing multiply, and recombining — this avoids touching the carry logic entirely
-4. **Exhaustive edge-case tests**: multiply numbers that are exactly 1, 2, 3, and 4 limbs long (each limb boundary). Test `(BASE-1) * (BASE-1)`, `BASE * BASE`, and `(BASE^k - 1) * (BASE^k - 1)` for k=1..4
+1. Use Alpine Linux (musl libc) as the Docker build base — musl has zero issues with static linking and produces truly portable binaries
+2. Docker multi-stage build: compile on `alpine:3.20` with `apk add g++`, producing a genuinely portable static binary
+3. For the install script's pre-built binaries, compile Linux binaries on Alpine/musl to guarantee portability
+4. Do NOT compile release binaries on Ubuntu/Debian if distributing as static — use Alpine or cross-compile with musl
 
-**Detection:** Compare Karatsuba result against schoolbook result for random operands of 1–20 limbs. Any mismatch is a correctness bug.
-
-**Phase assignment:** Karatsuba multiplication phase — blocking correctness concern.
+**Detection:** Run `ldd dist/qseries` — should report "not a dynamic executable" (truly static). If it lists shared libraries, the binary isn't actually static.
+**Severity:** CRITICAL — "static" binaries that secretly require shared libs will fail on other distros
+**Phase:** Docker image phase (build stage) and CI/CD phase (release binary builds)
 
 ---
 
-### Pitfall 4: Wrong Karatsuba Recursion Threshold Causing Performance Regression
+### Pitfall 4: Install Script Security — curl | bash Risks
 
-**What goes wrong:** Karatsuba's O(n^1.585) advantage only kicks in above a threshold number of limbs. Below it, the three recursive calls + extra additions are slower than the tight O(n²) loop. With base 10^9, each limb holds 9 decimal digits, so a 100-digit number is only ~12 limbs. Most BigInt values in this REPL are small (partition numbers, series coefficients) — often 1–4 limbs.
+**What goes wrong:** The `curl -sSL https://example.com/install.sh | bash` pattern exposes users to supply-chain attacks, partial-download execution, and content-sniffing attacks.
 
-**Why it happens:** Developers set threshold too low (e.g., 2 limbs) or don't set one at all, making Karatsuba recurse all the way down to single digits.
+**Why it happens:** Three distinct attack vectors:
+1. **Server-side user-agent sniffing:** A compromised server can detect when a script is being piped to bash (vs. viewed in a browser) and serve different content — malicious payload to `curl`, clean script to browsers
+2. **Partial download:** If the connection drops mid-transfer, bash executes the incomplete script, potentially leaving the system in a broken state (e.g., PATH modified but binary not installed)
+3. **MITM without verification:** If the URL uses HTTP or the user disables certificate verification, the script can be modified in transit
 
 **Consequences:**
-- Series multiplication becomes **slower** than before because every Frac multiply pays Karatsuba overhead for tiny numbers
-- `etaq(1, 500)` or Rogers-Ramanujan at T=200 regresses noticeably
-- Benchmark shows Karatsuba "working" on large synthetic inputs but the REPL gets slower for real workloads
+- Mathematician users (not security-savvy) may blindly run `curl | sudo bash`
+- A compromised GitHub Pages or CDN could distribute malware
+- Partial downloads could corrupt user's PATH or leave orphaned files
 
 **Prevention:**
-1. Start with threshold around 32 limbs (~288 decimal digits) and tune empirically
-2. Run the existing acceptance tests with timing **before and after** — reject if any test regresses
-3. Profile real workloads: `etaq(1,500)`, `prodmake(rr, 200)`, `findhom([theta3,theta4,...], 2, 0)` — these are the actual hot paths, not synthetic million-digit multiplies
-4. Keep the schoolbook `operator*` intact; Karatsuba should be called from a dispatch that checks `d.size()` threshold
+1. Always use HTTPS URLs — never offer HTTP install URLs
+2. Provide checksum verification in install instructions:
+   ```bash
+   curl -sSL https://github.com/.../install.sh -o install.sh
+   sha256sum install.sh  # User verifies against published hash
+   bash install.sh
+   ```
+3. Make the install script idempotent — re-running it should be safe
+4. Use `set -euo pipefail` at the top of the install script so partial execution fails fast
+5. Wrap the entire script in a function that's called at the end, preventing partial-download execution:
+   ```bash
+   #!/bin/bash
+   set -euo pipefail
+   main() {
+       # ... all install logic ...
+   }
+   main "$@"
+   ```
+6. Never require `sudo` in the install script — install to `~/.local/bin` or `~/bin` instead
+7. Offer alternative install methods: manual download, `brew tap`, or just `git clone && make`
 
-**Detection:** Time `etaq(1,200)` before and after. If it's slower, threshold is wrong.
-
-**Phase assignment:** Karatsuba multiplication phase — performance validation step.
+**Detection:** Code review the install script for all these patterns before publishing.
+**Severity:** CRITICAL — security vulnerability affecting user trust
+**Phase:** Install script phase
 
 ---
 
-### Pitfall 5: Session Save/Load Format Not Versioned → Silent Data Loss on Format Change
+## Major Pitfalls
 
-**What goes wrong:** Session files are written in version 1 format. A future change adds a field (e.g., new variable types, function definitions). Old binary loads new file and silently ignores or misparses the new fields, or new binary loads old file and crashes on missing fields.
+Mistakes that cause significant usability problems or broken CI pipelines.
 
-**Why it happens:** No version header in the session file format. The format is ad-hoc (e.g., plain text key=value or JSON-like) without a schema version.
+---
+
+### Pitfall 5: Docker CRLF Line Ending Corruption with -t Flag
+
+**What goes wrong:** When Docker allocates a TTY (`-t` flag), it converts `\n` to `\r\n` (CRLF) in output. This corrupts output when piped from a Docker container, breaking scripts that parse qseries output.
+
+**Why it happens:** Docker's `-t` flag puts the terminal in raw mode and enables the TTY's `onlcr` (output NL to CR-NL) translation. This is standard TTY behavior but breaks programmatic output parsing.
 
 **Consequences:**
-- Users lose saved sessions after upgrading
-- Corrupted state loaded silently — wrong truncation, wrong variable values
-- `EnvValue` is `std::variant<Series, std::vector<JacFactor>>` — if a third type is added later, old files can't represent it
+- `docker run -it qseries <<< "etaq(0,10)" | head -1` contains invisible `\r` characters
+- Scripts that compare Docker output to expected output fail on line endings
+- CI tests piping into Docker may produce spurious failures
 
 **Prevention:**
-1. First line of session file: `# qseries-session v1` — always check on load
-2. Use human-readable text format (not binary) — easier to debug, diff, version-control
-3. Define explicit serialization for each `EnvValue` variant with a type tag
-4. On version mismatch: warn user and skip (don't crash, don't silently load)
-5. Test: save session in v1, modify format to v2, verify v2 binary loads v1 file gracefully
+1. Document that `-it` is for interactive use only; for scripted use, use `-i` without `-t`:
+   ```bash
+   echo "etaq(0,10)" | docker run -i qseries  # Correct for scripting
+   docker run -it qseries                       # Correct for interactive
+   ```
+2. In CI tests against Docker, always use `-i` (not `-it`) and strip trailing `\r` defensively
+3. The REPL already handles script mode (non-TTY stdin) correctly, so `-i` without `-t` works naturally
 
-**Detection:** Save a session, hex-edit the version number, load it — should produce a clear error message.
+**Detection:** Compare `docker run -it qseries <<< "1+1" | xxd | head` output — look for `0d 0a` (CRLF) vs `0a` (LF).
+**Severity:** MAJOR — breaks scripted usage of Docker image
+**Phase:** Docker image phase — document in README, test in CI
 
-**Phase assignment:** Session save/load phase — must be the first thing defined before any serialization code.
+---
+
+### Pitfall 6: Alpine/musl Locale and UTF-8 Issues
+
+**What goes wrong:** The qseries REPL running in an Alpine Docker container may mishandle Unicode characters (mathematical symbols in output or user input) because Alpine's musl libc has limited locale support compared to glibc.
+
+**Why it happens:** musl libc doesn't support the full glibc locale system. By default, Alpine containers have no locale set, and `setlocale(LC_ALL, "")` may not enable UTF-8 as expected.
+
+**Consequences:**
+- Mathematical symbols or special characters in output may display as garbage
+- Users typing Unicode in the REPL may see corrupted input echoing
+- `std::locale` operations may behave differently than on desktop Linux
+
+**Prevention:**
+1. Set `ENV LANG=C.UTF-8` in the Dockerfile — musl has built-in support for C.UTF-8
+2. The qseries REPL doesn't currently use `setlocale` or `std::locale` heavily (it deals in ASCII math notation), so impact is low
+3. Test with non-ASCII input to verify behavior
+
+**Detection:** Run `docker run -it qseries` and type/paste a Unicode character — verify it doesn't crash.
+**Severity:** MAJOR if the REPL processes any non-ASCII, MINOR for pure ASCII math
+**Phase:** Docker image phase — single ENV line in Dockerfile
+
+---
+
+### Pitfall 7: PATH Management Across Shells (bash, zsh, fish)
+
+**What goes wrong:** The install script adds the binary to `PATH` by modifying the wrong shell config file, or modifies a file that isn't sourced in the user's shell, leaving the binary not on `PATH` despite a "successful" install.
+
+**Why it happens:** Different shells read different config files:
+- **bash**: `~/.bashrc` (interactive) vs `~/.bash_profile` (login) — and bash login shells DON'T read `~/.bashrc` unless `~/.bash_profile` sources it
+- **zsh** (default on macOS since Catalina): `~/.zshrc`
+- **fish**: `~/.config/fish/config.fish` (completely different syntax: `set PATH $PATH /new/path` instead of `export PATH=`)
+
+Modifying only `~/.bashrc` fails for macOS users (who use zsh by default). Modifying `~/.profile` works for bash login shells but not zsh or fish.
+
+**Consequences:**
+- User installs successfully, opens a new terminal, types `qseries`, gets "command not found"
+- macOS users (zsh default) are the most likely to be affected
+- fish users need completely different syntax and are always forgotten
+
+**Prevention:**
+1. Install binary to a directory already on most PATH configurations:
+   - `~/.local/bin` (XDG standard, often already on PATH in modern distros)
+   - `/usr/local/bin` (requires sudo — avoid if possible)
+2. Detect the user's current shell from `$SHELL` and modify the correct file:
+   ```bash
+   case "$(basename "$SHELL")" in
+       bash) RC_FILE="$HOME/.bashrc" ;;
+       zsh)  RC_FILE="$HOME/.zshrc" ;;
+       fish) RC_FILE="$HOME/.config/fish/config.fish" ;;
+       *)    RC_FILE="$HOME/.profile" ;;
+   esac
+   ```
+3. For fish, use `fish_add_path` or `set -Ua fish_user_paths ~/.local/bin` instead of `export PATH=...`
+4. Check if the directory is already on PATH before modifying any config files
+5. Print clear instructions at the end: "Restart your terminal or run: `source ~/.zshrc`"
+6. Prefer `~/.local/bin` and tell users to add it themselves if it's not on PATH — less magical, more reliable
+
+**Detection:** Test the install script with bash, zsh, and fish shells. Verify `which qseries` works in a new terminal session for each.
+**Severity:** MAJOR — "command not found" after successful install is a terrible first experience
+**Phase:** Install script phase
+
+---
+
+### Pitfall 8: GitHub Actions arm64 Linux Build — QEMU Emulation is Extremely Slow
+
+**What goes wrong:** Cross-compiling or building arm64 Linux binaries on GitHub Actions using QEMU emulation takes 10-50x longer than native builds, causing CI timeouts and wasted minutes.
+
+**Why it happens:** GitHub now offers native arm64 Linux runners (`ubuntu-24.04-arm`), but many tutorials and existing workflows still use `docker/setup-qemu-action` + `docker buildx` for multi-arch builds. QEMU user-space emulation of aarch64 on x86_64 runners is functional but extremely slow for compilation.
+
+**Consequences:**
+- A 30-second native build becomes 10-25 minutes under QEMU
+- CI minutes quota depletes rapidly
+- Flaky timeouts on compilation-heavy builds
+
+**Prevention:**
+1. Use GitHub's native arm64 runners: `runs-on: ubuntu-24.04-arm` (GA since Jan 2026)
+2. For Docker multi-arch images, use a build matrix with native runners per arch instead of QEMU:
+   ```yaml
+   strategy:
+     matrix:
+       include:
+         - runner: ubuntu-24.04
+           arch: amd64
+         - runner: ubuntu-24.04-arm
+           arch: arm64
+   runs-on: ${{ matrix.runner }}
+   ```
+3. If native runners aren't available (e.g., in public repos with limited minutes), cross-compile instead of emulating: use `aarch64-linux-gnu-g++` on an x86_64 runner
+
+**Detection:** Monitor CI build times — if arm64 steps take >5 minutes for a simple C++ compile, you're using emulation.
+**Severity:** MAJOR — wastes CI time and budget, may cause timeout failures
+**Phase:** CI/CD phase (if adding GitHub Actions for release builds)
+
+---
+
+### Pitfall 9: Docker Signal Handling — Ctrl+C Doesn't Kill the REPL
+
+**What goes wrong:** Pressing Ctrl+C in `docker run -it qseries` doesn't send SIGINT to the REPL process, leaving users stuck with no way to exit except `docker kill`.
+
+**Why it happens:** Two common causes:
+1. Using shell form `ENTRYPOINT` (`ENTRYPOINT /usr/local/bin/qseries`) wraps the process in `/bin/sh -c`, so signals go to shell PID 1, not the REPL
+2. PID 1 in a container has special signal semantics — it doesn't receive the default signal handlers, so SIGINT/SIGTERM are ignored unless explicitly handled
+
+**Consequences:**
+- Users can't exit the REPL with Ctrl+C (expected behavior)
+- Users can't exit with Ctrl+D if the REPL doesn't handle EOF
+- `docker stop qseries` waits the full 10-second timeout before force-killing
+
+**Prevention:**
+1. Use exec form for ENTRYPOINT: `ENTRYPOINT ["/usr/local/bin/qseries"]` — this runs the binary as PID 1 directly, no shell wrapper
+2. Alternatively, use `tini` as an init process (Alpine: `apk add tini`, then `ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/qseries"]`) — tini handles signal forwarding properly
+3. Verify the REPL handles SIGINT (Ctrl+C) and EOF (Ctrl+D) gracefully — the current code already handles these in the raw mode input loop
+4. Add a `STOPSIGNAL SIGINT` to the Dockerfile if SIGTERM isn't handled
+
+**Detection:** Run `docker run -it qseries`, press Ctrl+C — verify it exits cleanly. Run `docker stop <container>` — verify it stops within 1-2 seconds, not 10.
+**Severity:** MAJOR — users get stuck in the container
+**Phase:** Docker image phase — ENTRYPOINT format and signal handling
 
 ---
 
 ## Moderate Pitfalls
 
-Mistakes that cause user confusion, subtle bugs, or maintenance burden.
+Mistakes that cause confusing errors or partial failures.
 
 ---
 
-### Pitfall 6: Session Serialization of Arbitrary-Precision Rationals
+### Pitfall 10: Docker Multi-Stage Build — Missing Static Libs in Alpine
 
-**What goes wrong:** `Series` stores `std::map<int, Frac>` where each `Frac` contains two `BigInt`s. Serializing these requires exact round-trip fidelity. Using `Frac::str()` (which outputs `"3/2"` or `"7"`) and parsing back works, but edge cases lurk:
-- Negative exponents in the map (e.g., after `inverse()` of `q*(1-q)`)
-- Very large coefficients (100+ digit numerators from relation finding)
-- The truncation value must be preserved exactly
+**What goes wrong:** The Alpine build stage fails with linker errors because static libraries for libstdc++ or libgcc aren't installed.
 
-**Why it happens:** Developers serialize using `Series::str()` which is a display format with `O(q^N)` suffix and limited term count (`maxTerms=30`). This loses coefficients beyond term 30 and conflates display with data.
-
-**Consequences:**
-- Reloaded series has fewer terms than original
-- Truncation information lost → subsequent arithmetic produces wrong results
-- Negative-exponent terms (from Laurent series) may be omitted or misparsed
+**Why it happens:** Alpine's `g++` package doesn't always include `libstdc++.a` (the static version). By default, `apk add g++` installs the shared library. Static linking requires `gcc-static` (for libgcc) and possibly building with specific flags.
 
 **Prevention:**
-1. Serialize as structured data, not display strings: `{trunc: 50, coeffs: {0: "1", 1: "-1", 2: "-1", ...}}`
-2. Emit ALL coefficients, not just first 30
-3. Include explicit truncation value
-4. Round-trip test: serialize → deserialize → compare every coefficient
+1. Install the right packages: `apk add g++ musl-dev` (musl-dev provides static libc)
+2. Verify with a test build in the Docker stage that `ldd` reports "not a dynamic executable"
+3. Multi-stage Dockerfile pattern:
+   ```dockerfile
+   FROM alpine:3.20 AS builder
+   RUN apk add --no-cache g++ musl-dev make
+   COPY src/ src/
+   COPY Makefile .
+   RUN make LDFLAGS=-static
 
-**Detection:** Save a series with 100 terms, reload, check `coeff(99)` matches.
+   FROM alpine:3.20
+   COPY --from=builder /app/dist/qseries /usr/local/bin/qseries
+   ENTRYPOINT ["/usr/local/bin/qseries"]
+   ```
+4. The final stage can even use `FROM scratch` since the binary is fully static — smallest possible image
 
-**Phase assignment:** Session save/load phase.
+**Detection:** Build fails at link time with "cannot find -lstdc++" or similar.
+**Severity:** MODERATE — blocks Docker build but easy to fix once diagnosed
+**Phase:** Docker image phase
 
 ---
 
-### Pitfall 7: Jacobi Product Variables Not Serializable
+### Pitfall 11: Install Script Assumes `curl` or `wget` Exists
 
-**What goes wrong:** `EnvValue = std::variant<Series, std::vector<JacFactor>>`. If session save only handles `Series`, users who ran `jp := jacprodmake(rr, 40)` lose `jp` on reload. The `JacFactor` type (a tuple of `int, int, Frac`) needs its own serialization path.
-
-**Why it happens:** `JacFactor` is a less common type, easy to forget. The `jac2prod()` display function exists but produces display-only output like `1/(q,q^5)(q^4,q^5)`, not a parseable format.
-
-**Consequences:**
-- Jacobi product variables silently dropped on save
-- User re-runs expensive `jacprodmake` computations after reload
+**What goes wrong:** The install script uses `curl` to download the binary, but the user's system doesn't have `curl` installed (some minimal Linux installs, some Docker base images, older systems).
 
 **Prevention:**
-1. Enumerate all variants in `EnvValue` and require serialization for each
-2. Serialize `JacFactor` as structured `{a: 0, b: 5, exp: 1}` triples
-3. Compile-time check: if `EnvValue` gains a new alternative, the save function must handle it (use `std::visit` exhaustively)
+1. Try `curl` first, fall back to `wget`:
+   ```bash
+   if command -v curl &>/dev/null; then
+       curl -sSL "$URL" -o "$DEST"
+   elif command -v wget &>/dev/null; then
+       wget -q "$URL" -O "$DEST"
+   else
+       echo "Error: curl or wget required. Install one and retry."
+       exit 1
+   fi
+   ```
+2. Also check for `tar` or `unzip` if distributing archives
+3. Check for `chmod` availability (it's standard but good to be defensive)
 
-**Detection:** Save session with a Jacobi product variable, reload, access it — must not throw "undefined variable."
-
-**Phase assignment:** Session save/load phase.
+**Detection:** Test install script on minimal Docker images (`debian:slim`, `alpine`).
+**Severity:** MODERATE — install fails with confusing error
+**Phase:** Install script phase
 
 ---
 
-### Pitfall 8: Windows ANSI Requires Explicit Console Mode Activation
+### Pitfall 12: Binary Naming Convention — `.exe` Extension on Linux/macOS
 
-**What goes wrong:** On Windows, ANSI escape codes are NOT processed by default. The codebase already uses `SetConsoleMode` for input (repl.h line 82-94, `RawModeGuard`), but that's for `STD_INPUT_HANDLE`. ANSI output requires `ENABLE_VIRTUAL_TERMINAL_PROCESSING` on `STD_OUTPUT_HANDLE`, which is a separate call.
+**What goes wrong:** The current Makefile builds `dist/qseries.exe` — this works on Cygwin/Windows but looks wrong on Linux/macOS and confuses users.
 
-**Why it happens:** Unix developers assume ANSI works everywhere. Windows 10+ supports it, but only after explicit opt-in via `SetConsoleMode(hOut, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)`.
+**Why it happens:** The Makefile was written in a Cygwin environment where `.exe` is conventional. On Linux/macOS, executable binaries typically have no extension.
 
 **Consequences:**
-- On Windows, users see raw `←[31m` text instead of colored output
-- Older Windows 10 builds (pre-19042) may fail the `SetConsoleMode` call entirely
-- The existing `RawModeGuard` destructor restores input mode; a separate guard is needed for output mode
+- Linux/macOS users must type `./qseries.exe` which feels wrong
+- Package managers and install scripts typically expect extensionless binaries
+- Docker images carrying `qseries.exe` look like Windows artifacts
 
 **Prevention:**
-1. On startup (before any output), call `SetConsoleMode` on `STD_OUTPUT_HANDLE` with `ENABLE_VIRTUAL_TERMINAL_PROCESSING`
-2. Check return value — if it fails, fall back to no-color mode
-3. Create a separate `AnsiOutputGuard` or integrate into existing startup
-4. Test on Windows Terminal, PowerShell, cmd.exe, and Cygwin terminal (which uses its own ANSI handling)
+1. In the Makefile, conditionally name the binary:
+   ```makefile
+   ifeq ($(OS),Windows_NT)
+       BINARY = dist/qseries.exe
+   else
+       BINARY = dist/qseries
+   endif
+   ```
+2. In the install script, always install as `qseries` (no extension)
+3. In the Dockerfile, the built binary should be `/usr/local/bin/qseries`
 
-**Detection:** Run on Windows cmd.exe without the `SetConsoleMode` call — ANSI codes will appear as literal text.
-
-**Phase assignment:** ANSI color phase — Windows platform concern.
+**Detection:** Check `ls dist/` after building on Linux — `.exe` extension is the warning sign.
+**Severity:** MODERATE — cosmetic but affects user perception and scripting
+**Phase:** Docker + install script phase — both need the correct binary name
 
 ---
 
-### Pitfall 9: Clear Screen Inconsistency Across Platforms
+### Pitfall 13: Install Script Doesn't Verify Architecture Match
 
-**What goes wrong:** `\033[2J\033[H` clears the visible screen on Unix terminals and Windows Terminal (with VT processing enabled). But behavior differs:
-- `\033[2J` clears screen but may not reset cursor to top on all terminals
-- `\033[3J` also clears scrollback buffer — may surprise users who want to scroll up
-- On Cygwin, terminal behavior depends on the underlying terminal emulator (mintty vs Windows console)
-
-**Why it happens:** "Clear screen" has at least 3 different user expectations: clear visible area, clear scrollback, or reset terminal state.
-
-**Consequences:**
-- Users on some terminals see blank screen but cursor at bottom
-- WASM build (`__EMSCRIPTEN__`) has no terminal to clear — command is meaningless
-- Script mode: clear screen in a script does nothing useful and may insert ANSI into piped output
+**What goes wrong:** User on arm64 macOS downloads the x86_64 binary (or vice versa), resulting in "Exec format error" or silent Rosetta 2 emulation with degraded performance.
 
 **Prevention:**
-1. Use `\033[2J\033[H` (clear + cursor home) as the standard sequence
-2. Gate on `stdin_is_tty()` — in script mode, `clear` is a no-op
-3. Gate on `__EMSCRIPTEN__` — in WASM, `clear` is a no-op (or sends a message to the web frontend)
-4. Document what `clear` does: "clears the visible terminal area"
+1. Detect architecture in the install script:
+   ```bash
+   ARCH=$(uname -m)
+   case "$ARCH" in
+       x86_64|amd64)  ARCH="x86_64" ;;
+       aarch64|arm64) ARCH="arm64" ;;
+       *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+   esac
+   ```
+2. Construct download URL with both OS and arch: `qseries-${OS}-${ARCH}`
+3. On macOS with Rosetta 2, `uname -m` may report `x86_64` even on arm64 hardware — check `sysctl -n sysctl.proc_translated 2>/dev/null` to detect Rosetta
 
-**Detection:** Run `clear` in script mode — should produce no output.
-
-**Phase assignment:** Clear screen phase.
+**Detection:** Run `file qseries` to check the binary's architecture matches the host.
+**Severity:** MODERATE — "Exec format error" is confusing for non-technical users
+**Phase:** Install script phase and CI release matrix
 
 ---
 
-### Pitfall 10: Benchmark Noise Hiding Real Performance Changes
+### Pitfall 14: Docker Image Too Large — Shipping Build Tools in Runtime Image
 
-**What goes wrong:** Benchmarks show 15% variance between runs due to OS scheduling, CPU frequency scaling, background processes, and cache effects. A real 5% improvement or regression is invisible within the noise.
-
-**Why it happens:** Using a single `steady_clock::now()` before/after measurement (as the REPL already does at line 1280-1290) is fine for user-visible timing, but insufficient for benchmarking algorithm changes.
-
-**Consequences:**
-- Karatsuba appears faster/slower depending on system load at test time
-- Performance regressions ship because benchmark was run once and looked okay
-- Series multiplication optimization appears to help but actually doesn't (or vice versa)
+**What goes wrong:** A single-stage Dockerfile includes `g++`, `make`, header files, and source code in the final image, inflating it from ~5 MB to 500+ MB.
 
 **Prevention:**
-1. Run each benchmark N times (N ≥ 5, ideally 11+) and report median, not mean
-2. Use warm-up iterations (discard first 1-2 runs) to fill caches
-3. Disable CPU frequency scaling during benchmarks (if possible), or accept and document variance
-4. Compare before/after using statistical significance (e.g., are the medians separable given the variance?)
-5. Benchmark specific hot paths: `etaq(1, 500)`, `prodmake(rr, 100)`, `findhom(L, 3, 0)` — these are the user-visible operations
-6. Use `std::chrono::steady_clock`, not `high_resolution_clock` (which may be an alias for `system_clock` on some platforms)
+1. Always use multi-stage builds — build stage has compilers, runtime stage has only the binary
+2. For a fully static binary, the final stage can be `FROM scratch` (0 bytes base) or `FROM alpine:3.20` (~7 MB base)
+3. Expected image sizes:
+   - `FROM scratch` + static binary: ~2-4 MB
+   - `FROM alpine` + static binary: ~10-12 MB
+   - `FROM ubuntu` + dynamic binary: ~80+ MB (bad)
+   - Single-stage with build tools: ~500+ MB (terrible)
 
-**Detection:** Run the same benchmark 10 times — if min and max differ by >20%, the measurement methodology is too noisy.
-
-**Phase assignment:** Benchmarking phase.
+**Detection:** Run `docker images qseries` — if size exceeds 20 MB, investigate.
+**Severity:** MODERATE — wastes bandwidth, slow pulls, bad first impression
+**Phase:** Docker image phase
 
 ---
 
-### Pitfall 11: Faster Series Multiplication Breaking Truncation Invariant
+### Pitfall 15: Cross-Platform GitHub Release Matrix Misses a Target
 
-**What goes wrong:** The current `Series::operator*` (series.h line 133-151) maintains the critical invariant: `result.trunc = min(a.trunc, b.trunc)` and skips terms where `e1 + e2 >= trunc`. A "faster" implementation (e.g., converting to dense vector, using FFT-style polynomial multiply, or batching coefficient additions) might:
-- Forget to enforce the truncation cutoff
-- Use a dense array indexed 0..N but forget that series can have negative exponents (Laurent series from `inverse()`)
-- Accumulate into Frac without calling `reduce()`, causing BigInt growth
-
-**Why it happens:** Optimization focuses on speed and changes data structures, breaking invariants that were implicit in the original `std::map` iteration.
-
-**Consequences:**
-- Series with extra terms beyond truncation → wrong results in subsequent operations
-- Dense-array approach crashes on negative exponents
-- Unreduced Frac intermediates → exponential memory growth → OOM on moderate computations
+**What goes wrong:** The CI release workflow builds binaries for some OS/arch combos but misses one (e.g., Linux arm64, or macOS x86_64), leaving some users without a pre-built binary.
 
 **Prevention:**
-1. Keep the `std::map<int, Frac>` representation — it handles sparse series and negative exponents naturally. Optimize within this representation first (e.g., skip zero coefficients, batch additions)
-2. If converting to dense, handle the `minExp()` offset explicitly and enforce `trunc` cutoff
-3. Run the full acceptance test suite after any series multiplication change — Rogers-Ramanujan is the ultimate correctness test
-4. Profile first: the bottleneck may be in Frac arithmetic (BigInt multiply/GCD), not in Series iteration
+1. Define the full target matrix explicitly:
+   | OS | Arch | Runner | Static? | Notes |
+   |---|---|---|---|---|
+   | Linux | x86_64 | `ubuntu-24.04` | Yes (musl) | Build on Alpine in Docker |
+   | Linux | arm64 | `ubuntu-24.04-arm` | Yes (musl) | Native ARM runner |
+   | macOS | arm64 | `macos-26` | No (-static omitted) | Apple Silicon native |
+   | macOS | x86_64 | `macos-26-large` | No (-static omitted) | Intel Mac |
+   | Windows | x86_64 | `windows-latest` | Yes | MinGW or MSVC |
+2. Name artifacts consistently: `qseries-linux-x86_64`, `qseries-linux-arm64`, `qseries-darwin-arm64`, `qseries-darwin-x86_64`, `qseries-windows-x86_64.exe`
+3. Test each artifact in CI (at least `./qseries --version` or `echo "1+1" | ./qseries`)
 
-**Detection:** Compute `etaq(1, 100)` and compare every coefficient against known Euler pentagonal values.
-
-**Phase assignment:** Faster series multiplication phase.
-
----
-
-### Pitfall 12: Tab Completion Breaking with New Completable Names
-
-**What goes wrong:** The existing `getCompletionCandidates` (repl.h line 1036-1043) returns help table keys + environment variable names. Adding new built-in commands (like `save`, `load`, `clear`, `benchmark`) requires adding them to the help table AND ensuring the tab completion picks them up. If they're implemented as special-cased strings in the REPL loop (not in the help table), tab completion won't find them.
-
-**Why it happens:** New commands are added in the REPL dispatch (`runRepl`) as string comparisons, bypassing the `getHelpTable()` registry.
-
-**Consequences:**
-- User types `sa<TAB>` and nothing happens — `save` isn't in the candidate set
-- Inconsistency: some commands are completable, others aren't
-- Help system and completion diverge
-
-**Prevention:**
-1. Add ALL new commands to `getHelpTable()` — it's the single source of truth
-2. Tab completion already uses `getHelpTable()` — no extra work needed IF commands are registered there
-3. Test: for every new command, verify `<prefix><TAB>` completes it
-
-**Detection:** Type first 2 letters of every new command + TAB — each must complete or show candidates.
-
-**Phase assignment:** Every phase that adds a new command.
+**Detection:** Check GitHub release assets after each release — count should match the matrix.
+**Severity:** MODERATE — some user cohort can't install
+**Phase:** CI/CD phase
 
 ---
 
 ## Minor Pitfalls
 
-Mistakes that cause minor UX issues or technical debt.
+Mistakes that cause cosmetic issues or minor confusion.
 
 ---
 
-### Pitfall 13: Color Scheme Illegible on Light/Dark Terminal Backgrounds
+### Pitfall 16: Docker termios Warning on Container Startup
 
-**What goes wrong:** Choosing specific ANSI colors (e.g., dark blue for errors) that are invisible on dark terminal backgrounds, or bright yellow that's invisible on light backgrounds.
+**What goes wrong:** When the Alpine-based container starts, the REPL's `tcgetattr()` call may log a warning or debug message if `/dev/tty` isn't available in certain container runtimes (Podman, rootless Docker, CI environments).
 
 **Prevention:**
-1. Use bold/bright variants for important text (errors, warnings)
-2. Stick to colors visible on both light and dark: red for errors, cyan/green for prompts, default for output
-3. Provide `--color=never` for users with problematic terminals
-4. Test on at least: dark terminal, light terminal, Windows Terminal, Cygwin mintty
+1. The existing `RawModeGuard` already handles `tcgetattr` failure gracefully (sets `active = false`)
+2. Ensure no error messages are printed on TTY detection failure — silent fallback to line mode is correct
+3. Test with `docker run --rm qseries` (no `-it`) to verify clean error handling
 
-**Phase assignment:** ANSI color phase.
+**Severity:** MINOR — only affects unusual container runtimes
+**Phase:** Docker image phase (verification)
 
 ---
 
-### Pitfall 14: Session File Grows Without Bound
+### Pitfall 17: Install Script Doesn't Clean Up on Failure
 
-**What goes wrong:** If session auto-saves on every command (or save captures full history + all variables), the session file grows large. A series at T=500 has 500 coefficients, each a rational number. Twenty such variables = 10,000 Frac values = potentially megabytes of text.
+**What goes wrong:** If the install script fails partway through (e.g., download succeeds but `chmod` fails), it leaves a non-executable binary in `~/.local/bin` and a modified `~/.zshrc` with a PATH entry pointing to a broken install.
 
 **Prevention:**
-1. Session save is explicit (user types `save("file")`), not automatic
-2. Warn if session file exceeds a threshold (e.g., 1 MB)
-3. Consider saving only variable names and the commands that created them (replay approach) — more compact but requires re-execution on load
+1. Use a temporary directory for downloads, only move to final location on success:
+   ```bash
+   TMPDIR=$(mktemp -d)
+   trap "rm -rf $TMPDIR" EXIT
+   download_to "$TMPDIR/qseries"
+   chmod +x "$TMPDIR/qseries"
+   mv "$TMPDIR/qseries" "$INSTALL_DIR/qseries"
+   ```
+2. Only modify PATH config files AFTER binary is confirmed working (`$INSTALL_DIR/qseries --version`)
+3. `trap` cleanup ensures temp files are removed even on Ctrl+C
 
-**Phase assignment:** Session save/load phase.
+**Severity:** MINOR — leaves system in inconsistent state, but easy to manually fix
+**Phase:** Install script phase
 
 ---
 
-### Pitfall 15: Benchmark Output Interfering with Normal REPL Output
+### Pitfall 18: Dockerfile COPY Context — Accidentally Including .git or Build Artifacts
 
-**What goes wrong:** Benchmark results printed to `stdout` intermix with series output, making both hard to read. Or benchmark mode changes global state (truncation, variables) that persists after benchmarking.
+**What goes wrong:** `COPY . .` in the Dockerfile includes `.git/` (potentially hundreds of MB), `build/`, `dist/`, and other non-essential directories, dramatically slowing builds and inflating image size.
 
 **Prevention:**
-1. Benchmark output goes to `stderr` or is clearly delimited
-2. Benchmark runs in an isolated `Environment` copy — no side effects on user state
-3. Format: `benchmark: etaq(1,200) — median 0.342s (5 runs, min 0.331s, max 0.358s)`
+1. Create a `.dockerignore` file:
+   ```
+   .git
+   .planning
+   build
+   dist
+   *.exe
+   qseries_debug
+   qseries_bench
+   demo
+   tests
+   website
+   .cursor
+   ```
+2. Alternatively, COPY only what's needed: `COPY src/ src/` and `COPY Makefile .`
 
-**Phase assignment:** Benchmarking phase.
+**Severity:** MINOR — slow builds but no functional impact
+**Phase:** Docker image phase
 
 ---
 
-### Pitfall 16: Karatsuba Not Tested Against Existing BigInt Test Suite
+### Pitfall 19: Windows Users Can't Run `install.sh`
 
-**What goes wrong:** Karatsuba is tested with new unit tests but the existing BigInt test suite in `main.cpp` (lines 25-99) still uses the old multiply path (because test operands are small). The Karatsuba code path is never exercised by existing acceptance tests.
+**What goes wrong:** Windows users (without WSL or Cygwin) can't execute the bash install script. They need a separate installation method.
 
 **Prevention:**
-1. Add large-operand multiplication tests that exceed the Karatsuba threshold
-2. Run a randomized cross-check: for 1000 random (a, b) pairs of varying sizes, verify `karatsuba(a, b) == schoolbook(a, b)`
-3. Ensure the existing `--test` flag exercises Karatsuba for at least some cases
+1. Provide a `.zip` download with the Windows binary and simple instructions
+2. Consider a PowerShell install script for Windows:
+   ```powershell
+   Invoke-WebRequest -Uri $url -OutFile qseries.exe
+   ```
+3. Or simply provide direct download links on the website/GitHub releases page — Windows users are accustomed to downloading `.exe` files directly
+4. The Cygwin development environment is separate from the end-user experience
 
-**Detection:** Code coverage — if Karatsuba function has 0% coverage after `--test`, it's not being tested.
-
-**Phase assignment:** Karatsuba multiplication phase.
+**Severity:** MINOR — Windows users have alternative install paths (direct download)
+**Phase:** Install script phase (Windows variant)
 
 ---
 
-### Pitfall 17: ANSI Codes in Error Messages Breaking Error Line Detection in Script Mode
+### Pitfall 20: Version String Not Embedded in Binary
 
-**What goes wrong:** Currently errors go to `std::cerr` (repl.h line 1293-1296) with format `"error: line N: message"`. If error messages are colorized (red), the script-mode line number detection `"error: line "` won't match because ANSI codes are interspersed.
+**What goes wrong:** The install script downloads and installs a binary, but there's no way to verify which version was installed. The Docker image tag and the binary version can drift.
 
 **Prevention:**
-1. Gate error colorization on `stdin_is_tty()` (same as all other ANSI gating)
-2. Never embed ANSI in the error message string itself — color the output at the print site
-3. Regression test: parse error output in script mode to verify `"error: line N:"` format is intact
+1. Ensure `qseries --version` (or the `version` REPL command) reports a version string
+2. In CI release builds, inject the git tag into the binary at compile time:
+   ```makefile
+   VERSION ?= $(shell git describe --tags --always)
+   CXXFLAGS += -DVERSION=\"$(VERSION)\"
+   ```
+3. Docker image tags should match binary versions: `qseries:1.0.0`
+4. The install script should report what version it installed
 
-**Phase assignment:** ANSI color phase.
-
----
-
-### Pitfall 18: Unicode Superscript Interaction with ANSI Color Reset
-
-**What goes wrong:** The codebase uses UTF-8 Unicode superscripts (`⁰¹²³⁴⁵⁶⁷⁸⁹`) and subscripts (`₁₂₃₄₅`) for mathematical display (series.h `expToUnicode`, repl.h line 959). If an ANSI color reset (`\033[0m`) is placed mid-expression, it could split a multi-byte UTF-8 sequence, producing garbled output.
-
-**Prevention:**
-1. Apply color at the expression level (before the whole expression, reset after), not character-by-character
-2. Never insert ANSI sequences between bytes of a multi-byte UTF-8 character
-3. Test with series containing exponents 10+ (multi-character superscripts like `¹⁰`)
-
-**Phase assignment:** ANSI color phase.
+**Severity:** MINOR — makes debugging version mismatches harder
+**Phase:** CI/CD phase + install script phase
 
 ---
 
-## Phase-Specific Warnings Summary
+## Phase-Specific Warnings
 
-| Phase Topic | Likely Pitfall | Severity | Mitigation |
+| Phase Topic | Likely Pitfall | Mitigation | Ref |
 |---|---|---|---|
-| ANSI color output | Codes leak into script mode / piped output | **CRITICAL** | Gate all color on `stdin_is_tty()`; add `--color` flag |
-| ANSI color output | Line editor cursor miscalculation | **CRITICAL** | Track display width separately from byte length |
-| ANSI color output | Windows needs explicit VT processing | **MODERATE** | `SetConsoleMode` on `STD_OUTPUT_HANDLE` |
-| ANSI color output | Colors illegible on some backgrounds | MINOR | Use bold/bright; test light+dark |
-| ANSI color output | Unicode superscript split by color reset | MINOR | Color at expression level, not char level |
-| ANSI color output | Error format broken by color in script mode | MINOR | Gate error color on TTY check |
-| Karatsuba multiplication | Intermediate overflow / negative limbs | **CRITICAL** | Use signed int64 intermediates; implement at vector-split level |
-| Karatsuba multiplication | Wrong threshold → performance regression | **CRITICAL** | Benchmark real workloads before/after; threshold ~32 limbs |
-| Karatsuba multiplication | Not tested by existing test suite | MINOR | Add cross-check tests + large-operand tests |
-| Session save/load | No format versioning → future breakage | **CRITICAL** | Version header on line 1; graceful degradation on mismatch |
-| Session save/load | Series serialized as display string | **MODERATE** | Use structured format with ALL coefficients |
-| Session save/load | Jacobi product variables dropped | **MODERATE** | Exhaustive `std::visit` serialization |
-| Session save/load | File grows without bound | MINOR | Explicit save only; warn on large files |
-| Clear screen | Inconsistent across platforms | **MODERATE** | `\033[2J\033[H`; no-op in script/WASM mode |
-| Faster series multiplication | Truncation invariant broken | **CRITICAL** | Keep `std::map`; full acceptance test after change |
-| Benchmarking | Noise hides real changes | **MODERATE** | Multiple runs, report median, warm-up iterations |
-| Benchmarking | Output interferes with REPL | MINOR | Isolated environment; clear output format |
-| Tab completion (new commands) | New commands not registered | **MODERATE** | Add to `getHelpTable()` — single source of truth |
+| Dockerfile creation | Missing `-it` docs; users can't run REPL | Wrapper script + prominent docs | #2, #9 |
+| Dockerfile creation | Image bloat from build tools | Multi-stage build, `FROM scratch` or Alpine runtime | #14 |
+| Dockerfile creation | Signal handling broken | Exec-form ENTRYPOINT, consider tini | #9 |
+| Dockerfile creation | Build fails on static libstdc++ | Install `musl-dev`, verify with `ldd` | #10 |
+| Dockerfile creation | CRLF corruption in piped output | Document `-i` vs `-it` usage | #5 |
+| Dockerfile creation | Locale/UTF-8 problems | `ENV LANG=C.UTF-8` | #6 |
+| Dockerfile creation | Slow context, huge layers | `.dockerignore` file | #18 |
+| Install script | macOS rejects static binary | OS detection, omit `-static` on Darwin | #1 |
+| Install script | Wrong shell config modified | Detect `$SHELL`, handle bash/zsh/fish | #7 |
+| Install script | Security concerns | HTTPS, checksums, idempotent, `set -euo pipefail` | #4 |
+| Install script | Missing curl/wget | Feature detection with fallback | #11 |
+| Install script | Wrong architecture downloaded | `uname -m` detection, Rosetta check | #13 |
+| Install script | Partial failure leaves mess | Temp dir + trap cleanup | #17 |
+| Install script | Windows users excluded | Direct download or PowerShell script | #19 |
+| CI release builds | Binary named `.exe` on Linux | Conditional naming in Makefile | #12 |
+| CI release builds | Missing target in matrix | Explicit full matrix with test step | #15 |
+| CI release builds | arm64 builds via QEMU are slow | Use native `ubuntu-24.04-arm` runner | #8 |
+| CI release builds | No version in binary | Compile-time `-DVERSION` injection | #20 |
+
+---
+
+## Integration Pitfalls
+
+### Docker + termios Interaction
+The qseries REPL has three terminal modes: raw mode (interactive with tab/arrows), line mode (script/pipe), and WASM mode (no terminal). Docker must correctly trigger raw mode (via `-it`) or line mode (via `-i`). The existing `stdin_is_tty()` check handles this, but the Docker documentation must guide users to the right flags.
+
+### Install Script + macOS + Build-from-Source
+If the install script offers a "build from source" fallback (when no pre-built binary matches), it must NOT pass `-static` on macOS. This is the most common build failure for macOS users compiling from source.
+
+### Docker Image + CI Release Matrix
+The Docker image should use the same build process as the CI-built Linux binary (Alpine/musl, static linking). Don't maintain two different build recipes — divergence leads to one being tested and the other broken.
+
+### Install Script + History File Permissions
+The qseries REPL writes `~/.qseries_history`. If the install script runs as root (via `sudo`) or creates files as root, the history file could end up owned by root, preventing the normal user from writing to it. The install script should NEVER need sudo.
+
+---
 
 ## Sources
 
-- Codebase inspection: `src/bigint.h`, `src/series.h`, `src/repl.h`, `src/main.cpp` (direct reading)
-- ANSI + piped output: unix.stackexchange.com/questions/10823 (HIGH confidence — canonical Unix behavior)
-- Windows ANSI: learn.microsoft.com/en-us/windows/console/setconsolemode (HIGH — Microsoft official docs)
-- ANSI width bugs: github.com/willmcgugan/rich/issues/1670, github.com/block/goose/issues/7463 (MEDIUM — real-world confirmed)
-- Karatsuba overflow: stackoverflow.com/questions/47873434, stackoverflow.com/questions/31338166 (HIGH — multiple independent reports)
-- Karatsuba threshold: gmplib.org/manual/Karatsuba-Multiplication, swtch.com/math/big/calibrate.html (HIGH — GMP is authoritative)
-- Benchmark clocks: sandordargo.com/blog/2025/12/10/clocks-part-4-high_resolution_clock (MEDIUM — recent analysis, matches cppreference)
-- Session versioning: studyplan.dev/pro-cpp/binary-serialization/q/versioning-serialized-game-save-files (MEDIUM)
+- Apple Developer QA1118: Statically linked binaries on Mac OS X (https://developer.apple.com/library/archive/qa/qa1118/_index.html) — HIGH confidence
+- Apple Developer Forums Thread 706419: Static linking not supported — HIGH confidence
+- Docker Documentation: glibc and musl (https://docs.docker.com/dhi/core-concepts/glibc-musl/) — HIGH confidence
+- Alpine Linux wiki: Static linking with musl (https://build-your-own.org/blog/20221229_alpine/) — HIGH confidence
+- Docker run interactive/TTY options (https://www.baeldung.com/linux/docker-run-interactive-tty-options) — HIGH confidence
+- Docker PTY raw mode CRLF issue (https://stackoverflow.com/questions/54709650/) — HIGH confidence
+- GitHub Changelog: arm64 standard runners in private repos (Jan 2026) — HIGH confidence
+- GitHub Changelog: macOS 26 GA (Feb 2026) — HIGH confidence
+- Julia Evans: How to add a directory to PATH (https://jvns.ca/blog/2025/02/13/how-to-add-to-your-path/) — MEDIUM confidence
+- curl|bash security analysis (multiple sources) — HIGH confidence

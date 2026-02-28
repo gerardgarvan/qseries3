@@ -1,455 +1,440 @@
-# Architecture: v4.0 Core Improvements Integration
+# Architecture: Distribution Features (Docker + Install Script + CI/CD)
 
-**Project:** qseries REPL v4.0
+**Project:** qseries3
 **Researched:** 2026-02-28
-**Confidence:** HIGH (based on direct source analysis of all 11 source files)
+**Overall confidence:** HIGH
 
-## Existing Architecture Snapshot
+## Executive Summary
 
-```
-main.cpp  ─────────────────────────────────────────────┐
-  │  entry point, --test unit tests, runRepl()         │
-  ▼                                                    │
-repl.h  (~1300 lines) ────────────────────────────────┐│
-  │  Environment, EvalResult variant, dispatchBuiltin  ││
-  │  format* functions, display(), runRepl() main loop ││
-  │  readLineRaw(), handleTabCompletion(), history     ││
-  │  RawModeGuard (raw terminal mode)                  ││
-  │  ALL output via direct std::cout                   ││
-  ▼                                                    ▼▼
-parser.h ──► series.h ──► frac.h ──► bigint.h
-               │
-               ├── qfuncs.h   (etaq, theta, etaq_cache)
-               ├── convert.h  (prodmake, etamake, jacprodmake)
-               ├── linalg.h   (kernel, solve)
-               └── relations.h (findhom, findnonhom)
-
-main_wasm.cpp  (WASM binding, redirects cout to ostringstream)
-```
-
-### Critical Architectural Properties
-
-| Property | Current State |
-|----------|--------------|
-| Output path | ~40 direct `std::cout <<` calls scattered in `repl.h` (display, dispatchBuiltin, format*) |
-| Tab completion | `handleTabCompletion()` — prefix match from `getCompletionCandidates()` (help table + env vars) |
-| History | `std::deque<std::string>`, maxHistory=100, in-memory only |
-| Terminal mode | `RawModeGuard` RAII, cross-platform (termios/Win32), char-by-char read |
-| TTY detection | `stdin_is_tty()` macro, guards interactive features |
-| Timing | Basic: `chrono::steady_clock` around eval+display, printed when TTY |
-| BigInt multiply | Schoolbook O(n²) in `operator*`, base 10^9, nested loop with carry |
-| Series multiply | O(k₁·k₂) nested map iteration, early skip when e1+e2 >= trunc |
-| Serialization | None — Environment is ephemeral |
+The qseries binary is a fully static, zero-dependency C++20 executable. This makes distribution exceptionally straightforward: Docker images can use `scratch` (empty) as the runtime base, install scripts need only download a single file, and CI builds require nothing beyond `g++`. The main architectural decisions concern: (1) cross-platform build matrix in GitHub Actions, (2) Docker image layering, and (3) naming conventions for release assets.
 
 ---
 
-## Feature Integration Analysis
+## New Files
 
-### 1. ANSI Color Output
+| File | Purpose | Location Rationale |
+|------|---------|-------------------|
+| `Dockerfile` | Multi-stage build → scratch-based runtime image | Repo root (Docker convention) |
+| `.github/workflows/release.yml` | Build + test + release on tag push | GitHub Actions standard path |
+| `.github/workflows/ci.yml` | Build + test on every push/PR | GitHub Actions standard path |
+| `install.sh` | One-liner install: `curl -sSL … \| bash` | Repo root (discoverable, linked from README) |
+| `.dockerignore` | Exclude `.planning/`, `.git/`, `build/`, `dist/`, etc. from Docker context | Repo root (Docker convention) |
 
-**Scope:** Modify output layer in `repl.h`; add thin `ansi.h` utility header.
+## Modified Files
 
-**Problem:** Output is scattered across ~40 `std::cout <<` call sites in `repl.h` — the `display()` visitor, `dispatchBuiltin()` built-in handlers (jac2prod, coeffs, series, help, etc.), `runRepl()` (prompt, timing, errors), and the `format*()` functions. No single output bottleneck exists.
-
-**Integration approach:**
-
-```
-NEW: src/ansi.h
-  - Color constants: RESET, RED, GREEN, CYAN, YELLOW, BOLD, DIM
-  - colorize(text, color) → wraps with ANSI codes
-  - g_color_enabled global (checked by colorize)
-  - Initialized from stdin_is_tty() in runRepl() startup
-
-MODIFY: src/repl.h
-  - #include "ansi.h"
-  - Prompt "qseries> " → colorize(BOLD+GREEN)
-  - Timing line → colorize(DIM)
-  - Error messages → colorize(RED)
-  - display() visitor: Series → default, product/eta → CYAN, errors → RED
-  - format* functions: optional color parameter
-  - Banner text → colorize
-
-MODIFY: src/main_wasm.cpp
-  - Set g_color_enabled = false before evaluate()
-  - OR: strip ANSI from ostringstream output (less clean)
-```
-
-**Key decisions:**
-- Global `g_color_enabled` boolean, not a config file. Set from `stdin_is_tty()` at startup; overridden by `color on`/`color off` commands.
-- Colors go into the output *strings* (not a separate rendering layer). This is the simplest approach for a header-only project and matches how readline-free REPLs work.
-- `ansi.h` has zero includes beyond `<string>`. Sits at same level as `bigint.h` (no dependencies).
-
-**WASM impact:** `main_wasm.cpp` sets `g_color_enabled = false`. No ANSI codes leak into web output.
-
-**Estimated touch points:** ~15 call sites in `repl.h` need wrapping, plus `ansi.h` creation (~40 lines).
+| File | Change | Reason |
+|------|--------|--------|
+| `Makefile` | Add targets: `docker-build`, `docker-push`, `docker-run` | Convenience wrappers; keeps all build commands in one place |
+| `.gitignore` | Add `!.github/` exclusion (currently ignores dotfiles implicitly via `.cursor/`) | Ensure `.github/workflows/` is tracked |
+| `README.md` | Add install instructions, Docker usage, badge for CI status | User-facing documentation |
 
 ---
 
-### 2. Smart Tab Completion
+## Integration Points
 
-**Scope:** Modify `handleTabCompletion()` and `getCompletionCandidates()` in `repl.h`. No new files.
+### 1. Makefile ↔ Docker
 
-**Current mechanism:**
-```cpp
-handleTabCompletion(line, pos, env):
-  1. Extract prefix (word before cursor)
-  2. Match against getCompletionCandidates() = help table keys + env var names
-  3. Single match → replace inline; multiple → list below prompt
+New Makefile targets wrap Docker CLI commands so developers don't need to remember image names/tags:
+
+```makefile
+DOCKER_IMAGE ?= ghcr.io/gerardgarvan/qseries
+DOCKER_TAG   ?= latest
+
+docker-build:
+	docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) .
+
+docker-run:
+	docker run -it --rm $(DOCKER_IMAGE):$(DOCKER_TAG)
+
+docker-push:
+	docker push $(DOCKER_IMAGE):$(DOCKER_TAG)
 ```
 
-**Smart completion additions:**
+These targets are additive — they don't modify existing targets. The `all` target remains unchanged.
 
-| Context | Detection | Completions |
-|---------|-----------|-------------|
-| After `(` or `,` in function call | Scan backwards from cursor for unmatched `(` and function name | Show argument signature hint from help table |
-| Bare identifier | No `(` context, prefix matches | Functions + variables (current behavior) |
-| After `:=` | LHS is assignment target | Only functions (not variables) |
-| Inside list `[...]` | Unmatched `[` | Only variables (series names) |
+### 2. Makefile ↔ GitHub Actions
 
-**Integration:**
-```
-MODIFY: src/repl.h
-  - handleTabCompletion(): add context analysis before matching
-  - NEW helper: analyzeCompletionContext(line, pos) → enum {BARE, FUNC_ARG, ASSIGN_RHS, LIST}
-  - For FUNC_ARG context: also return function name + arg position
-  - Show inline hint: "etaq(k, T) — eta product" when pressing Tab inside etaq(|)
-  - getCompletionCandidates(): add filter parameter for context type
+GitHub Actions invokes the same `make` commands used locally. This is critical: the CI build must be identical to the local build. The workflow uses:
+
+```yaml
+- run: make CXX=g++ LDFLAGS=-static    # build
+- run: make acceptance                   # test
 ```
 
-**Key decision:** Context analysis is lightweight string scanning (find unmatched parens/brackets), NOT a full parse. Calling the parser on partial input would require error recovery that doesn't exist. The simple scan approach handles 95% of cases.
+The existing Makefile already supports `CXX` and `LDFLAGS` overrides, so no changes are needed for the build step itself.
 
-**No parser.h changes needed.** Context detection is syntactic (paren counting), not semantic.
+### 3. GitHub Actions ↔ GitHub Releases
+
+The release workflow triggers on version tags (`v*`), builds for each platform, then uploads binaries as release assets using `softprops/action-gh-release@v2`. Asset naming convention:
+
+| Platform | Asset Name |
+|----------|-----------|
+| Linux x86_64 | `qseries-linux-amd64` |
+| Linux ARM64 | `qseries-linux-arm64` |
+| macOS x86_64 | `qseries-darwin-amd64` |
+| macOS ARM64 | `qseries-darwin-arm64` |
+| Windows x86_64 | `qseries-windows-amd64.exe` |
+
+### 4. Install Script ↔ GitHub Releases
+
+`install.sh` calls the GitHub API to find the latest release, detects OS/arch via `uname`, downloads the matching asset, and places it in `/usr/local/bin` (or `~/.local/bin` without root). It depends on the asset naming convention above.
+
+### 5. Docker Image ↔ Binary
+
+The Dockerfile builds the binary inside the container (ensuring reproducibility) and copies it to `scratch`. The REPL's TTY detection (`stdin_is_tty()` in `repl.h`) already handles non-TTY mode gracefully — when piped, it suppresses the prompt. Docker interactive mode (`docker run -it`) provides a TTY, so the REPL works normally.
+
+### 6. Acceptance Tests ↔ CI
+
+The existing `tests/acceptance.sh` already locates the binary flexibly (checks `./dist/qseries.exe`, `./dist/qseries`, `./qseries.exe`, `./qseries`). This works in CI without modification. The script uses `set -e` and exits non-zero on failure, which integrates cleanly with GitHub Actions step failure detection.
 
 ---
 
-### 3. Session Save/Load
+## Build/Release Pipeline
 
-**Scope:** Modify `repl.h` (new builtins + serialization logic). Possibly add string literal support to `parser.h`.
-
-**What must be serialized:**
-
-| Component | Type | Serialization |
-|-----------|------|--------------|
-| Variables | `map<string, EnvValue>` | Name + type tag + data |
-| Series | `map<int,Frac>` + `int trunc` | `S name trunc k1 n1/d1 k2 n2/d2 ...` |
-| JacFactor list | `vector<JacFactor>` | `J name a1 b1 e1 a2 b2 e2 ...` |
-| Truncation | `int T` | `T value` |
-| q variable | Series | Skipped (reconstructed from T) |
-
-**File format:** Plain text, one entity per line. Human-readable and diffable.
-```
-# qseries session v1
-T 50
-S myvar 100 0 1/1 1 -1/1 2 -1/1 5 1/1
-J myjac 0 5 1 1 5 -1
-```
-
-**Integration approach:**
+### Continuous Integration (every push / PR)
 
 ```
-MODIFY: src/parser.h
-  - Add Token::Kind::STRING for "filename" literals (needed for save/load args)
-  - Tokenizer: handle double-quoted strings
-  - Parser: string literal → Expr node (new tag Expr::Tag::StrLit)
-
-MODIFY: src/repl.h
-  - dispatchBuiltin(): add "save" and "load" handlers
-  - NEW: serializeEnvironment(env, ostream) — writes text format
-  - NEW: deserializeEnvironment(env, istream) — reads text format, validates
-  - save("file") → open file, serialize, close
-  - load("file") → open file, deserialize into env, close
-  - load merges into current env (doesn't clear first); user can restart to clear
-  
-  - #include <fstream> (new include in repl.h)
+┌─────────────┐    ┌──────────────┐    ┌──────────────────┐
+│  git push /  │───▶│ Build binary │───▶│ Run acceptance   │
+│  open PR     │    │ (Linux g++)  │    │ tests            │
+└─────────────┘    └──────────────┘    └──────────────────┘
 ```
 
-**Alternative (no parser change):** Use identifier-based filenames: `save(mysession)` and `load(mysession)`. This appends `.qsession` automatically. Avoids parser string literal work entirely. **Recommended approach** — simpler, and filenames-with-extensions is a secondary concern for a math REPL.
+Single platform (Linux) for speed. Goal: catch regressions within minutes.
 
-**BigInt serialization:** Use `BigInt::str()` (decimal). Deserialization via `BigInt(string)` constructor. Both already exist.
-
-**WASM impact:** Save/load unavailable in WASM (no filesystem). Gate behind `#ifndef __EMSCRIPTEN__`.
-
----
-
-### 4. Clear Screen
-
-**Scope:** Modify `repl.h` only. Trivially small.
-
-**Two entry points:**
-
-| Trigger | Handler | Action |
-|---------|---------|--------|
-| `clear` command | Pre-parse check in `runRepl()` before calling `parse()` | Emit `\033[2J\033[H` |
-| Ctrl-L keypress | `readLineRaw()` key handler (c == 12) | Emit escape + redraw prompt |
-
-**Integration:**
-```
-MODIFY: src/repl.h
-  - runRepl(): before parse(trimmed), check if trimmed == "clear" → emit escape, continue
-  - readLineRaw(): add case c == 12 (Ctrl-L) → emit \033[2J\033[H, redrawLineRaw()
-  - WASM: no-op (clear is meaningless without terminal)
-```
-
-**Cross-platform note:** ANSI `\033[2J\033[H` works on Cygwin, Linux, macOS Terminal, Windows Terminal, and modern cmd.exe with VT processing enabled. The existing `redrawLineRaw()` already uses `\033[K` (erase line), so ANSI escapes are established practice in this codebase.
-
----
-
-### 5. Karatsuba Multiplication
-
-**Scope:** Modify `bigint.h` only. Self-contained algorithm change.
-
-**Current multiply (lines 203-220 of bigint.h):**
-```cpp
-BigInt operator*(const BigInt& o) const {
-    // Schoolbook O(n²): nested loop over digits
-    r.d.assign(d.size() + o.d.size(), 0);
-    for (size_t i = 0; i < d.size(); ++i)
-        for (size_t j = 0; j < o.d.size() || carry; ++j) ...
-}
-```
-
-**Karatsuba integration:**
-```
-MODIFY: src/bigint.h
-  - NEW: static BigInt karatsubaMultiply(const BigInt& a, const BigInt& b)
-    - Base case: if min(a.d.size(), b.d.size()) <= KARATSUBA_THRESHOLD → schoolbook
-    - Split each operand at midpoint m = max(a.d.size(), b.d.size()) / 2
-    - Compute z0 = low(a) * low(b), z2 = high(a) * high(b)
-    - z1 = (low(a)+high(a)) * (low(b)+high(b)) - z0 - z2
-    - result = z2 * BASE^(2m) + z1 * BASE^m + z0
-  - MODIFY: operator*() → dispatch: if both operands > threshold → karatsubaMultiply, else schoolbook
-  - THRESHOLD: ~32 limbs (32 × 9 digits = 288-digit numbers). Below this, schoolbook wins.
-```
-
-**Implementation details:**
-- "Shift by m" = insert m zero digits at front of `.d` vector (no actual multiplication).
-- `addAbs` and `subAbs` already exist as static methods — reuse them for z1 computation.
-- Need a helper: `BigInt::slice(start, len)` to extract limb ranges.
-- All existing division, GCD, etc. are unaffected — they call `operator*` which now dispatches.
-
-**Cascade impact:**
-- Frac arithmetic uses BigInt multiply → automatically faster for large numerators/denominators.
-- Series::operator* calls Frac multiply → automatically faster when individual coefficients are large (e.g., high-precision partition numbers).
-- `bigGcd` calls `divmod` which calls `operator*` → GCD faster for large BigInts.
-
-**No other files need modification.** The operator interface is unchanged.
-
----
-
-### 6. Faster Series Operations
-
-**Scope:** Modify `series.h` only. Algorithm-level optimization.
-
-**Current bottleneck — Series::operator* (lines 133-151 of series.h):**
-```cpp
-for (const auto& [e1, c1] : c)
-    for (const auto& [e2, c2] : o.c)
-        if (e1 + e2 < t) → accumulate
-```
-
-**Optimization opportunities:**
-
-| Optimization | Approach | Expected speedup | Complexity |
-|--------------|----------|-------------------|------------|
-| Inner loop early break | `std::map` is sorted; when `e1 + e2 >= t`, break inner loop (all subsequent e2 values are larger) | 2-4× for high-truncation series | Low — 3-line change |
-| Dense multiplication path | Convert sparse map → dense `vector<Frac>` when density > 50%, multiply as array convolution, convert back | 2-5× for dense series (most q-series) | Medium — ~50 lines |
-| Accumulation optimization | Accumulate into `vector<Frac>` (contiguous) instead of `map` lookups, build map at end | 1.5-2× from cache locality | Low-medium |
-
-**Recommended phased approach:**
+### Release (on tag push `v*`)
 
 ```
-MODIFY: src/series.h
-
-Phase A: Inner loop early break (trivial)
-  - In operator*, after `if (exp >= t) continue;` change to `if (exp >= t) break;`
-  - Works because map iterates in ascending key order
-
-Phase B: Dense fast path
-  - NEW: denseMul(vector<Frac>&, vector<Frac>&, int trunc) → vector<Frac>
-  - operator*(): if both operands have minExp >= 0 and density > 50%:
-    1. Convert maps → dense vectors (O(n))
-    2. Call denseMul (O(n²) but cache-friendly, no map overhead)
-    3. Convert result → map, strip zeros (O(n))
-  - Density = c.size() / (maxExp - minExp + 1)
-
-Phase C: inverse() optimization
-  - Current inverse() calls coeff(j) and coeff(n-j) in inner loop — O(log n) map lookups each
-  - Pre-extract coefficients into dense vector for O(1) access
+┌──────────┐    ┌─────────────────────────────────────────┐
+│ git tag  │    │          Matrix Build (parallel)         │
+│ v3.1.0   │───▶│  ┌─────────┐ ┌─────────┐ ┌──────────┐  │
+│ git push │    │  │ Linux   │ │ macOS   │ │ Windows  │  │
+│ --tags   │    │  │ amd64   │ │ arm64   │ │ amd64    │  │
+│          │    │  │ + arm64 │ │ + amd64 │ │          │  │
+│          │    │  └────┬────┘ └────┬────┘ └─────┬────┘  │
+│          │    │       │          │             │        │
+│          │    └───────┼──────────┼─────────────┼────────┘
+│          │            ▼          ▼             ▼
+│          │    ┌─────────────────────────────────────────┐
+│          │    │  Run acceptance tests on each platform  │
+│          │    └────────────────┬────────────────────────┘
+│          │                    ▼
+│          │    ┌─────────────────────────────────────────┐
+│          │    │  Upload binaries to GitHub Release      │
+│          │    │  Build + push Docker image (linux/amd64 │
+│          │    │  + linux/arm64 multi-arch)              │
+│          │    └─────────────────────────────────────────┘
+└──────────┘
 ```
 
-**No interface changes.** `operator*`, `inverse()` signatures are unchanged. All callers (qfuncs, convert, relations) benefit automatically.
-
----
-
-### 7. Benchmarking
-
-**Scope:** Modify `repl.h` only. Extend existing timing infrastructure.
-
-**Current timing (lines 1280-1291 of repl.h):**
-```cpp
-auto t0 = chrono::steady_clock::now();
-StmtPtr stmt = parse(trimmed);
-EvalResult res = evalStmt(stmt.get(), env);
-// ... display ...
-auto t1 = chrono::steady_clock::now();
-if (stdin_is_tty()) cout << secs << "s" << endl;
-```
-
-**New capabilities:**
-
-| Feature | Syntax | Implementation |
-|---------|--------|----------------|
-| Timing toggle | `timing on` / `timing off` | Add `bool showTiming` to Environment, check in runRepl display section |
-| Benchmark | `benchmark(expr, N)` | New builtin: parse expr, run N times, report min/avg/max/total |
-| Benchmark command | `benchmark N { expr }` | Alternative syntax: cleaner but needs parser support |
-
-**Recommended approach (no parser changes):**
+### Docker Image Build (part of release)
 
 ```
-MODIFY: src/repl.h
-  - Environment: add `bool showTiming = true;`
-  - runRepl(): check env.showTiming before printing time
-  - runRepl(): handle "timing on" / "timing off" as special commands (like "clear")
-  - dispatchBuiltin(): add "benchmark" handler:
-    - benchmark(expr, N): re-evaluate the expression N times
-    - Capture min/avg/max times
-    - Return DisplayOnly (output printed directly)
-  - Help table: add benchmark entry
-```
-
-**Benchmark implementation detail:** The `benchmark` builtin receives `args[0]` as an AST node. It can call `eval(args[0], env, sumIndices)` repeatedly in a loop without re-parsing, measuring each iteration. This is possible because `eval` takes an `Expr*`, not a string.
-
----
-
-## Component Dependency Map
-
-```
-                     ansi.h (NEW)
-                       │
-                       ▼
-bigint.h ──► frac.h ──► series.h ──► qfuncs.h ──► convert.h
-  │(Karatsuba)           │(dense mul)               │
-  │                      │                           ├──► linalg.h
-  │                      │                           │
-  │                      │                    relations.h
-  │                      │                           │
-  │                      ▼                           ▼
-  │                 parser.h  ◄───────────────── repl.h
-  │                  │(optional: string lits)     │(ANSI color)
-  │                  │                            │(smart completion)
-  │                  │                            │(session save/load)
-  │                  │                            │(clear screen)
-  │                  │                            │(benchmark)
-  │                  │                            │(timing toggle)
-  ▼                  ▼                            ▼
-              main.cpp                    main_wasm.cpp
-```
-
-## New vs Modified Files
-
-| File | Status | Changes |
-|------|--------|---------|
-| `src/ansi.h` | **NEW** | ANSI color constants, colorize(), g_color_enabled (~40 lines) |
-| `src/bigint.h` | **MODIFY** | Add Karatsuba multiply, threshold dispatch, slice helper |
-| `src/series.h` | **MODIFY** | Inner-loop early break, optional dense multiply path |
-| `src/repl.h` | **MODIFY** | Color wrapping, smart completion, session save/load, clear, benchmark, timing toggle |
-| `src/parser.h` | **MODIFY** (optional) | String literal support if save/load uses quoted filenames |
-| `src/main_wasm.cpp` | **MODIFY** | Set g_color_enabled = false |
-| `src/main.cpp` | **MODIFY** | Unit tests for Karatsuba, series perf |
-
-**Files NOT modified:** `frac.h`, `qfuncs.h`, `convert.h`, `linalg.h`, `relations.h`.
-
----
-
-## Recommended Build Order
-
-The order is driven by two principles: (1) lower layers before upper layers, (2) independent features can be parallelized.
-
-```
-Phase 1: Foundation (no dependencies between these)
-  ├── 1a. ansi.h + ANSI color in repl.h     [independent]
-  ├── 1b. Karatsuba in bigint.h              [independent]
-  └── 1c. Clear screen in repl.h             [independent, trivial]
-
-Phase 2: Series optimization (depends on 1b for full benefit)
-  └── 2a. Series fast-path in series.h
-
-Phase 3: REPL enhancements (depends on 1a for colored output)
-  ├── 3a. Smart tab completion in repl.h     [independent]
-  ├── 3b. Benchmarking/timing in repl.h      [independent]
-  └── 3c. Session save/load in repl.h        [independent]
-```
-
-**Rationale:**
-- **ansi.h first** because it's the thinnest layer and subsequent features (benchmarking, smart completion) benefit from colored output.
-- **Karatsuba first** because it's self-contained in bigint.h and the series optimization in Phase 2 gets the combined benefit of both Karatsuba + dense multiply.
-- **Clear screen** is trivial (5 lines), do it early to build momentum.
-- **Series optimization** in Phase 2 because it benefits from Karatsuba already being in place — benchmarking the improvement requires both layers.
-- **Phase 3 features** are all repl.h modifications but touch different parts of the file (completion = readLineRaw area, benchmarking = eval/display area, session = new serialization section). They can be implemented in any order.
-
----
-
-## Data Flow Changes
-
-### Current Output Flow
-```
-eval() → EvalResult → display() → std::cout
-                                    ↑ direct, unformatted
-dispatchBuiltin() → std::cout (for DisplayOnly results)
-runRepl() → std::cout (prompt, timing, errors)
-```
-
-### Post-v4.0 Output Flow
-```
-eval() → EvalResult → display() → colorize() → std::cout
-                                    ↑ color-wrapped
-dispatchBuiltin() → colorize() → std::cout
-runRepl() → colorize() → std::cout
-             ↑ prompt=GREEN, timing=DIM, error=RED
-```
-
-### Current Multiply Flow
-```
-Series::operator* → Frac::operator* → BigInt::operator* (schoolbook)
-```
-
-### Post-v4.0 Multiply Flow
-```
-Series::operator* ─┬─ sparse path (map iteration, sorted early-break)
-                    └─ dense path (vector convolution when density > 50%)
-                         ↓
-                    Frac::operator* → BigInt::operator* ─┬─ schoolbook (< 32 limbs)
-                                                          └─ Karatsuba (≥ 32 limbs)
-```
-
-### New Session Data Flow
-```
-save: Environment.env → serializeEnvironment() → ofstream → .qsession file
-load: .qsession file → ifstream → deserializeEnvironment() → Environment.env
+┌───────────────────────────────────────────────────────────┐
+│  Stage 1: Build (gcc:14 or ubuntu:24.04)                  │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │ apt-get install g++                                  │  │
+│  │ COPY src/ /build/src/                                │  │
+│  │ g++ -std=c++20 -O2 -static -o qseries src/main.cpp  │  │
+│  │ strip qseries                                        │  │
+│  └──────────────────────────────────────────────────────┘  │
+│                          │                                 │
+│                          ▼                                 │
+│  Stage 2: Runtime (scratch)                                │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │ COPY --from=build /build/qseries /qseries            │  │
+│  │ ENTRYPOINT ["/qseries"]                               │  │
+│  │ Final image size: ~3-5 MB                             │  │
+│  └──────────────────────────────────────────────────────┘  │
+└───────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Architectural Invariants Preserved
+## Detailed Component Design
 
-| Constraint | How v4.0 Respects It |
-|------------|---------------------|
-| Zero external dependencies | All new code uses only C++ standard library |
-| Header-only | ansi.h is header-only with `inline` functions |
-| Single binary | No new compilation units (ansi.h included via repl.h) |
-| Exact arithmetic | Karatsuba produces identical results to schoolbook |
-| WASM compatibility | Color disabled, save/load gated with `#ifndef __EMSCRIPTEN__` |
-| Operator interface | Series `+ - * /` signatures unchanged |
-| Auto-reduce | Frac::reduce() call pattern unchanged |
+### Dockerfile
+
+```dockerfile
+# Build stage
+FROM gcc:14 AS build
+WORKDIR /build
+COPY src/ src/
+RUN g++ -std=c++20 -O2 -static -o qseries src/main.cpp && strip qseries
+
+# Runtime stage — empty image, only the binary
+FROM scratch
+COPY --from=build /build/qseries /qseries
+ENTRYPOINT ["/qseries"]
+```
+
+**Why `scratch` over distroless or alpine:**
+- The binary is fully static (`-static` flag), no runtime dependencies
+- `scratch` produces the smallest image (~3-5 MB vs ~9 MB distroless vs ~80 MB alpine)
+- The REPL only needs stdin/stdout, which Docker provides
+- No shell is needed in the container — the binary IS the shell (it's a REPL)
+- Debugging: `docker cp` can extract the binary if needed; for interactive debugging, build with the `build` stage target directly (`docker build --target build`)
+
+**Why `gcc:14` for build stage (not alpine/musl):**
+- `gcc:14` provides glibc-based g++ which is the project's primary compiler
+- Static linking with glibc via `-static` produces universally compatible Linux binaries
+- Alpine/musl can produce slightly smaller binaries but risks subtle C++ stdlib behavior differences
+- Build stage size is irrelevant (discarded after build)
+
+### .dockerignore
+
+```
+.git
+.github
+.planning
+.cursor
+build/
+dist/
+emsdk/
+*.exe
+*.o
+tests/
+demo/
+docs/
+*.md
+```
+
+Keeps the Docker build context minimal (only `src/` directory is needed).
+
+### GitHub Actions: ci.yml
+
+```yaml
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: g++ -std=c++20 -O2 -static -o dist/qseries src/main.cpp
+      - name: Unit tests
+        run: ./dist/qseries --test
+      - name: Acceptance tests
+        run: make acceptance
+```
+
+Lightweight — single platform, fast feedback.
+
+### GitHub Actions: release.yml
+
+```yaml
+name: Release
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-amd64
+            cc: g++
+            flags: "-static"
+            ext: ""
+          - os: ubuntu-latest
+            target: linux-arm64
+            cc: aarch64-linux-gnu-g++
+            flags: "-static"
+            ext: ""
+            cross: true
+          - os: macos-latest         # arm64 runner
+            target: darwin-arm64
+            cc: g++-14
+            flags: ""               # macOS doesn't support -static
+            ext: ""
+          - os: macos-13             # x86_64 runner
+            target: darwin-amd64
+            cc: g++-14
+            flags: ""
+            ext: ""
+          - os: windows-latest
+            target: windows-amd64
+            cc: g++
+            flags: "-static"
+            ext: ".exe"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cross-compiler (ARM64)
+        if: matrix.cross
+        run: sudo apt-get update && sudo apt-get install -y g++-aarch64-linux-gnu
+
+      - name: Build
+        run: >
+          ${{ matrix.cc }} -std=c++20 -O2 ${{ matrix.flags }}
+          -o qseries-${{ matrix.target }}${{ matrix.ext }} src/main.cpp
+
+      - name: Test (native only)
+        if: "!matrix.cross"
+        run: ./qseries-${{ matrix.target }}${{ matrix.ext }} --test
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qseries-${{ matrix.target }}
+          path: qseries-${{ matrix.target }}${{ matrix.ext }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: qseries-*
+          generate_release_notes: true
+
+  docker:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: |
+            ghcr.io/gerardgarvan/qseries:${{ github.ref_name }}
+            ghcr.io/gerardgarvan/qseries:latest
+          platforms: linux/amd64
+```
+
+### install.sh
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO="gerardgarvan/qseries3"
+INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
+
+# Detect platform
+OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+ARCH="$(uname -m)"
+case "$OS" in
+  linux*)  OS="linux" ;;
+  darwin*) OS="darwin" ;;
+  *)       echo "Unsupported OS: $OS" >&2; exit 1 ;;
+esac
+case "$ARCH" in
+  x86_64|amd64) ARCH="amd64" ;;
+  aarch64|arm64) ARCH="arm64" ;;
+  *)             echo "Unsupported arch: $ARCH" >&2; exit 1 ;;
+esac
+
+ASSET="qseries-${OS}-${ARCH}"
+TAG=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
+  | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+
+URL="https://github.com/${REPO}/releases/download/${TAG}/${ASSET}"
+
+echo "Installing qseries ${TAG} (${OS}/${ARCH})..."
+if [ -w "$INSTALL_DIR" ]; then
+  curl -fsSL -o "${INSTALL_DIR}/qseries" "$URL"
+  chmod +x "${INSTALL_DIR}/qseries"
+else
+  sudo curl -fsSL -o "${INSTALL_DIR}/qseries" "$URL"
+  sudo chmod +x "${INSTALL_DIR}/qseries"
+fi
+
+echo "Installed: $(qseries --version)"
+```
 
 ---
 
-## Risk Areas
+## Build Order
 
-| Risk | Severity | Mitigation |
-|------|----------|------------|
-| repl.h grows beyond maintainability (~1300 → ~1600 lines) | Medium | Extract serialization into `session.h` if it exceeds 100 lines |
-| Karatsuba correctness for base 10^9 | Medium | Extensive unit tests: schoolbook vs Karatsuba on random inputs |
-| Dense series path changing numerical results | Low | Dense and sparse paths must produce bit-identical results; test with Rogers-Ramanujan |
-| ANSI codes leaking to non-TTY output | Medium | Guard every colorize() call with g_color_enabled; add acceptance test piping through `cat` |
-| Session file format versioning | Low | Include version header `# qseries session v1`; reject unknown versions |
+Build order considers both dependency relationships and risk profile:
+
+### Phase 1: CI Pipeline (ci.yml)
+**Dependencies:** None — works with existing Makefile and tests.
+**Why first:** Establishes quality gate before any other changes. Every subsequent PR gets tested.
+
+### Phase 2: Dockerfile + .dockerignore + Makefile docker targets
+**Dependencies:** None technically, but CI should exist first so the Dockerfile PR itself gets tested.
+**Why second:** Self-contained, easy to validate locally. `docker build . && docker run -it` provides immediate feedback.
+
+### Phase 3: Release Pipeline (release.yml)
+**Dependencies:** Needs the asset naming convention finalized (Phase 2 validates the Linux build path). Needs CI passing.
+**Why third:** Most complex piece. Cross-compilation matrix needs careful testing. Start with Linux-only, then expand the matrix.
+
+### Phase 4: Install Script (install.sh)
+**Dependencies:** Requires at least one release to exist in GitHub Releases (needs Phase 3).
+**Why last:** Cannot be tested until binaries are actually published. The script's correctness depends entirely on the asset naming convention from Phase 3.
+
+### Dependency Graph
+
+```
+Phase 1: ci.yml
+    │
+    ▼
+Phase 2: Dockerfile + .dockerignore + Makefile targets
+    │
+    ▼
+Phase 3: release.yml (cross-platform builds → GitHub Releases)
+    │
+    ▼
+Phase 4: install.sh (downloads from GitHub Releases)
+```
+
+---
+
+## Key Constraints & Decisions
+
+### macOS Static Linking
+macOS does not support fully static linking (`-static` is rejected by Apple's linker). macOS binaries will be dynamically linked against system libraries (libSystem). This is standard practice — Homebrew, Rust, Go all ship dynamically-linked macOS binaries. The binary still has zero *external* dependencies; it links only against OS-provided libraries.
+
+### Container Registry
+Use GitHub Container Registry (`ghcr.io`) rather than Docker Hub. Rationale:
+- Integrated with GitHub (same auth, same permissions)
+- Free for public repositories
+- No rate limiting for pulls from the same org
+
+### Version Tagging Strategy
+Git tags drive everything: `git tag v3.1.0 && git push --tags` triggers the release workflow. The tag becomes both the GitHub Release name and the Docker image tag. The binary's `--version` output should match. Currently hardcoded as `"qseries 2.0"` in `main.cpp` — consider making this build-time configurable via `-DVERSION=...` preprocessor define.
+
+### Windows Build in CI
+GitHub Actions `windows-latest` runners have MSYS2/MinGW g++ available. Use `g++` directly (the runner has it on PATH). The `-static` flag works on Windows/MinGW to produce a standalone `.exe`.
+
+### ARM64 Linux Cross-Compilation
+Use `g++-aarch64-linux-gnu` on Ubuntu runners. Static linking ensures the cross-compiled binary runs on any ARM64 Linux. Cannot run acceptance tests for cross-compiled binaries without QEMU, so unit tests (`--test`) are skipped for cross targets.
+
+---
+
+## Confidence Assessment
+
+| Area | Confidence | Rationale |
+|------|------------|-----------|
+| Dockerfile multi-stage with scratch | HIGH | Verified with Docker official docs; pattern is standard for static C++ binaries |
+| GitHub Actions matrix build | HIGH | Well-documented, widely used pattern for multi-platform C++ projects |
+| Install script platform detection | HIGH | Standard `uname` approach used by virtually every CLI tool installer |
+| macOS build constraints | HIGH | Apple's `-static` limitation is well-documented |
+| Windows CI build | MEDIUM | MinGW g++ is available on GitHub Actions runners but exact path/version may need verification at implementation time |
+| ARM64 cross-compilation | MEDIUM | `g++-aarch64-linux-gnu` package is standard but acceptance test coverage is limited for cross targets |
+| GHCR multi-arch images | MEDIUM | `docker buildx` multi-arch is mature but adds complexity; recommend starting with amd64-only |
