@@ -2,7 +2,7 @@
 // Usage: node tests/test_wasm.mjs
 // Requires: build/wasm/qseries.js (built via `make wasm`)
 
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -15,7 +15,8 @@ function test(name, condition) {
     else { console.log(`FAIL: ${name}`); failed++; }
 }
 
-const createQSeries = (await import(join(__dirname, '..', 'build', 'wasm', 'qseries.js'))).default;
+const wasmPath = join(__dirname, '..', 'build', 'wasm', 'qseries.js');
+const createQSeries = (await import(pathToFileURL(wasmPath).href)).default;
 const Module = await createQSeries();
 
 // 1. Banner
