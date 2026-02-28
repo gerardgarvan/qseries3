@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v2.1 (Website)
+**Current focus:** Milestone v3.0 (Simple Website & Example Audit)
 
 ## Current Position
 
-Phase: 47 — CI/CD Deploy, Plan 01 COMPLETE
-Plan: 01 complete
-Status: GitHub Actions CI/CD workflow + Cloudflare Pages _headers for automated Wasm + Astro deploy
-Last activity: 2026-02-28 — Phase 47 Plan 01 executed
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for v3.0
+Last activity: 2026-02-28 — Milestone v3.0 started
 
-Progress: [█████████░] 90%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -127,7 +127,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 47-01-PLAN.md (GitHub Actions CI/CD workflow + Cloudflare Pages _headers)
+Stopped at: Starting milestone v3.0 — Simple Website & Example Audit
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 

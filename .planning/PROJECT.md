@@ -8,17 +8,22 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 **Rogers-Ramanujan must work.** Given `Σ q^(n²) / (q;q)_n`, prodmake must recover the product form with denominators only at exponents ≡ ±1 (mod 5). If this test passes, the core math is correct. Everything else builds on it.
 
-## Current Milestone: v2.1 Website
+## Current Milestone: v3.0 Simple Website & Example Audit
 
-**Goal:** Create a modern documentation website with live WebAssembly playground so users can try qseries in the browser and read docs online.
+**Goal:** Replace the complex Astro/Wasm website with a single self-contained HTML page using the kangaroo-banner aesthetic, and audit every example across the project to ensure correctness.
 
 **Target features:**
-- Astro Starlight documentation site with modern dev-tool aesthetic
-- Landing page: feature highlights, download link, project overview
-- Online documentation: MANUAL.md converted to HTML pages
-- Garvan tutorial examples with commentary as interactive walkthrough
-- Live playground: qseries compiled to WebAssembly via Emscripten, browser-based REPL
-- Custom domain support (domain TBD)
+- Delete entire website/ directory (Astro Starlight, playground, KaTeX, CI/CD)
+- Single comprehensive HTML page: kangaroo sunset banner as hero, project overview, build instructions, key examples, full 40+ function reference
+- Design language: outback sunset gradient (#1a0a2e → #d4451a → #f7a634), gold accents (#ffe066), Bebas Neue + Outfit fonts, dark theme
+- Audit all examples in demo/garvan-demo.sh, MANUAL.md, and website docs — fix any that don't produce correct output
+- Remove GitHub Actions deploy workflow (no longer needed)
+
+---
+
+## Previous Milestone: v2.1 Website ✓
+
+**Shipped:** Astro Starlight docs site with 17 pages, KaTeX math, xterm.js Wasm playground, GitHub Actions CI/CD for Cloudflare Pages. Replaced by v3.0 simple page approach.
 
 ---
 
@@ -132,4 +137,4 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 | jacprodmake 80% periodicity threshold | Don't demand exact match; verify reconstruction | — Pending |
 
 ---
-*Last updated: 2026-02-27 after v2.1 milestone start*
+*Last updated: 2026-02-28 after v3.0 milestone start*
