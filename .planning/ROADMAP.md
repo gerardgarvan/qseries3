@@ -774,7 +774,12 @@ Plans:
   2. MANUAL.md content is converted to navigable HTML documentation sections (all 50+ built-ins reachable via sidebar)
   3. Garvan tutorial examples render with KaTeX mathematics and explanatory commentary
   4. Navigation between landing page, manual sections, and tutorials works seamlessly
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 45-01-PLAN.md — KaTeX math integration, landing page with feature cards + RR demo, getting-started pages
+- [ ] 45-02-PLAN.md — All 7 reference manual pages (38+ built-in functions with typed signatures and REPL examples)
+- [ ] 45-03-PLAN.md — All 5 tutorial pages (Rogers-Ramanujan, theta functions, partition identities, modular equations)
 
 ### Phase 46: Playground
 **Goal**: Users can run q-series computations live in the browser
