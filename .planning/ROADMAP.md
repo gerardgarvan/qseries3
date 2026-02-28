@@ -502,7 +502,7 @@ Plans:
 | 44. Astro Starlight scaffold | 0/? | Complete    | 2026-02-27 |
 | 45. Documentation content | 0/? | Complete    | 2026-02-28 |
 | 46. Playground | 0/? | Complete    | 2026-02-28 |
-| 47. CI/CD & deployment | 0/? | Not started | - |
+| 47. CI/CD & deployment | 0/? | Complete    | 2026-02-28 |
 
 ### Phase 30: Output on next line after input
 
@@ -734,7 +734,7 @@ Plans:
 - [x] **Phase 44: Astro Starlight scaffold** - Documentation site skeleton with responsive layout, sidebar, search (completed 2026-02-27)
 - [x] **Phase 45: Documentation content** - Landing page, MANUAL.md conversion, Garvan tutorial with KaTeX (completed 2026-02-28)
 - [x] **Phase 46: Playground** - xterm.js terminal UI, Web Worker Wasm execution, example dropdown (completed 2026-02-28)
-- [ ] **Phase 47: CI/CD & deployment** - GitHub Actions pipeline, Cloudflare Pages with correct .wasm MIME
+- [x] **Phase 47: CI/CD & deployment** - GitHub Actions pipeline, Cloudflare Pages with correct .wasm MIME (completed 2026-02-28)
 
 ### Phase 43: Wasm compile
 **Goal**: C++ codebase compiles to WebAssembly with a working evaluate(expr) → string API
@@ -804,7 +804,7 @@ Plans:
   1. GitHub Actions workflow: push to main → build Wasm (Emscripten) → build site (Astro) → deploy to Cloudflare Pages
   2. Deployed site serves `.wasm` files with correct `application/wasm` MIME type
   3. Playground works end-to-end on the deployed URL (Wasm loads, evaluates, returns results)
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 47-01-PLAN.md — GitHub Actions workflow (Wasm → Astro → Cloudflare Pages deploy) + _headers for Wasm MIME type
