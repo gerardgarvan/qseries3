@@ -503,6 +503,9 @@ Plans:
 | 45. Documentation content | 0/? | Complete    | 2026-02-28 |
 | 46. Playground | 0/? | Complete    | 2026-02-28 |
 | 47. CI/CD & deployment | 0/? | Complete    | 2026-02-28 |
+| 48. Cleanup | 0/? | Not started | - |
+| 49. Single-page website | 0/? | Not started | - |
+| 50. Example audit | 0/? | Not started | - |
 
 ### Phase 30: Output on next line after input
 
@@ -808,3 +811,44 @@ Plans:
 
 Plans:
 - [ ] 47-01-PLAN.md — GitHub Actions workflow (Wasm → Astro → Cloudflare Pages deploy) + _headers for Wasm MIME type
+
+---
+
+## Milestone v3.0 (Simple Website & Example Audit) — phases 48–50:
+
+- [ ] **Phase 48: Cleanup** - Delete website/, remove CI/CD workflow, clean Makefile of wasm-website target
+- [ ] **Phase 49: Single-page website** - Self-contained HTML page with kangaroo-banner aesthetic, examples, full function reference
+- [ ] **Phase 50: Example audit** - Run every example across all docs, fix any failures
+
+### Phase 48: Cleanup
+**Goal**: The codebase is free of all complex website infrastructure
+**Depends on**: Phase 47
+**Requirements**: CLEAN-01, CLEAN-02, CLEAN-03
+**Success Criteria** (what must be TRUE):
+  1. The `website/` directory no longer exists in the repository
+  2. `.github/workflows/deploy.yml` and `website/public/_headers` no longer exist
+  3. `make wasm-website` is no longer a valid Makefile target
+  4. The core build still works (`make` produces a working qseries binary)
+**Plans**: TBD
+
+### Phase 49: Single-page website
+**Goal**: A single self-contained HTML file serves as the project's web presence with kangaroo-banner aesthetic
+**Depends on**: Phase 48
+**Requirements**: PAGE-01, PAGE-02, PAGE-03, PAGE-04, PAGE-05
+**Success Criteria** (what must be TRUE):
+  1. A single HTML file exists with kangaroo-banner hero section (sunset gradient, hopping kangaroo SVG, stars, boomerang, dust particles)
+  2. Build instructions section covers prerequisites, one-liner compile command, and platform notes
+  3. Key examples section shows Rogers-Ramanujan, partition function, theta functions, and relation finding with REPL input/output
+  4. Full function reference documents all 40+ built-in functions with signature, description, and example
+  5. Design follows kangaroo-banner aesthetic: dark background (#0d0617), sunset accents (#d4451a, #f7a634), gold headings (#ffe066), Bebas Neue + Outfit fonts
+**Plans**: TBD
+
+### Phase 50: Example audit
+**Goal**: Every example across all project documentation runs correctly and produces expected output
+**Depends on**: Phase 49
+**Requirements**: AUDIT-01, AUDIT-02, AUDIT-03, AUDIT-04
+**Success Criteria** (what must be TRUE):
+  1. Every command in `demo/garvan-demo.sh` runs without error and produces correct output
+  2. Every example in `MANUAL.md` runs without error and produces correct output
+  3. Every code snippet in the single-page website runs without error and produces correct output
+  4. Any failing or incorrect examples have been fixed (in the example text or in the REPL code)

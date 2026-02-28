@@ -476,18 +476,18 @@ Requirements for milestone v3.0 — replace complex website with single HTML pag
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLEAN-01 | TBD | Pending |
-| CLEAN-02 | TBD | Pending |
-| CLEAN-03 | TBD | Pending |
-| PAGE-01 | TBD | Pending |
-| PAGE-02 | TBD | Pending |
-| PAGE-03 | TBD | Pending |
-| PAGE-04 | TBD | Pending |
-| PAGE-05 | TBD | Pending |
-| AUDIT-01 | TBD | Pending |
-| AUDIT-02 | TBD | Pending |
-| AUDIT-03 | TBD | Pending |
-| AUDIT-04 | TBD | Pending |
+| CLEAN-01 | Phase 48 | Pending |
+| CLEAN-02 | Phase 48 | Pending |
+| CLEAN-03 | Phase 48 | Pending |
+| PAGE-01 | Phase 49 | Pending |
+| PAGE-02 | Phase 49 | Pending |
+| PAGE-03 | Phase 49 | Pending |
+| PAGE-04 | Phase 49 | Pending |
+| PAGE-05 | Phase 49 | Pending |
+| AUDIT-01 | Phase 50 | Pending |
+| AUDIT-02 | Phase 50 | Pending |
+| AUDIT-03 | Phase 50 | Pending |
+| AUDIT-04 | Phase 50 | Pending |
 
 **Coverage:** 12/12 v3.0 requirements mapped ✓
 
