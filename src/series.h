@@ -137,8 +137,8 @@ struct Series {
         for (const auto& [e1, c1] : c) {
             for (const auto& [e2, c2] : o.c) {
                 int exp = e1 + e2;
-                if (exp >= t)  // skip early (PITFALLS: mult trunc skip)
-                    continue;
+                if (exp >= t)
+                    break;
                 Frac prod = c1 * c2;
                 if (!prod.isZero()) {
                     Frac old = s.coeff(exp);
