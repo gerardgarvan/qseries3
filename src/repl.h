@@ -104,6 +104,34 @@ inline int readOneChar() {
 #endif
 #endif // __EMSCRIPTEN__
 
+namespace ansi {
+    inline bool g_color = false;
+
+    inline void init() {
+        if (!stdin_is_tty()) return;
+        if (std::getenv("NO_COLOR")) return;
+        g_color = true;
+#if defined(_WIN32) && !defined(__CYGWIN__)
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
+        HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        DWORD mode = 0;
+        if (GetConsoleMode(hOut, &mode))
+            SetConsoleMode(hOut, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+        HANDLE hErr = GetStdHandle(STD_ERROR_HANDLE);
+        if (GetConsoleMode(hErr, &mode))
+            SetConsoleMode(hErr, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+#endif
+    }
+
+    inline const char* gold()  { return g_color ? "\033[33m" : ""; }
+    inline const char* red()   { return g_color ? "\033[31m" : ""; }
+    inline const char* dim()   { return g_color ? "\033[2m" : ""; }
+    inline const char* reset() { return g_color ? "\033[0m" : ""; }
+    inline const char* bold()  { return g_color ? "\033[1m" : ""; }
+}
+
 // EnvValue: variable can hold Series or Jacobi product
 using EnvValue = std::variant<Series, std::vector<JacFactor>>;
 
@@ -736,7 +764,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
             bool first = true;
             for (const auto& [n, _] : table) {
                 if (!first) std::cout << ", ";
-                std::cout << n;
+                std::cout << ansi::gold() << n << ansi::reset();
                 first = false;
             }
             std::cout << std::endl;
@@ -746,7 +774,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
             const std::string& fn = args[0]->varName;
             auto it = table.find(fn);
             if (it != table.end()) {
-                std::cout << it->second.first << " — " << it->second.second << std::endl;
+                std::cout << ansi::gold() << it->second.first << ansi::reset() << " — " << it->second.second << std::endl;
             } else {
                 std::cout << "unknown function: " << fn << std::endl;
             }
@@ -1026,7 +1054,7 @@ inline std::string trim(const std::string& s) {
 #ifndef __EMSCRIPTEN__
 // Redraw prompt + line with cursor at pos (0 = before first char, line.size() = after last)
 inline void redrawLineRaw(const std::string& line, size_t pos) {
-    std::cout << "\r\033[Kqseries> " << line << std::flush;
+    std::cout << "\r\033[K" << ansi::gold() << "qseries> " << ansi::reset() << line << std::flush;
     if (pos < line.size()) {
         size_t count = line.size() - pos;
         std::cout << "\033[" << std::to_string(count) << "D" << std::flush;
@@ -1200,8 +1228,10 @@ inline EvalResult evalStmt(const Stmt* s, Environment& env) {
 
 #ifndef __EMSCRIPTEN__
 inline void runRepl() {
+    ansi::init();
+
     if (stdin_is_tty()) {
-        std::cout << R"banner(
+        std::cout << ansi::gold() << R"banner(
  _                                           
 | |                                          
 | | ____ _ _ __   __ _  __ _ _ __ ___   ___  
@@ -1212,7 +1242,7 @@ inline void runRepl() {
                  |___/                       
 
  q-series REPL (Maple-like), version 2.0
-)banner" << std::endl;
+)banner" << ansi::reset() << std::endl;
     }
 
     Environment env;
@@ -1225,7 +1255,7 @@ inline void runRepl() {
     for (;;) {
         std::string line;
         if (stdin_is_tty()) {
-            std::cout << "qseries> " << std::flush;
+            std::cout << ansi::gold() << "qseries> " << ansi::reset() << std::flush;
             auto opt = readLineRaw(env, history);
             std::cout << std::endl;
             if (!opt) break;
@@ -1247,7 +1277,7 @@ inline void runRepl() {
             if (contCount >= maxContinuations)
                 break;
             if (stdin_is_tty()) {
-                std::cout << "  > " << std::flush;
+                std::cout << ansi::gold() << "  > " << ansi::reset() << std::flush;
                 auto nextOpt = readLineRaw(env, history);
                 std::cout << std::endl;
                 if (!nextOpt) break;
@@ -1287,10 +1317,10 @@ inline void runRepl() {
             auto t1 = std::chrono::steady_clock::now();
             if (stdin_is_tty()) {
                 double secs = std::chrono::duration<double>(t1 - t0).count();
-                std::cout << std::fixed << std::setprecision(3) << secs << "s" << std::endl;
+                std::cout << ansi::dim() << std::fixed << std::setprecision(3) << secs << "s" << ansi::reset() << std::endl;
             }
         } catch (const std::exception& e) {
-            std::cerr << "error: ";
+            std::cerr << ansi::red() << "error: " << ansi::reset();
             if (!stdin_is_tty() && inputLineNum > 0)
                 std::cerr << "line " << inputLineNum << ": ";
             std::cerr << e.what() << std::endl;
