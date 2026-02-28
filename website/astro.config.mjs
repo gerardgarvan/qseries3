@@ -49,7 +49,7 @@ export default defineConfig({
         {
           label: 'Playground',
           items: [
-            { slug: 'playground' },
+            { label: 'Try it Online', link: '/playground/' },
           ],
         },
       ],
