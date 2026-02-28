@@ -1,181 +1,166 @@
 # Project Research Summary
 
-**Project:** Q-Series REPL v2.1 — Documentation Website with WebAssembly Playground
-**Domain:** Mathematical software documentation site with live interactive computation
-**Researched:** 2026-02-27
+**Project:** qseries REPL v4.0 — Core Improvements
+**Domain:** Zero-dependency C++20 mathematical REPL (q-series / partition theory)
+**Researched:** 2026-02-28
 **Confidence:** HIGH
 
 ## Executive Summary
 
-This milestone adds a documentation website with a live-in-browser playground to the existing C++20 q-series CLI REPL. The recommended stack is **Astro Starlight** for documentation (zero-JS by default, built-in search, dark mode, KaTeX math rendering) with the C++ REPL compiled to **WebAssembly via Emscripten** and embedded as a **React island**. Cloudflare Pages is the recommended host for its free tier, correct `.wasm` MIME type handling, and `_headers` support. The architecture is a monorepo with a `website/` subfolder — the Wasm build compiles the same `src/*.h` files as the native build, keeping everything in sync.
+The v4.0 milestone adds two categories of improvement to the existing qseries REPL: **visual polish** (ANSI color output, clear screen, smarter tab completion) and **computational performance** (Karatsuba multiplication, faster series operations, benchmarking infrastructure). All features are implementable within the zero-dependency C++20 constraint using only standard library facilities (`<chrono>`, `<fstream>`, `<sstream>`) and well-documented algorithms. No new external libraries, no build command changes, and no modifications to the mathematical core (frac.h, qfuncs.h, convert.h, relations.h, linalg.h) are required for the REPL enhancements. The performance work is confined to bigint.h and series.h. Session save/load adds persistence to repl.h.
 
-The critical technical decision is the I/O bridge between browser and Wasm. Research identified two viable approaches: (1) **Embind `evaluate(line) → string`** — simpler, no Asyncify overhead, no SharedArrayBuffer, but batch-mode only (loses interactive REPL feel); (2) **xterm-pty + Asyncify** — full terminal emulation with arrow keys, tab completion, and variable persistence, but ~70% Wasm size overhead and higher integration complexity. **Recommendation: start with Embind batch mode for MVP, design the architecture (Web Worker, component boundaries) to support an xterm-pty upgrade later.** The feature research confirms this — users want to try q-series in their browser, not necessarily have a pixel-perfect terminal clone on day one.
+The recommended approach is **bottom-up by layer**: start with the lowest-level performance optimization (Karatsuba in bigint.h), then series optimization (series.h), then the REPL presentation layer (ansi color, clear screen, tab completion, session persistence, benchmarking — all in repl.h). ANSI color and clear screen share a Windows VT processing prerequisite and should ship together. The performance features (Karatsuba + series optimization) are independent of the REPL features and can be developed in parallel. The benchmarking suite is both a deliverable and a validation tool for the Karatsuba threshold tuning.
 
-The primary risks are all in the Emscripten compilation phase: terminal I/O dead code must be bypassed (the existing `readLineRaw` with termios/Win32 console APIs won't compile), C++ exception handling is disabled by default at `-O1+` (causing silent aborts on `1/0` or parse errors), and the binary can balloon to 3-5 MB without size optimization. All three risks have known, well-documented mitigations. A Web Worker is non-negotiable for the playground — without it, any computation over ~200ms freezes the browser tab.
+The key risks are: (1) **Karatsuba intermediate overflow** — base 10^9 limb arithmetic requires signed 64-bit intermediates to handle the subtraction step `z1 = z_mid - z_high - z_low`, and wrong threshold selection can cause performance regressions on real workloads; (2) **ANSI codes leaking into non-TTY output** — the codebase has ~51 `std::cout` call sites that must all be gated on `stdin_is_tty()` or ANSI will contaminate script mode and piped output; (3) **ANSI codes breaking the line editor** — colorizing the prompt changes its byte length without changing display width, breaking cursor positioning in `redrawLineRaw()`.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The website introduces an entirely new technology layer (JavaScript/Node.js ecosystem) alongside the existing C++20 codebase. No changes to the existing C++ source are needed for the basic build — conditional compilation (`#ifdef __EMSCRIPTEN__`) isolates Wasm-specific code.
+No new dependencies. All v4.0 features use C++20 standard library headers already available or trivially addable: `<fstream>` and `<sstream>` for session persistence, `<chrono>` (already included) for benchmarking. The build command remains `g++ -std=c++20 -O2 -static -o qseries main.cpp`. An optional `bench_main.cpp` produces a separate benchmark binary for development-time performance testing.
 
 **Core technologies:**
-- **Astro Starlight** (^5.7 / ^0.37): Documentation framework — zero-JS pages by default, built-in Pagefind search, dark mode, sidebar nav, MDX support. No custom theme work needed.
-- **Emscripten emsdk** (^4.0): C++ → Wasm compiler — only viable C++20 → Wasm toolchain. Supports `std::map`, `std::vector`, all STL features used by the codebase.
-- **React** (^19.0): UI framework for the playground island only — Astro renders everything else as static HTML.
-- **@xterm/xterm** (^5.5): Terminal emulator component for the playground UI. Industry standard (powers VS Code terminal).
-- **Cloudflare Pages**: Static hosting — free tier, correct `application/wasm` MIME type, global CDN, `_headers` file support.
-
-**Key rejections:** No GMP/Boost (violates zero-dependency constraint), no Asyncify for MVP (70% size overhead), no server-side execution (client-side Wasm eliminates hosting costs), no Monaco/CodeMirror (overkill for math expressions), no Tailwind (Starlight's built-in styles suffice).
+- **C++20 / g++ 13+**: Unchanged toolchain — all new features use standard library only
+- **ANSI SGR escape codes**: Direct `\033[Nm` sequences for color; Windows requires one-time `SetConsoleMode()` call on stdout
+- **Karatsuba algorithm**: Textbook divide-and-conquer multiplication (Knuth 4.3.3 / GMP), threshold ~32 limbs
+- **`std::chrono::steady_clock`**: Monotonic clock for benchmarking (NOT `high_resolution_clock`, which is non-monotonic on libstdc++)
 
 ### Expected Features
 
 **Must have (table stakes):**
-- Responsive layout, dark mode, full-text search, sidebar navigation (all Starlight defaults)
-- Math rendering via KaTeX (remark-math + rehype-katex) — q-series docs are meaningless without rendered Σ, Π, (a;q)_n
-- Playground with code input, Run button, output panel, error display
-- Wasm binary compiled from the existing C++ source
-- 5-8 preloaded examples sourced from `garvan-demo.sh`
-- Loading indicator while Wasm downloads (~2-4 MB payload)
+- ANSI colored output — prompt (cyan/green), errors (red), timing (dim gray), results in default color
+- Clear screen (`Ctrl+L` keypress + `clear` command) — universal REPL expectation
+- Longest common prefix tab completion — current behavior (list-only, no prefix fill) is below readline standard
+- Persistent history across sessions — `~/.qseries_history`, plain text, 1000 lines
 
 **Should have (differentiators):**
-- Shareable permalinks (encode playground code in URL hash — no server needed)
-- Inline "Try It" buttons in documentation pages (Codapi pattern)
-- Terminal mode upgrade (xterm.js + xterm-pty for full interactive REPL)
-- Guided tutorial walkthrough from `qseriesdoc.md`
+- Auto-parentheses on function completion — append `(` after completing a known function name
+- Argument signature hints — show `etaq(k) or etaq(k,T)` when Tab pressed inside empty parens
+- `save("file")` / `load("file")` commands — save input history as replayable `.q` script
+- Karatsuba multiplication — O(n^1.585) for large BigInt operands (significant at T=200+)
+- Series inner-loop early break — trivial 3-line change for 2-4x speedup on high-truncation series
+- Benchmarking suite — separate `bench_main.cpp` with `doNotOptimize` barriers and median reporting
 
 **Defer (v2+):**
-- LocalStorage draft persistence, embeddable widget, multiple output formats
-- User accounts, server-side execution, collaborative editing, Jupyter integration
-
-**Competitive advantage:** Client-side Wasm is rare among math playgrounds (Rust/Go/Sage all use server-side). Integrated docs + playground is uncommon. No math software project has a modern Starlight-quality docs site.
+- Input syntax highlighting — requires per-keystroke tokenization + colored redraw; massive complexity
+- Output syntax highlighting (coloring coefficients vs exponents) — unprecedented in math REPLs, distracting
+- Full workspace serialization (save all variables as structured data) — requires Series→expression serialization; fragile
+- Configurable color themes — overkill for 5-6 color uses
+- Toom-Cook / FFT multiplication — over-engineered; Karatsuba is the right next step from schoolbook
+- `NO_COLOR` env var support — nice-to-have, low priority (can add `--color=never` flag instead)
 
 ### Architecture Approach
 
-Monorepo with `website/` subfolder containing an independent Astro project. The Emscripten build reads the same `src/*.h` + `src/main.cpp` as the native `g++` build. A thin `wasm_entry.cpp` (or `#ifdef __EMSCRIPTEN__` block) exposes an `evaluate()` function via Embind. The playground is a React island (`client:only="react"`) on a dedicated `/playground/` page — documentation pages remain static HTML with zero JS. The Wasm module runs inside a **Web Worker** to prevent UI freezing; communication is via `postMessage`.
+All REPL enhancements (color, clear, completion, session, benchmarking) are confined to `repl.h` with a thin new `ansi.h` utility header. Performance work modifies only `bigint.h` (Karatsuba) and `series.h` (dense fast-path, inner-loop early break). No interface changes — `operator*` signatures, `eval()` signatures, and `Environment` structure are preserved. The existing `stdin_is_tty()` macro gates all interactive-only behavior. WASM compatibility is maintained by disabling color and session I/O behind `#ifndef __EMSCRIPTEN__`.
 
-**Major components:**
-1. **Emscripten build pipeline** — `em++` with `-fwasm-exceptions`, `-O2`/`-Os`, `MODULARIZE=1`, `ALLOW_MEMORY_GROWTH=1` → produces `qseries.wasm` + `qseries.js`
-2. **Astro Starlight site** — MDX documentation pages (manual, reference, tutorial), Pagefind search, KaTeX math
-3. **QSeriesPlayground React component** — xterm.js terminal UI, Web Worker message passing, loading/computing states
-4. **Web Worker** — loads and instantiates Wasm module, receives input via `postMessage`, returns results
-5. **CI/CD pipeline** — GitHub Actions: emsdk setup → `make wasm` → `npm run build` → deploy to Cloudflare Pages
+**Major components modified:**
+1. **`bigint.h`** — Add `karatsubaMultiply()` static method with threshold dispatch; existing `addAbs`/`subAbs` reused for recombination
+2. **`series.h`** — Inner-loop early break (trivial), optional dense multiply path for series with density >50%
+3. **`repl.h`** — ANSI color wrapping (~15 call sites), `Ctrl+L` + `clear` command, smart tab completion (context analysis + LCP + auto-parens), history persistence, save/load commands, timing toggle, benchmark builtin
+4. **`ansi.h` (new)** — ~40 lines: color constants, `enabled` flag, helper functions returning empty strings when disabled
 
 ### Critical Pitfalls
 
-1. **Terminal I/O dead code in Wasm** — `readLineRaw()`, `RawModeGuard`, termios/Win32 APIs are dead code under Emscripten. **Avoid:** Create a separate Wasm entry point that bypasses `runRepl()` and exposes `evaluate(string) → string`. Use `#ifdef __EMSCRIPTEN__` guards.
+1. **ANSI codes leaking into script/piped output** — Gate ALL color on `stdin_is_tty()`. Never embed `\033[` literals at call sites; centralize in `ansi.h` helpers that return empty strings when disabled. Add regression test: `qseries < demo.qs | xxd | grep '1b 5b'` must be empty.
 
-2. **Long computations freeze browser** — `etaq(q,1,200)` or `findnonhomcombo()` can take seconds, blocking the main thread. **Avoid:** Run Wasm in a Web Worker from day one. Use `worker.terminate()` for cancellation (loses state but acceptable for MVP).
+2. **ANSI codes breaking line editor cursor positioning** — Colorizing the prompt adds invisible bytes that break `redrawLineRaw()` cursor math. Track prompt **display width** separately from byte length. Never colorize user input text.
 
-3. **C++ exceptions silently disabled** — Emscripten disables exception catching at `-O1+`. The codebase has ~85 catch sites in `repl.h`. Without `-fwasm-exceptions`, `1/0` aborts the module instead of showing an error. **Avoid:** Compile with `-fwasm-exceptions` (native Wasm exceptions, supported in Chrome 95+/Firefox 100+/Safari 15.2+).
+3. **Karatsuba intermediate overflow with base 10^9** — The recombination `z1 = z_mid - z_high - z_low` produces negative limbs that wrap in `uint32_t`. Use `int64_t` signed intermediates, or implement Karatsuba at the vector-split level (half the limbs, delegate sub-products to existing `operator*`). Cross-check: `karatsuba(a,b) == schoolbook(a,b)` for random inputs at all size boundaries.
 
-4. **Wasm binary size blowup** — Full REPL + STL + exception support = 2-5 MB uncompressed. **Avoid:** Use `-Os` or `-O2`, `-fwasm-exceptions` (not `-fexceptions`), `--closure 1`, gzip/brotli compression (60-75% reduction). Budget: <1.5 MB compressed.
+4. **Wrong Karatsuba threshold causing regression** — Most BigInt values in the REPL are 1-4 limbs. Start threshold at ~32 limbs (~288 digits). Benchmark real workloads (`etaq(1,500)`, `prodmake(rr,200)`) not synthetic inputs. Reject if any acceptance test regresses.
 
-5. **GitHub Pages serves wrong MIME for `.wasm`** — Returns `text/html` instead of `application/wasm`. **Avoid:** Use Cloudflare Pages (correct MIME by default) or configure `_headers` file.
+5. **Series optimization breaking truncation invariant** — A dense-array fast path must handle negative exponents (Laurent series from `inverse()`) and enforce `result.trunc = min(a.trunc, b.trunc)`. Run Rogers-Ramanujan after any series.h change.
 
 ## Implications for Roadmap
 
-Based on combined research, here is the suggested phase structure. The Wasm compilation is the critical path — everything playground-related depends on it. Documentation content is independent and can be parallelized.
+Based on research, suggested phase structure:
 
-### Phase 1: Wasm Compilation & API
-**Rationale:** Critical path — nothing playground-related works without a functioning Wasm binary. This is also where the highest-risk pitfalls live (I/O dead code, exceptions, binary size).
-**Delivers:** `qseries.wasm` + `qseries.js` that can evaluate q-series expressions from JavaScript.
-**Tasks:** Create `wasm_entry.cpp` with Embind `evaluate()`, configure Emscripten flags (`-fwasm-exceptions`, `-Os`, `MODULARIZE`, `ALLOW_MEMORY_GROWTH`), verify error handling (`1/0`, parse errors), measure binary size.
-**Addresses:** Playground table stakes (client-side execution)
-**Avoids:** Pitfalls 1 (terminal I/O), 3 (exceptions), 4 (binary size), 5 (memory growth)
+### Phase 1: ANSI Color + Clear Screen
+**Rationale:** Foundation for all visual improvements. Shares the Windows VT processing prerequisite with clear screen. Lowest complexity (~70 lines total). Transforms the REPL's visual impression immediately.
+**Delivers:** Colored prompt, errors, timing; `Ctrl+L` and `clear` command; Windows VT enablement; `ansi.h` utility header.
+**Addresses:** ANSI color (table stakes), clear screen (table stakes)
+**Avoids:** Pitfalls 1 (leak to pipes), 2 (cursor miscalculation), 8 (Windows VT), 13 (color scheme legibility), 17 (error format), 18 (Unicode interaction)
 
-### Phase 2: Astro Starlight Scaffold
-**Rationale:** Independent of Wasm — can be done in parallel with Phase 1. Establishes the website structure that all content and the playground will live in.
-**Delivers:** `website/` directory with Astro Starlight, React integration, sidebar nav, placeholder pages.
-**Tasks:** `npm create astro`, add Starlight + React integrations, configure sidebar, set up KaTeX (remark-math + rehype-katex), create placeholder pages for manual/reference/tutorial/playground.
-**Addresses:** Site table stakes (responsive, dark mode, search, navigation)
-**Avoids:** Pitfall 7 (hydration gotchas — test `client:only` early)
+### Phase 2: Karatsuba Multiplication
+**Rationale:** Self-contained change in `bigint.h`. No upstream dependencies. Must land before series optimization (Phase 3) to get combined benefit. Must land before benchmarking (Phase 4) because the benchmark suite validates the threshold.
+**Delivers:** O(n^1.585) BigInt multiply for operands ≥32 limbs; automatic speedup for Frac and Series at high truncation.
+**Avoids:** Pitfalls 3 (overflow), 4 (threshold regression), 16 (not tested)
 
-### Phase 3: Playground Component & Web Worker
-**Rationale:** Depends on Phase 1 (Wasm binary) and Phase 2 (Astro site). This is the core interactive feature.
-**Delivers:** Working playground page with xterm.js terminal, Web Worker execution, loading states, error display, cancel button.
-**Tasks:** Build `QSeriesPlayground.tsx` React component, set up Web Worker to load Wasm, wire xterm.js for input/output, add loading indicator, add "Reset" button, test with preloaded examples.
-**Addresses:** Playground table stakes (code editor, output panel, error display, loading indicator)
-**Avoids:** Pitfall 2 (main-thread blocking), Pitfall 6 (COOP/COEP — avoided by using `postMessage` not SharedArrayBuffer)
+### Phase 3: Faster Series Operations
+**Rationale:** Depends on Karatsuba being in place for combined benefit. Modifies only `series.h`. The inner-loop early break is trivial (3 lines) and delivers 2-4x on its own.
+**Delivers:** Inner-loop early break; optional dense multiply path for dense series; optimized `inverse()` coefficient access.
+**Avoids:** Pitfall 11 (truncation invariant breakage)
 
-### Phase 4: Documentation Content
-**Rationale:** Independent of playground — can be done in parallel with Phase 3. Content already exists in MANUAL.md and qseriesdoc.md.
-**Delivers:** Complete documentation pages: manual (split into sections), function reference, tutorial with KaTeX math and code examples.
-**Tasks:** Convert MANUAL.md → MDX sections, convert qseriesdoc.md → tutorial pages, add KaTeX formulas, verify rendering in dark/light modes, add landing page with feature highlights and download links.
-**Addresses:** Must-have features (math rendering, manual pages, semantic URLs)
+### Phase 4: Benchmarking Suite
+**Rationale:** Validates Phases 2-3 performance gains. Provides infrastructure for future optimization work. Can be developed concurrently with Phases 2-3 but is most useful after they land.
+**Delivers:** `bench_main.cpp` with `doNotOptimize` barriers, median reporting, benchmarks for BigInt multiply (3/20/100 limbs), series multiply (T=50/200), etaq, prodmake. Timing toggle (`timing on/off`) in REPL.
+**Avoids:** Pitfalls 10 (benchmark noise), 15 (output interference)
 
-### Phase 5: CI/CD & Deployment
-**Rationale:** Depends on Phases 1-4 working locally. Automates the build-and-deploy pipeline.
-**Delivers:** Automated deployment: push to main → build Wasm → build site → deploy to Cloudflare Pages.
-**Tasks:** Create GitHub Actions workflow (`deploy-website.yml`), set up emsdk in CI (`mymindstorm/setup-emsdk`), add Wrangler for Cloudflare deployment, configure cache headers for `.wasm` files, verify MIME types in production.
-**Addresses:** Deployment requirements
-**Avoids:** Pitfall 5 (wrong MIME — Cloudflare handles correctly), compression (Cloudflare automatic gzip/brotli)
+### Phase 5: Smart Tab Completion
+**Rationale:** Independent of performance work. Benefits from Phase 1 (dimmed hint text). Three sub-features of increasing complexity: LCP fill (LOW), auto-parens (LOW), arg hints (MEDIUM).
+**Delivers:** Longest-common-prefix fill on first Tab; auto-parentheses on single function match; argument signature hints when Tab pressed inside empty parens.
+**Avoids:** Pitfall 12 (new commands not registered in help table)
 
-### Phase 6: Polish & Differentiators
-**Rationale:** After core site is live and validated. These features elevate the site from functional to impressive.
-**Delivers:** Preloaded example gallery, shareable permalinks, inline "Try It" buttons in docs, mobile polish.
-**Tasks:** Build example dropdown from garvan-demo.sh, implement URL hash encoding for permalinks, add "Run" buttons to doc code blocks, test on mobile devices, add "browser limited to T≤N" messaging.
-**Addresses:** Differentiator features (permalinks, inline Try It, example gallery)
+### Phase 6: Session Save/Load + History Persistence
+**Rationale:** Largest REPL enhancement. Requires the most new code (~80 lines) and touches serialization, file I/O, and the REPL loop. Best done last to avoid churn from earlier phases modifying repl.h. History persistence is independent and can be split out.
+**Delivers:** `~/.qseries_history` persistence (1000 lines); `save("file")` writes input history as replayable `.q` script; `load("file")` replays a script from within the REPL.
+**Avoids:** Pitfalls 5 (format versioning), 6 (Series serialization), 7 (JacFactor serialization), 14 (unbounded growth)
 
 ### Phase Ordering Rationale
 
-- **Phase 1 first** because it's the highest-risk, highest-dependency item. If Emscripten compilation fails or produces an unusable binary, the entire playground is blocked.
-- **Phase 2 parallel with Phase 1** because the Astro site has zero dependency on the Wasm binary. Documentation pages are static HTML.
-- **Phase 3 after Phase 1+2** because the playground component needs both the Wasm binary (to run) and the Astro site (to live in).
-- **Phase 4 parallel with Phase 3** because content conversion is pure Markdown/MDX work, independent of the playground.
-- **Phase 5 after Phase 3+4** because CI/CD should automate what already works locally. Deploying broken builds wastes time.
-- **Phase 6 last** because differentiators are valuable but not blocking. The site is useful without them.
+- **Performance before presentation:** Karatsuba and series optimization are lower-layer changes with zero risk of conflicting with REPL-layer work. Landing them first means the benchmark suite (Phase 4) can validate them, and all subsequent testing runs faster.
+- **ANSI first among REPL features:** It's the thinnest REPL change and establishes the `ansi.h` utility used by later phases (dimmed hint text in tab completion, colored benchmark output).
+- **Tab completion before session:** Tab completion modifies `handleTabCompletion()` and `readLineRaw()`. Session save/load adds new builtins and serialization. Keeping them in separate phases reduces merge conflicts in the large `repl.h` file.
+- **Benchmarking as a tool phase:** The suite is needed to validate Karatsuba threshold and series optimization, but is also a deliverable. Positioning it after performance work means it can immediately report meaningful results.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 1 (Wasm Compilation):** Emscripten flag interactions are complex. Need to validate: does `-fwasm-exceptions` + `-Os` + `MODULARIZE` work together? What's the actual binary size? Does `std::map` performance degrade in Wasm?
-- **Phase 3 (Playground):** Web Worker + Wasm module loading has nuances (ES module Workers, `importScripts` vs dynamic import). xterm.js configuration for non-PTY usage needs investigation.
+- **Phase 2 (Karatsuba):** Threshold tuning is empirical — needs benchmark-driven experimentation. The signed-intermediate approach for the subtraction step requires careful implementation.
+- **Phase 3 (Series optimization):** Dense fast-path density threshold (50%?) needs empirical validation. Laurent series (negative exponents) handling in dense path needs design.
 
 Phases with standard patterns (skip research-phase):
-- **Phase 2 (Astro Scaffold):** Starlight is extremely well-documented. `npm create astro` + add integrations is routine.
-- **Phase 4 (Content):** Markdown → MDX conversion is mechanical. KaTeX syntax is well-documented.
-- **Phase 5 (CI/CD):** GitHub Actions + Cloudflare Pages deployment is a standard pattern with many examples.
+- **Phase 1 (ANSI color):** Well-documented; project already uses ANSI escapes for cursor control. Pattern is established.
+- **Phase 4 (Benchmarking):** Standard `steady_clock` + compiler barrier pattern. `doNotOptimize` template is textbook.
+- **Phase 5 (Tab completion):** Readline conventions are well-documented; existing `handleTabCompletion()` provides clear extension points.
+- **Phase 6 (Session save/load):** Plain text I/O with `fstream`. The replay-based approach (save history, not variables) is straightforward.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Astro Starlight, Emscripten, xterm.js are all mature, well-documented technologies. Cloudflare Pages free tier is well-understood. |
-| Features | HIGH | Feature landscape is well-mapped by comparing Rust/Go/Julia/Sage playgrounds. MVP scope is clear. |
-| Architecture | HIGH | Monorepo structure is straightforward. Emscripten Embind and Web Worker patterns are proven. xterm-pty has a working Vim demo as proof. |
-| Pitfalls | HIGH | All 7 pitfalls have documented mitigations with specific Emscripten flags or architectural decisions. Recovery costs are LOW-MEDIUM for all. |
+| Stack | HIGH | Zero new dependencies; all standard library. Verified against official docs. |
+| Features | HIGH | Conventions established by IPython, Julia, PARI/GP. Feature classification (table stakes vs differentiator) grounded in real REPL precedents. |
+| Architecture | HIGH | Based on direct source analysis of all 11 project files. Touch points identified by line number. |
+| Pitfalls | HIGH | Critical pitfalls verified against community reports (GMP Karatsuba docs, ANSI leak issues, readline width bugs). |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **KaTeX + Starlight compatibility:** Research mentions "known Starlight compatibility issues with rehype-katex." May need MathJax fallback. Validate during Phase 2 scaffold by rendering test formulas.
-- **Actual Wasm binary size:** Estimates range 1-5 MB. Won't know until the first Emscripten build completes. If over budget, `-Os`, `--closure 1`, and module splitting are available mitigations.
-- **xterm.js without xterm-pty:** The MVP uses Embind (not xterm-pty), but xterm.js is still recommended for the terminal UI. Need to validate that xterm.js works well as a "dumb terminal" (capturing line input, displaying output) without the full PTY layer.
-- **Emscripten C++20 support breadth:** Confirmed working for `-std=c++20` with basic STL, but the codebase uses advanced features (structured bindings, `if constexpr`, fold expressions). Validate with actual compilation.
+- **Karatsuba threshold value:** Research recommends ~32 limbs but this is a starting estimate from GMP's data on 32-bit limbs. Actual optimal threshold depends on this codebase's `addAbs`/`subAbs` overhead and must be measured empirically with the benchmark suite.
+- **Dense series multiplication density cutoff:** The 50% density threshold for switching from sparse (map) to dense (vector) multiplication is an educated guess. Needs profiling on real q-series workloads (etaq products, theta functions) to find the actual crossover.
+- **Session save scope:** Research recommends Level 1 only (save input history as replayable script) over Level 2 (full workspace serialization). If users demand variable persistence, the structured text format from STACK.md provides a viable design, but it requires handling all `EnvValue` variants including future additions.
+- **`NO_COLOR` environment variable:** The no-color.org convention is becoming standard. Whether to support it in v4.0 or defer is a prioritization decision.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Astro Starlight docs](https://starlight.astro.build/) — project structure, sidebar config, custom pages, component overrides
-- [Emscripten Embind](https://emscripten.org/docs/porting/connecting_cpp_and_javascript/embind.html) — C++/JS bridge API
-- [Emscripten Exceptions](https://emscripten.org/docs/porting/exceptions.html) — `-fexceptions` vs `-fwasm-exceptions` analysis
-- [Emscripten Asyncify](https://emscripten.org/docs/porting/asyncify.html) — size overhead, blocking I/O in Wasm
-- [xterm.js](https://xtermjs.org/) — terminal emulation, themes, addon system
-- [xterm-pty](https://github.com/mame/xterm-pty) — PTY bridge for Emscripten programs (Vim demo proves feasibility)
-- [Cloudflare Pages](https://developers.cloudflare.com/pages/) — hosting limits, `_headers` configuration, MIME types
+- [Microsoft Learn: Console Virtual Terminal Sequences](https://learn.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences) — ANSI/VT processing on Windows
+- [Microsoft Learn: SetConsoleMode](https://learn.microsoft.com/en-us/windows/console/setconsolemode) — Windows API for enabling VT
+- [GMP Manual: Karatsuba Multiplication](https://gmplib.org/manual/Karatsuba-Multiplication) — Algorithm reference and threshold guidance
+- [GMP Tuneup Tables](https://gmplib.org/devel/thres/) — Empirical thresholds across architectures
+- [IPython documentation](https://ipython.readthedocs.io/en/stable/) — REPL color, history, and save conventions
+- [Julia REPL docs](https://docs.julialang.org/en/v1/stdlib/REPL) — Tab completion and color conventions
+- [PARI/GP defaults](https://pari.math.u-bordeaux.fr/dochtml/ref/GP_defaults.html) — Math REPL color and history conventions
+- Direct codebase analysis of all 11 source files (bigint.h, frac.h, series.h, qfuncs.h, convert.h, linalg.h, relations.h, parser.h, repl.h, main.cpp, main_wasm.cpp)
 
 ### Secondary (MEDIUM confidence)
-- [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) — SharedArrayBuffer on static hosts (needed only if upgrading to PROXY_TO_PTHREAD)
-- [web.dev COOP/COEP](https://web.dev/articles/coop-coep) — cross-origin isolation requirements
-- [Emscripten Memory Settings](https://emscripten.org/docs/tools_reference/settings_reference.html) — `ALLOW_MEMORY_GROWTH` performance characteristics
-- [mymindstorm/setup-emsdk](https://github.com/mymindstorm/setup-emsdk) — GitHub Action for Emscripten in CI
-
-### Tertiary (LOW confidence)
-- [ALLOW_MEMORY_GROWTH performance](https://emscripten-discuss.narkive.com/t2ZA8bo5) — 2x slowdown claim from community benchmarks (needs validation with our specific workload)
-- [GitHub Pages WASM MIME issue](https://stackoverflow.com/questions/79381719) — confirmed broken, but GitHub may fix this
+- [Sandor Dargo: Clocks in C++](https://www.sandordargo.com/blog/2025/12/10/clocks-part-4-high_resolution_clock) — steady_clock vs high_resolution_clock analysis
+- [Stack Overflow: DoNotOptimize patterns](https://stackoverflow.com/questions/40122141) — Compiler barrier techniques for benchmarking
+- [no-color.org](https://no-color.org/) — Convention for disabling terminal colors
+- [OhMyREPL.jl](https://kristofferc.github.io/OhMyREPL.jl/latest/) — Julia REPL enhancement patterns
 
 ---
-*Research completed: 2026-02-27*
+*Research completed: 2026-02-28*
 *Ready for roadmap: yes*
