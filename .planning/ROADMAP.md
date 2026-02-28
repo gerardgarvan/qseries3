@@ -500,7 +500,7 @@ Plans:
 | 42. Garvan tutorial coverage | 2/2 | Complete | 2026-02-27 |
 | 43. Wasm compile | 0/? | Not started | - |
 | 44. Astro Starlight scaffold | 0/? | Complete    | 2026-02-27 |
-| 45. Documentation content | 0/? | Not started | - |
+| 45. Documentation content | 0/? | Complete    | 2026-02-28 |
 | 46. Playground | 0/? | Not started | - |
 | 47. CI/CD & deployment | 0/? | Not started | - |
 
@@ -732,7 +732,7 @@ Plans:
 
 - [ ] **Phase 43: Wasm compile** - C++ → WebAssembly via Emscripten with evaluate() API and exception safety
 - [x] **Phase 44: Astro Starlight scaffold** - Documentation site skeleton with responsive layout, sidebar, search (completed 2026-02-27)
-- [ ] **Phase 45: Documentation content** - Landing page, MANUAL.md conversion, Garvan tutorial with KaTeX
+- [x] **Phase 45: Documentation content** - Landing page, MANUAL.md conversion, Garvan tutorial with KaTeX (completed 2026-02-28)
 - [ ] **Phase 46: Playground** - xterm.js terminal UI, Web Worker Wasm execution, example dropdown
 - [ ] **Phase 47: CI/CD & deployment** - GitHub Actions pipeline, Cloudflare Pages with correct .wasm MIME
 
