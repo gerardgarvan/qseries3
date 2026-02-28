@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 
 ## Current Position
 
-Phase: 45 — Documentation content, Plan 02 COMPLETE
-Plan: 02 complete
-Status: All 7 reference manual pages written with typed signatures, KaTeX math, and REPL examples for 38+ functions
-Last activity: 2026-02-28 — Phase 45 Plan 02 executed
+Phase: 45 — Documentation content, Plan 03 COMPLETE
+Plan: 03 complete
+Status: 5 tutorial pages (RR, theta, partition, modular equations) with KaTeX math and real REPL output
+Last activity: 2026-02-28 — Phase 45 Plan 03 executed
 
-Progress: [██████░░░░] 60%
+Progress: [███████░░░] 70%
 
 ## Performance Metrics
 
@@ -40,6 +40,7 @@ Progress: [██████░░░░] 60%
 | Phase 44-starlight-scaffold P01 | ~7 | 2 tasks | 24 files |
 | Phase 45-doc-content P01 | ~5 | 3 tasks | 6 files |
 | Phase 45-doc-content P02 | ~5 | 3 tasks | 7 files |
+| Phase 45-doc-content P03 | ~6 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,7 @@ Progress: [██████░░░░] 60%
 - [Phase 44-starlight-scaffold]: Plan 44-01: Astro Starlight site in website/ with manual sidebar (4 groups, 16 slugs), teal accent theme, 16 placeholder pages, Pagefind search; npm run build produces dist/ with 17 HTML files
 - [Phase 45-doc-content]: Plan 45-01: KaTeX math pipeline (remark-math + rehype-katex + CSS fix); landing page with hero, 4 feature cards, RR KaTeX demo, Garvan attribution; installation page with build one-liner and platform notes; quick-start page with 6 REPL examples
 - [Phase 45-doc-content]: Plan 45-02: 7 reference manual pages with typed signatures, KaTeX formulas, REPL examples for all 38+ built-ins; bigint-frac conceptual overview; q-functions grouped into 3 sections; standard function entry format (heading, math, syntax, params, example)
+- [Phase 45-doc-content]: Plan 45-03: 5 tutorial pages (overview, Rogers-Ramanujan, theta/eta, partition identities, modular equations); real REPL output for all examples; KaTeX math-then-REPL layout; sift T parameter is input truncation
 
 ### Roadmap Evolution
 
@@ -121,7 +123,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-28
-Stopped at: Completed 45-02-PLAN.md (7 reference manual pages)
+Stopped at: Completed 45-03-PLAN.md (5 tutorial pages with KaTeX + REPL examples)
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
