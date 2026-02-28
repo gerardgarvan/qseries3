@@ -4,23 +4,70 @@ description: Exact q-series computation for partition theory, modular forms, and
 template: splash
 hero:
   title: qseries
-  tagline: "Exact q-series arithmetic — partition functions, infinite products, theta functions, and modular relations. Free, open-source, runs in your browser."
+  tagline: "Exact q-series arithmetic for partition functions, infinite products, theta functions, and modular relations."
   actions:
     - text: Get Started
       link: /getting-started/installation/
       icon: right-arrow
-    - text: Try Playground
-      link: /playground/
+    - text: View Manual
+      link: /manual/q-functions/
       variant: minimal
-      icon: external
 ---
 
-## Why qseries?
+import { Card, CardGrid } from '@astrojs/starlight/components';
 
-**Exact rational arithmetic** — every coefficient is computed as an exact fraction, never a floating-point approximation. Results you can trust for proofs and conjectures.
+<CardGrid stagger>
+  <Card title="Exact Rational Arithmetic" icon="approve-check">
+    Every coefficient is an exact fraction — never a floating-point approximation.
+    Arbitrary-precision integers ensure results you can trust for proofs and conjectures.
+  </Card>
+  <Card title="Series → Product Conversion" icon="puzzle">
+    Andrews' prodmake algorithm converts any q-series into its infinite product form.
+    Identify Rogers-Ramanujan type identities computationally.
+  </Card>
+  <Card title="Theta & Eta Functions" icon="star">
+    Built-in theta2, theta3, theta4, etaq, tripleprod, quinprod, and winquist functions
+    for computing with modular forms and partition generating functions.
+  </Card>
+  <Card title="Relation Discovery" icon="magnifier">
+    findhom, findnonhom, and findpoly discover polynomial relations among q-series
+    — let the computer find the identities.
+  </Card>
+</CardGrid>
 
-**Andrews' prodmake algorithm** — automatically convert any q-series into its infinite product representation. Identify Rogers-Ramanujan type identities at the push of a button.
+## A Taste of qseries
 
-**Theta, eta, and Jacobi products** — built-in support for `etaq`, `theta2`, `theta3`, `theta4`, `tripleprod`, `quinprod`, and more. Compute modular forms with ease.
+The Rogers-Ramanujan identity is one of the most celebrated results in partition theory:
 
-**Relation finding** — discover polynomial and linear relations among q-series using `findhom`, `findnonhom`, and `findpoly`. Let the computer find the identities for you.
+$$\sum_{n=0}^{\infty} \frac{q^{n^2}}{(q;q)_n} = \prod_{n=1}^{\infty} \frac{1}{(1-q^{5n-1})(1-q^{5n-4})}$$
+
+Verify it computationally in a single REPL session:
+
+```text
+qseries> rr := sum(q^(n^2)/aqprod(q,q,n,50), n, 0, 8)
+1 + q + q^2 + q^3 + 2*q^4 + 2*q^5 + 3*q^6 + ... + O(q^50)
+
+qseries> prodmake(rr, 40)
+(1-q)^(-1) * (1-q^4)^(-1) * (1-q^6)^(-1) * (1-q^9)^(-1) * ...
+```
+
+The denominators appear only at exponents ≡ ±1 (mod 5) — the identity is confirmed.
+
+## Background
+
+qseries reimplements core functionality from Frank Garvan's
+[qseries Maple package](https://qseries.org/fgarvan/qmaple/qseries/index.html)
+as a standalone, zero-dependency C++ binary. It is designed for researchers in
+partition theory, the theory of modular forms, and combinatorics.
+
+The package provides tools for the three fundamental computational problems in
+q-series research: converting series to infinite products, identifying eta and
+Jacobi product representations, and discovering polynomial relations among
+q-series.
+
+## Get Started
+
+qseries is free and open-source. Build from source with a single command — no
+dependencies required.
+
+[Installation guide →](/getting-started/installation/)
