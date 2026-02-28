@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kangaroo — q-series research tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --sunset-top: #1a0a2e;
+    --sunset-mid: #d4451a;
+    --sunset-bottom: #f7a634;
+    --accent: #ffe066;
+    --dust: #e8c47c;
+    --bg-dark: #0d0617;
+    --bg-alt: #0f0820;
+    --code-bg: #1a0e2e;
+    --text: rgba(255,224,102,0.85);
+    --text-dim: rgba(255,224,102,0.55);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg-dark);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+  }
+
+  /* ─── HERO BANNER ─── */
+  .hero {
+    position: relative;
+    width: 100%;
+    height: 420px;
+    overflow: hidden;
+  }
+
+  .sky {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      180deg,
+      var(--sunset-top) 0%,
+      #3d1155 20%,
+      #8b2a2a 40%,
+      var(--sunset-mid) 60%,
+      #e8762b 75%,
+      var(--sunset-bottom) 90%,
+      #fcd980 100%
+    );
+  }
+
+  .stars {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 45%;
+    background:
+      radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.9), transparent),
+      radial-gradient(1px 1px at 25% 8%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1.5px 1.5px at 40% 20%, rgba(255,255,255,0.8), transparent),
+      radial-gradient(1px 1px at 55% 5%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(1px 1px at 70% 18%, rgba(255,255,255,0.9), transparent),
+      radial-gradient(1.5px 1.5px at 85% 10%, rgba(255,255,255,1), transparent),
+      radial-gradient(1px 1px at 15% 30%, rgba(255,255,255,0.5), transparent),
+      radial-gradient(1px 1px at 60% 28%, rgba(255,255,255,0.7), transparent),
+      radial-gradient(1px 1px at 92% 25%, rgba(255,255,255,0.6), transparent),
+      radial-gradient(2px 2px at 78% 3%, rgba(255,224,102,0.9), transparent);
+    animation: twinkle 4s ease-in-out infinite alternate;
+  }
+
+  @keyframes twinkle {
+    0% { opacity: 0.6; }
+    100% { opacity: 1; }
+  }
+
+  .sun {
+    position: absolute;
+    bottom: 28%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, #f0d78a 0%, #c4792a 40%, rgba(212,69,26,0) 70%);
+    opacity: 0.7;
+    border-radius: 50%;
+    animation: pulse-sun 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse-sun {
+    0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.6; }
+    50% { transform: translateX(-50%) scale(1.03); opacity: 0.7; }
+  }
+
+  .ground {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30%;
+    background: linear-gradient(180deg, #2a1508 0%, #1a0d04 100%);
+    clip-path: polygon(0 30%, 5% 20%, 12% 28%, 20% 15%, 30% 25%, 40% 10%, 50% 22%, 60% 8%, 70% 18%, 80% 12%, 88% 22%, 95% 15%, 100% 25%, 100% 100%, 0 100%);
+  }
+
+  .dust-particles {
+    position: absolute;
+    bottom: 5%;
+    left: 0;
+    right: 0;
+    height: 60px;
+  }
+
+  .dust-particles::before,
+  .dust-particles::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(232,196,124,0.15);
+    animation: drift 6s ease-in-out infinite;
+  }
+
+  .dust-particles::before {
+    width: 200px; height: 30px;
+    bottom: 10px; left: 15%;
+    filter: blur(15px);
+  }
+
+  .dust-particles::after {
+    width: 150px; height: 25px;
+    bottom: 20px; right: 20%;
+    filter: blur(12px);
+    animation-delay: -3s;
+  }
+
+  @keyframes drift {
+    0%, 100% { transform: translateX(0); opacity: 0.3; }
+    50% { transform: translateX(30px); opacity: 0.6; }
+  }
+
+  .kangaroo-container {
+    position: absolute;
+    bottom: 16%;
+    right: 8%;
+    animation: hop 2s ease-in-out infinite;
+  }
+
+  @keyframes hop {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    30% { transform: translateY(-35px) rotate(-3deg); }
+    50% { transform: translateY(-40px) rotate(-2deg); }
+    70% { transform: translateY(-20px) rotate(1deg); }
+  }
+
+  .kangaroo-shadow {
+    position: absolute;
+    bottom: 14%;
+    right: 10%;
+    width: 140px;
+    height: 15px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 50%;
+    filter: blur(8px);
+    animation: shadow-squish 2s ease-in-out infinite;
+  }
+
+  @keyframes shadow-squish {
+    0%, 100% { transform: scaleX(1); opacity: 0.4; }
+    30% { transform: scaleX(0.7); opacity: 0.2; }
+    50% { transform: scaleX(0.6); opacity: 0.15; }
+    70% { transform: scaleX(0.85); opacity: 0.3; }
+  }
+
+  .boomerang {
+    position: absolute;
+    top: 18%;
+    right: 35%;
+    width: 30px;
+    height: 30px;
+    animation: spin-float 8s linear infinite;
+  }
+
+  @keyframes spin-float {
+    0% { transform: rotate(0deg) translateY(0); }
+    25% { transform: rotate(90deg) translateY(-10px); }
+    50% { transform: rotate(180deg) translateY(0); }
+    75% { transform: rotate(270deg) translateY(10px); }
+    100% { transform: rotate(360deg) translateY(0); }
+  }
+
+  .title-container {
+    position: absolute;
+    top: 50%;
+    left: 55px;
+    transform: translateY(-50%);
+    z-index: 10;
+  }
+
+  .title-main {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 86px;
+    line-height: 0.85;
+    color: var(--accent);
+    text-shadow:
+      0 0 40px rgba(255,224,102,0.4),
+      0 4px 0 rgba(0,0,0,0.3);
+    letter-spacing: 4px;
+    animation: text-glow 3s ease-in-out infinite alternate;
+  }
+
+  @keyframes text-glow {
+    0% { text-shadow: 0 0 30px rgba(255,224,102,0.3), 0 4px 0 rgba(0,0,0,0.3); }
+    100% { text-shadow: 0 0 50px rgba(255,224,102,0.6), 0 4px 0 rgba(0,0,0,0.3); }
+  }
+
+  .title-sub {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 300;
+    font-size: 18px;
+    color: rgba(255,224,102,0.7);
+    letter-spacing: 12px;
+    text-transform: none;
+    margin-top: 10px;
+    padding-left: 4px;
+  }
+
+  .accent-line {
+    width: 80px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    margin-top: 16px;
+    border-radius: 2px;
+    animation: line-grow 2s ease-out forwards;
+  }
+
+  @keyframes line-grow {
+    0% { width: 0; }
+    100% { width: 80px; }
+  }
+
+  .scanlines {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0,0,0,0.03) 3px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+  }
+
+  /* ─── NAVIGATION ─── */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(13,6,23,0.95);
+    border-bottom: 1px solid rgba(255,224,102,0.12);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .nav-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    padding: 14px 24px;
+  }
+
+  .nav-brand {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-decoration: none;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 24px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 400;
+    font-size: 14px;
+    color: var(--text-dim);
+    text-decoration: none;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover {
+    color: var(--accent);
+  }
+
+  /* ─── SECTIONS ─── */
+  .section {
+    padding: 72px 24px;
+  }
+
+  .section:nth-child(odd) {
+    background: var(--bg-dark);
+  }
+
+  .section:nth-child(even) {
+    background: var(--bg-alt);
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+  }
+
+  .section-rule {
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    border: none;
+    margin-bottom: 36px;
+  }
+
+  /* ─── OVERVIEW ─── */
+  .overview-text {
+    font-size: 17px;
+    max-width: 700px;
+    margin-bottom: 40px;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+
+  .feature-card {
+    background: rgba(255,224,102,0.04);
+    border: 1px solid rgba(255,224,102,0.1);
+    border-radius: 10px;
+    padding: 24px 20px;
+    transition: border-color 0.2s;
+  }
+
+  .feature-card:hover {
+    border-color: rgba(255,224,102,0.25);
+  }
+
+  .feature-card h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: var(--accent);
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .feature-card p {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .attribution {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-top: 16px;
+  }
+
+  /* ─── BUILD ─── */
+  .build-cmd {
+    background: var(--code-bg);
+    border: 1px solid rgba(255,224,102,0.1);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 20px 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 15px;
+    color: var(--dust);
+    overflow-x: auto;
+  }
+
+  .build-cmd .prompt {
+    color: var(--accent);
+    user-select: none;
+  }
+
+  .platform-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-top: 28px;
+  }
+
+  .platform-card {
+    background: rgba(255,224,102,0.03);
+    border: 1px solid rgba(255,224,102,0.08);
+    border-radius: 8px;
+    padding: 18px 20px;
+  }
+
+  .platform-card h4 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+
+  .platform-card p {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .platform-card code {
+    background: rgba(255,224,102,0.08);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: var(--dust);
+  }
+
+  /* ─── EXAMPLES ─── */
+  .example-block {
+    margin-bottom: 40px;
+  }
+
+  .example-block:last-child {
+    margin-bottom: 0;
+  }
+
+  .example-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  .example-desc {
+    font-size: 15px;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    max-width: 700px;
+  }
+
+  .repl-block {
+    background: var(--code-bg);
+    border: 1px solid rgba(255,224,102,0.1);
+    border-radius: 8px;
+    padding: 20px 24px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .repl-block .p {
+    color: var(--accent);
+    user-select: none;
+  }
+
+  .repl-block .i {
+    color: #fff;
+  }
+
+  .repl-block .o {
+    color: var(--dust);
+  }
+
+  /* ─── FUNCTION REFERENCE ─── */
+  .ref-category {
+    margin-bottom: 36px;
+  }
+
+  .ref-category:last-child {
+    margin-bottom: 0;
+  }
+
+  .ref-category-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    color: var(--accent);
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(255,224,102,0.1);
+    padding-bottom: 6px;
+  }
+
+  .ref-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .ref-table td {
+    padding: 6px 12px;
+    font-size: 13px;
+    vertical-align: top;
+    border-bottom: 1px solid rgba(255,224,102,0.04);
+  }
+
+  .ref-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .ref-table .fn-name {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    color: var(--accent);
+    white-space: nowrap;
+    font-weight: bold;
+    width: 1%;
+  }
+
+  .ref-table .fn-sig {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    color: var(--dust);
+    white-space: nowrap;
+    width: 1%;
+  }
+
+  .ref-table .fn-desc {
+    color: var(--text-dim);
+  }
+
+  /* ─── FOOTER ─── */
+  .footer {
+    border-top: 2px solid transparent;
+    border-image: linear-gradient(90deg, var(--sunset-top), var(--sunset-mid), var(--sunset-bottom), var(--sunset-mid), var(--sunset-top)) 1;
+    padding: 36px 24px;
+    text-align: center;
+    background: var(--bg-dark);
+  }
+
+  .footer p {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  .footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .footer a:hover {
+    text-decoration: underline;
+  }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 640px) {
+    .hero { height: 320px; }
+    .title-main { font-size: 52px; }
+    .title-sub { font-size: 14px; letter-spacing: 6px; }
+    .title-container { left: 24px; }
+    .kangaroo-container { display: none; }
+    .kangaroo-shadow { display: none; }
+    .section-title { font-size: 32px; }
+    .nav-inner { gap: 16px; padding: 12px 16px; }
+    .nav-links { gap: 14px; }
+    .nav-links a { font-size: 12px; }
+    .section { padding: 48px 16px; }
+    .ref-table .fn-sig { white-space: normal; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <div class="sky"></div>
+  <div class="stars"></div>
+  <div class="sun"></div>
+  <div class="ground"></div>
+  <div class="dust-particles"></div>
+
+  <svg class="boomerang" viewBox="0 0 40 40" fill="none">
+    <path d="M20 5 Q30 10 35 20 Q30 18 25 20 Q30 25 20 35 Q22 25 20 20 Q18 25 5 20 Q15 18 20 5Z" fill="rgba(255,224,102,0.5)" />
+  </svg>
+
+  <div class="kangaroo-shadow"></div>
+  <svg class="kangaroo-container" width="160" height="100" viewBox="0 0 200 125">
+    <path d="M 96.6,0.0 L 97.5,1.7 L 98.3,0.0 L 116.1,0.0 L 126.3,4.2 L 139.8,16.1 L 148.3,30.5 L 161.9,33.1 L 169.5,27.1 L 160.2,20.3 L 155.9,13.6 L 157.6,12.7 L 169.5,17.8 L 174.6,23.7 L 200.0,37.3 L 200.0,41.5 L 196.6,44.9 L 174.6,44.9 L 156.8,59.3 L 144.1,62.7 L 129.7,79.7 L 123.7,78.8 L 122.0,74.6 L 123.7,72.0 L 126.3,75.4 L 128.8,72.9 L 133.1,56.8 L 131.4,55.1 L 121.2,55.1 L 116.1,61.0 L 117.8,83.9 L 122.0,95.8 L 132.2,105.1 L 148.3,111.9 L 157.6,124.6 L 148.3,122.0 L 145.8,123.7 L 130.5,111.0 L 110.2,99.2 L 109.3,76.3 L 105.1,61.0 L 87.3,50.8 L 72.9,39.0 L 68.6,39.0 L 44.1,52.5 L 27.1,56.8 L 11.9,55.1 L 6.8,52.5 L 0.8,44.9 L 0.0,30.5 L 1.7,30.5 L 5.9,42.4 L 11.0,46.6 L 16.9,48.3 L 29.7,46.6 L 51.7,33.1 L 82.2,6.8 L 96.6,0.0 Z" fill="#1a0d04" />
+  </svg>
+
+  <div class="title-container">
+    <div class="title-main">KANGAROO</div>
+    <div class="title-sub">q-series research tool</div>
+    <div class="accent-line"></div>
+  </div>
+
+  <div class="scanlines"></div>
+</section>
+
+<!-- ═══ NAVIGATION ═══ -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="#">K</a>
+    <ul class="nav-links">
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#build">Build</a></li>
+      <li><a href="#examples">Examples</a></li>
+      <li><a href="#reference">Reference</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ═══ OVERVIEW ═══ -->
+<section id="overview" class="section">
+  <div class="container">
+    <h2 class="section-title">Overview</h2>
+    <hr class="section-rule">
+    <p class="overview-text">
+      A standalone single-binary REPL for <strong>q-series computation</strong> in number theory,
+      partition theory, and modular forms. Reimplements core functionality of Frank Garvan's
+      <em>qseries</em> Maple package in C++20 with zero external dependencies. All arithmetic is
+      exact rational — no floating point anywhere in the math pipeline.
+    </p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <h3>Exact Arithmetic</h3>
+        <p>Arbitrary-precision integers and exact rationals. Every coefficient is computed precisely.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Andrews' Algorithm</h3>
+        <p>Convert any q-series to its infinite product form via <code>prodmake</code>.</p>
+      </div>
+      <div class="feature-card">
+        <h3>Relation Finding</h3>
+        <p>Discover polynomial relations between q-series with <code>findhom</code>, <code>findpoly</code>, and more.</p>
+      </div>
+      <div class="feature-card">
+        <h3>50+ Built-ins</h3>
+        <p>Theta functions, eta products, Eisenstein series, Jacobi/triple/quintuple products, and number-theoretic utilities.</p>
+      </div>
+    </div>
+    <p class="attribution">
+      Based on Frank Garvan's <em>qseries</em> Maple package for research in partition theory and q-series.
+    </p>
+  </div>
+</section>
+
+<!-- ═══ BUILD ═══ -->
+<section id="build" class="section">
+  <div class="container">
+    <h2 class="section-title">Build</h2>
+    <hr class="section-rule">
+    <p>Requires a C++20 compiler. No package managers, no dependencies — just compile and run.</p>
+    <div class="build-cmd">
+      <span class="prompt">$ </span>g++ -std=c++20 -O2 -static -o qseries src/main.cpp
+    </div>
+    <p>Verify the build:</p>
+    <div class="build-cmd">
+      <span class="prompt">$ </span>echo "partition(100)" | ./qseries<br>
+      190569292
+    </div>
+    <div class="platform-grid">
+      <div class="platform-card">
+        <h4>Linux</h4>
+        <p>GCC 10+ or Clang 13+. Compile with the one-liner above. The <code>-static</code> flag produces a portable binary.</p>
+      </div>
+      <div class="platform-card">
+        <h4>macOS</h4>
+        <p>Apple Clang 14+ (Xcode 14+). Drop <code>-static</code> — Apple doesn't support fully static linking.</p>
+      </div>
+      <div class="platform-card">
+        <h4>Windows</h4>
+        <p>Use MSYS2/MinGW-w64 or Cygwin with <code>g++</code>. The binary runs natively from any terminal.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+</body>
+</html>
