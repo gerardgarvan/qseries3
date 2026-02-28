@@ -1090,9 +1090,25 @@ inline void handleTabCompletion(std::string& line, size_t& pos, const Environmen
     }
     if (matches.empty()) return;
     if (matches.size() == 1) {
-        const std::string& match = matches[0];
+        std::string match = matches[0];
+        bool isFunc = getHelpTable().count(match) > 0;
+        if (isFunc) match += "(";
         line = line.substr(0, start) + match + line.substr(end);
         pos = start + match.size();
+        redrawLineRaw(line, pos);
+        return;
+    }
+    // Compute longest common prefix (LCP) across all matches
+    std::string lcp = matches[0];
+    for (size_t i = 1; i < matches.size(); ++i) {
+        size_t j = 0;
+        while (j < lcp.size() && j < matches[i].size() && lcp[j] == matches[i][j])
+            ++j;
+        lcp = lcp.substr(0, j);
+    }
+    if (lcp.size() > prefix.size()) {
+        line = line.substr(0, start) + lcp + line.substr(end);
+        pos = start + lcp.size();
         redrawLineRaw(line, pos);
         return;
     }
