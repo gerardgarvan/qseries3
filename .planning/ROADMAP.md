@@ -791,7 +791,10 @@ Plans:
   3. Example dropdown preloads Rogers-Ramanujan, prodmake, theta function, and relation-finding examples
   4. Loading spinner shown while Wasm downloads; computing indicator shown while evaluating
   5. User can type `prodmake(sum(q^(n^2)/aqprod(q,q,n),n,0,8),50)` and get correct output in the browser
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 46-01-PLAN.md — Complete playground page with xterm.js terminal, Web Worker Wasm execution, example dropdown, loading states
 
 ### Phase 47: CI/CD & deployment
 **Goal**: Push-to-deploy pipeline with correct Wasm serving on Cloudflare Pages
