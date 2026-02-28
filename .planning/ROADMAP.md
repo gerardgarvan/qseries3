@@ -503,7 +503,7 @@ Plans:
 | 45. Documentation content | 0/? | Complete    | 2026-02-28 |
 | 46. Playground | 0/? | Complete    | 2026-02-28 |
 | 47. CI/CD & deployment | 0/? | Complete    | 2026-02-28 |
-| 48. Cleanup | 0/? | Not started | - |
+| 48. Cleanup | 0/? | Complete    | 2026-02-28 |
 | 49. Single-page website | 0/? | Not started | - |
 | 50. Example audit | 0/? | Not started | - |
 
@@ -816,7 +816,7 @@ Plans:
 
 ## Milestone v3.0 (Simple Website & Example Audit) — phases 48–50:
 
-- [ ] **Phase 48: Cleanup** - Delete website/, remove CI/CD workflow, clean Makefile of wasm-website target
+- [x] **Phase 48: Cleanup** - Delete website/, remove CI/CD workflow, clean Makefile of wasm-website target (completed 2026-02-28)
 - [ ] **Phase 49: Single-page website** - Self-contained HTML page with kangaroo-banner aesthetic, examples, full function reference
 - [ ] **Phase 50: Example audit** - Run every example across all docs, fix any failures
 
