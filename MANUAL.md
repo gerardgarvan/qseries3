@@ -29,7 +29,7 @@ Runs commands from a file. No banner; output only. Use for batch work.
 qseries --version
 ```
 
-Prints the package version (e.g. `qseries 1.3`) and exits. In the REPL, type `version` for the same.
+Prints the package version (e.g. `qseries 2.0`) and exits. In the REPL, type `version()` for the same.
 
 ### Unit tests
 
@@ -138,7 +138,7 @@ Anything after `#` to end of line is ignored.
 | **subs_q** | `subs_q(f,k)` | Substitute q^k for q |
 | **jac2prod** | `jac2prod(var)` | Display Jacobi product stored in variable |
 | **jac2series** | `jac2series(var)` or `jac2series(var,T)` | Convert Jacobi product (in var) to series |
-| **version** | `version` | Print package version |
+| **version** | `version()` | Print package version |
 | **set_trunc** | `set_trunc(N)` | Set default truncation |
 | **legendre** | `legendre(a,p)` | Legendre symbol (a/p) |
 | **sigma** | `sigma(n)` or `sigma(n,k)` | Divisor sum σ_k(n) |
@@ -147,7 +147,7 @@ Anything after `#` to end of line is ignored.
 
 ## 4. Help
 
-- **`help`** — Brief usage and list of all built-ins
+- **`help()`** — Brief usage and list of all built-ins
 - **`help(func)`** — Signature and description for a function, e.g. `help(prodmake)`
 
 ---
@@ -233,7 +233,7 @@ findhom([theta3(q,100), theta4(q,100), theta3(subs_q(q,2),100), theta4(subs_q(q,
 ## 8. Error Messages
 
 - **Parse errors** — Show line and column, and what was expected
-- **Runtime errors** — Include the function name, e.g. `etaq: expected etaq(k,T) or etaq(q,k,T), got 1 arguments`
+- **Runtime errors** — Include the function name, e.g. `etaq: expected etaq(k), etaq(k,T), or etaq(q,k,T), got 0 arguments`
 - **Script mode** — Errors include the command line number in the script
 
 ---
