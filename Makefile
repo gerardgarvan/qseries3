@@ -4,7 +4,7 @@ CXX ?= g++
 CXXFLAGS = -std=c++20 -O2 -Wall -Wextra -Wpedantic
 LDFLAGS ?= 
 
-.PHONY: all clean test acceptance acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history demo test-package wasm bench docker-build docker-run
+.PHONY: all clean test acceptance acceptance-maple acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history demo test-package wasm bench docker-build docker-run
 
 all: dist/qseries.exe dist-demo
 
@@ -36,6 +36,10 @@ test: dist/qseries.exe
 # Run all 9 SPEC acceptance tests via REPL
 acceptance: dist/qseries.exe
 	./tests/acceptance.sh
+
+# Run Maple checklist blocks 1-27 (qseriesdoc.md validation)
+acceptance-maple: dist/qseries.exe
+	./tests/maple-checklist.sh
 
 # Run QoL acceptance tests (multi-line, error messages, demo packaging)
 acceptance-qol: dist/qseries.exe
