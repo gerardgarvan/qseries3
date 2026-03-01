@@ -339,6 +339,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"legendre", {"legendre(a,p)", "Legendre symbol (a/p)"}},
         {"partition", {"partition(n)", "partition number p(n)"}},
         {"prodmake", {"prodmake(f,T)", "Andrews' algorithm: series → infinite product"}},
+        {"mod", {"mod(a,b)", "integer remainder a mod b"}},
         {"mobius", {"mobius(n)", "Möbius function μ(n): 0 if squared factor, (-1)^k otherwise"}},
         {"mprodmake", {"mprodmake(f,T)", "convert series to product (1+q^n1)(1+q^n2)..."}},
         {"checkprod", {"checkprod(f) or checkprod(f,T) or checkprod(f,M,T)", "check if f is a nice product (exponents |a[n]| < M)"}},
@@ -382,6 +383,10 @@ inline Series getSeriesFromEnv(const EnvValue& v) {
     throw std::runtime_error("variable holds Jacobi product, not series");
 }
 
+inline EvalResult dispatchBuiltin(const std::string& name,
+    const std::vector<ExprPtr>& args, Environment& env,
+    const std::map<std::string, int64_t>& sumIndices);
+
 // evalToInt: evaluate expression that must be integer-valued (sum bounds, exponents, etc.)
 inline int64_t evalToInt(const Expr* e, Environment& env,
     const std::map<std::string, int64_t>& sumIndices) {
@@ -404,6 +409,7 @@ inline int64_t evalToInt(const Expr* e, Environment& env,
                 case BinOp::Mul: return l * r;
                 case BinOp::Div:
                     if (r == 0) throw std::runtime_error("division by zero");
+                    if (l % r != 0) throw std::runtime_error("non-integer division");
                     return l / r;
                 case BinOp::Pow: {
                     if (r < 0) throw std::runtime_error("negative exponent in integer power");
@@ -416,6 +422,12 @@ inline int64_t evalToInt(const Expr* e, Environment& env,
         }
         case Expr::Tag::UnOp:
             return -evalToInt(e->operand.get(), env, sumIndices);
+        case Expr::Tag::Call: {
+            EvalResult r = dispatchBuiltin(e->callName, e->args, env, sumIndices);
+            if (std::holds_alternative<int64_t>(r))
+                return std::get<int64_t>(r);
+            throw std::runtime_error("expected integer from " + e->callName + "()");
+        }
         default:
             throw std::runtime_error("expected integer expression");
     }
@@ -853,6 +865,15 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         std::cout << "]" << std::endl;
         return DisplayOnly{};
     }
+    if (name == "mod") {
+        if (args.size() != 2)
+            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
+        int64_t a = evi(0), b = evi(1);
+        if (b == 0) throw std::runtime_error(runtimeErr(name, "modulus cannot be zero"));
+        int64_t r = a % b;
+        if (r < 0) r += (b < 0 ? -b : b);
+        return r;
+    }
     if (name == "mobius") {
         if (args.size() != 1)
             throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
@@ -973,11 +994,12 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
         }
         case Expr::Tag::BinOp: {
             if (e->binOp == BinOp::Pow && isQLike(e->left.get())) {
-                EvalResult rr = eval(e->right.get(), env, sumIndices);
-                if (std::holds_alternative<int64_t>(rr)) {
-                    return Series::qpow(static_cast<int>(std::get<int64_t>(rr)), env.T);
-                }
-                Series rs = toSeries(rr, "q^exponent", env.T);
+                try {
+                    int64_t iv = evalToInt(e->right.get(), env, sumIndices);
+                    return Series::qpow(static_cast<int>(iv), env.T);
+                } catch (...) {}
+                Series rs = toSeries(eval(e->right.get(), env, sumIndices), "q^exponent", env.T);
+                if (rs.c.empty()) return Series::one(env.T);
                 if (rs.c.size() == 1 && rs.c.count(0)) {
                     Frac fv = rs.c.at(0);
                     if (fv.den == BigInt(1)) {
