@@ -512,6 +512,10 @@ Plans:
 | 54. Benchmarking Suite | 0/? | Complete    | 2026-02-28 |
 | 55. Smart Tab Completion | 0/? | Complete    | 2026-02-28 |
 | 56. Session Save/Load + History | 0/? | Not started | - |
+| 63. Q-Shift Arithmetic Fix | 0/? | Not started | - |
+| 64. Fractional Power Infrastructure | 0/? | Not started | - |
+| 65. Jacobi Half-Integer Exponents | 0/? | Not started | - |
+| 66. Exercise Solutions & Regression | 0/? | Not started | - |
 
 ### Phase 30: Output on next line after input
 
@@ -1006,3 +1010,67 @@ Plans:
   2. The script detects the platform via `uname` and downloads the correct binary (Linux x86_64 or macOS arm64)
   3. Downloaded binary is verified against published SHA256 checksums before being placed in PATH
   4. `install.sh --version v2.1` installs a specific version; omitting `--version` installs latest
+
+---
+
+## Milestone v4.2 (Fix Block Failures) — phases 63–66:
+
+- [ ] **Phase 63: Q-Shift Arithmetic Fix** - Absorb integer q_shift differences in Series::operator+, unblocking Block 25 and theta quotient arithmetic
+- [ ] **Phase 64: Fractional Power Infrastructure** - Series::powFrac(Frac) via generalized binomial series for exact rational fractional powers
+- [ ] **Phase 65: Jacobi Half-Integer Exponents** - Fix jacprodmake middle-element decomposition and jac2series fractional dispatch for Blocks 13-14
+- [ ] **Phase 66: Exercise Solutions & Regression** - Verify exercises 4/9/10 with fixed infrastructure, full regression gate
+
+### Phase 63: Q-Shift Arithmetic Fix
+**Goal**: Series addition works for operands whose q_shifts differ by an integer
+**Depends on**: Phase 62
+**Requirements**: QSHIFT-01, QSHIFT-02
+**Success Criteria** (what must be TRUE):
+  1. Adding two series whose q_shifts differ by an integer (e.g., 0 and -1) succeeds — coefficients are index-shifted to align rather than throwing
+  2. `normalize_q_shift()` absorbs integer part of q_shift into coefficient indices, keeping q_shift ∈ [0,1)
+  3. Block 25 in the Maple checklist passes — `findpoly` with `theta2(q)²/theta3(q)²` and `theta2(q³)²/theta3(q³)²` produces the expected cubic relation
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 63 to break down)
+
+### Phase 64: Fractional Power Infrastructure
+**Goal**: Series can be raised to any rational exponent via generalized binomial coefficients
+**Depends on**: Phase 63
+**Requirements**: JAC-02
+**Success Criteria** (what must be TRUE):
+  1. `Series::powFrac(Frac(1,2))` on `(1-q)` produces correct coefficients: 1, -1/2, -1/8, -1/16, -5/128, -7/256, ...
+  2. `f.powFrac(Frac(1,2)).powFrac(Frac(2,1))` equals `f` to truncation (square-root-then-square roundtrip)
+  3. `BigInt::isqrt()` and `Frac::rational_sqrt()` correctly compute integer and rational square roots as validation guards
+  4. `powFrac` handles arbitrary rational exponents (1/2, 3/2, 13/2) with correct truncation propagation
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 64 to break down)
+
+### Phase 65: Jacobi Half-Integer Exponents
+**Goal**: jacprodmake produces and jac2series reconstructs half-integer JAC exponents
+**Depends on**: Phase 64
+**Requirements**: JAC-01, JAC-03, JAC-04
+**Success Criteria** (what must be TRUE):
+  1. `jacprodmake` on Slater(46) produces JAC factors with half-integer exponents (e.g., `JAC(0,14,∞)^(13/2)`)
+  2. `jac2series` correctly reconstructs series from half-integer JAC exponents by dispatching through `powFrac`
+  3. Blocks 13 and 14 in the Maple checklist pass — jacprodmake on Slater identities yields correct fractional products
+  4. `jac2prod` displays fractional exponents correctly (e.g., `^(1/2)`, `^(13/2)`)
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 65 to break down)
+
+### Phase 66: Exercise Solutions & Regression
+**Goal**: All dependent exercises verified and full regression suite passes
+**Depends on**: Phase 63, Phase 65
+**Requirements**: EX-01, EX-02, EX-03, REG-04
+**Success Criteria** (what must be TRUE):
+  1. Exercise 4: `b(q) = η(τ)³/η(3τ)` computes correctly using `etaq(1,T)^3 / etaq(3,T)` and matches expected coefficients
+  2. Exercise 9: N(q) computation is attempted via `findnonhomcombo` with σ₅(n) coefficients — result documented even if infeasible at practical truncation
+  3. Exercise 10: `findpoly` with q-shift-fixed theta series produces the expected cubic relation `y = 27(m-1)(m+1)⁴/(m²+6m-3)³`
+  4. All existing acceptance tests and all 30 previously-passing maple-checklist blocks still pass (no regressions)
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 66 to break down)

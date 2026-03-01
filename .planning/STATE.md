@@ -9,10 +9,10 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-01 — Milestone v4.2 started
+Phase: 63 of 66 (Q-Shift Arithmetic Fix)
+Plan: — (not yet planned)
+Status: Ready to plan
+Last activity: 2026-03-01 — v4.2 roadmap created (4 phases: 63-66)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -100,6 +100,11 @@ Progress: [░░░░░░░░░░] 0%
 
 ### Roadmap Evolution
 
+- Milestone v4.2 started: Fix Block Failures
+- Phase 63 added: Q-Shift Arithmetic Fix (QSHIFT-01, QSHIFT-02)
+- Phase 64 added: Fractional Power Infrastructure (JAC-02)
+- Phase 65 added: Jacobi Half-Integer Exponents (JAC-01, JAC-03, JAC-04)
+- Phase 66 added: Exercise Solutions & Regression (EX-01, EX-02, EX-03, REG-04)
 - Phase 30 added: Output on next line after input
 - Phase 31 added: Up-down arrows for history
 - Milestone v1.6 started: etaq Performance
@@ -157,7 +162,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 62-02 — All 41 Maple blocks tested (30 pass, 3 fail, 8 skip), exercises_solutions.md complete, jacprodmake generalized
+Stopped at: v4.2 roadmap created — 4 phases (63-66) mapped from 10 requirements, ready for /gsd:plan-phase 63
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 

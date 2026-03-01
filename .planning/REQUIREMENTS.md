@@ -618,10 +618,16 @@ Requirements for milestone v4.2 — fix 3 Maple checklist block failures and 3 d
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| QSHIFT-01, QSHIFT-02 | TBD | Pending |
-| JAC-01, JAC-02, JAC-03, JAC-04 | TBD | Pending |
-| EX-01, EX-02, EX-03 | TBD | Pending |
-| REG-04 | TBD | Pending |
+| QSHIFT-01 | Phase 63 | Pending |
+| QSHIFT-02 | Phase 63 | Pending |
+| JAC-01 | Phase 65 | Pending |
+| JAC-02 | Phase 64 | Pending |
+| JAC-03 | Phase 65 | Pending |
+| JAC-04 | Phase 65 | Pending |
+| EX-01 | Phase 66 | Pending |
+| EX-02 | Phase 66 | Pending |
+| EX-03 | Phase 66 | Pending |
+| REG-04 | Phase 66 | Pending |
 
 **Coverage:** 10/10 v4.2 requirements mapped ✓
 
