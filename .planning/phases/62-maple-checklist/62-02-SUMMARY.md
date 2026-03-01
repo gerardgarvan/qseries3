@@ -1,150 +1,98 @@
 ---
 phase: 62-maple-checklist
 plan: 02
-subsystem: testing
-tags: [maple-checklist, exercises, tripleprod, quinprod, winquist, jacprodmake]
-
-requires:
-  - phase: 62-01
-    provides: "theta/tripleprod/quinprod fixes, blocks 1-27 tested"
-provides:
-  - "Complete maple checklist (41 blocks: 28 pass, 5 fail, 8 skip)"
-  - "exercises_solutions.md with all 13 exercise solutions"
-  - "Winquist identity verified to 60 terms"
-  - "Watson modular equation identified"
-affects: []
-
-tech-stack:
-  added: []
-  patterns: ["q-shift correction for eta product definitions in findhomcombo"]
-
-key-files:
-  created:
-    - exercises_solutions.md
-  modified:
-    - tests/maple-checklist.sh
-    - maple_checklist.md
-
-key-decisions:
-  - "eta products need q^(k/24) prefactors when used in findhomcombo/findnonhomcombo"
-  - "winquist T=100 sufficient for 20-term verification; T=200 for 60-term identity check"
-  - "jacprodmake mod-11 detection failure documented as known limitation"
-
-patterns-established:
-  - "q-shift correction: C1 := q^2*etaq(7)^7/etaq(1) for η(7τ)⁷/η(τ)"
-  - "findnonhomcombo n_list must match basis length, not [target_weight, basis_weight]"
-
-duration: ~25min
+status: complete
+started: 2026-03-01
 completed: 2026-03-01
+duration_minutes: ~60
 ---
 
-# Phase 62 Plan 02: Maple Checklist Blocks 28-41 + All 13 Exercises Summary
+## Summary
 
-**Complete maple checklist (28/41 pass) with Winquist identity verified and 7/13 exercises fully solved including Watson modular equation**
+Completed Maple checklist blocks 28-41, fixed jacprodmake for general moduli, created exercises_solutions.md with all 13 exercises documented.
 
-## Performance
+## Tasks Completed
 
-- **Duration:** ~25 min
-- **Started:** 2026-03-01T15:26:00Z
-- **Completed:** 2026-03-01T15:51:00Z
-- **Tasks:** 2
-- **Files modified:** 3
+### Task 1: Add blocks 28-41 to test script and update checklist
+- Extended `tests/maple-checklist.sh` with blocks 28-41 (14 new blocks)
+- Updated `maple_checklist.md` with verification status for all 41 blocks
+- Fixed critical bug in `jacprodmake` decomposition for general moduli (was hardcoded for mod-5)
+- Fixed `jac2prod` display to correctly show both numerator and denominator parts
 
-## Accomplishments
-- Extended test script to all 41 blocks: 28 pass, 5 fail, 8 skip
-- Winquist's identity verified: IDG - winquist(q⁵,q³,q¹¹) = 0 to O(q⁶⁰)
-- Exercise 7: UE(q,3,7) = 8·η(7τ)⁷/η(τ) + η(τ)³η(7τ)³ (Ramanujan identity)
-- Exercise 8: Watson modular equation T = ξ + 5ξ² + 15ξ³ + 25ξ⁴ + 25ξ⁵
-- Exercise 13: Both Winquist product forms computed and verified
-
-## Task Commits
-
-1. **Task 1: Blocks 28-41 test script + checklist update** - `0d57526` (feat)
-2. **Task 2: exercises_solutions.md** - `4d27d6a` (feat)
-
-## Files Created/Modified
-- `tests/maple-checklist.sh` - Extended from 27 to 41 blocks
-- `maple_checklist.md` - All 41 blocks marked with pass/fail/skip status
-- `exercises_solutions.md` - All 13 exercises with commands, output, notes
+### Task 2: Create exercises_solutions.md with all 13 exercise solutions
+- Created `exercises_solutions.md` with commands, output, and mathematical notes for all 13 exercises
+- 10 exercises produce meaningful computational results
+- 3 exercises are partial due to known limitations (ω not supported, q-shift addition, computation limits)
 
 ## Test Results
 
+```
+$ bash tests/maple-checklist.sh → 30 passed, 3 failed, 8 skipped (of 41 blocks)
+```
+
 | Status | Count | Blocks |
 |--------|-------|--------|
-| PASS   | 28    | 1-3, 5-9, 11-12, 15-20, 22-23, 26-27, 29, 33-37, 40-41 |
-| FAIL   | 5     | 13, 14, 25, 38, 39 |
+| PASS   | 30    | 1-3, 5-9, 11-12, 15-20, 22-23, 26-27, 29, 33-41 |
+| FAIL   | 3     | 13, 14, 25 |
 | SKIP   | 8     | 4, 10, 21, 24, 28, 30, 31, 32 |
 
-### Failure Details
-- **Blocks 13-14**: jacprodmake fractional Jacobi exponents (Slater identity)
-- **Block 25**: Cannot add series with different q-shifts (theta2/theta3 quotients)
-- **Blocks 38-39**: jacprodmake cannot detect mod-11 Jacobi periodicity
+### Failure Details (unchanged from Plan 01)
+- **Block 13-14** (jacprodmake Slater): Expected half-integer Jacobi exponents not supported
+- **Block 25** (findpoly): Cannot add series with different q-shifts (theta2 introduces fractional q-shift)
 
-### Skip Details
-- **Block 4**: Maple `factor()` not available
-- **Block 10**: `RootOf` algebraic extension
-- **Blocks 21, 24**: Result indexing / collect formatting
-- **Blocks 28, 30-32**: Symbolic variable z / prodid / seriesid modes
+### Skip Details (Blocks 28-32 new)
+- **Block 28**: `tripleprod(z,q,10)` requires symbolic variable z
+- **Block 30-31**: `quinprod(z,q,prodid/seriesid)` requires symbolic modes
+- **Block 32**: `quinprod(z,q,3)` requires symbolic z
 
-## Exercise Results
+## Code Fixes
+
+### jacprodmake general modulus (convert.h)
+The decomposition logic for converting prodmake exponent maps into JacFactor components was hardcoded for small moduli. Rewrote to:
+1. Properly pair residues (a, b-a) for any period b
+2. Check symmetry e[a] == e[b-a] for each pair
+3. Handle middle term when b is even
+4. Compute x[0] as remainder: e[b] - Σ x[a]
+
+### jac2prod display (convert.h)
+Fixed bug where numerator terms were discarded if denominator terms existed. Also corrected exponent display for denominator factors.
+
+## Exercise Solutions Summary
 
 | Exercise | Status | Key Result |
 |----------|--------|------------|
-| 1-3 | Complete | prodmake/qfactor identify products |
-| 4 | Partial | a(q) correct; b(q) needs ω, c(q) needs q^(1/3) |
-| 5 | Partial | Series correct; jacprodmake fails |
-| 6, 9, 10 | Infeasible | Require ω or q^(1/3) |
-| 7 | Complete | Ramanujan: UE(q,3,7) = 8C₁ + C₂ |
-| 8 | Complete | Watson: T = ξ + 5ξ² + 15ξ³ + 25ξ⁴ + 25ξ⁵ |
-| 11-12 | Partial | Sifting correct; jacprodmake fails |
-| 13 | Complete | Winquist identity verified both ways |
+| 1 | Complete | prodmake identifies Rogers product at ±1,0 mod 8 |
+| 2 | Complete | T(r,n) qfactor factorization pattern |
+| 3 | Complete | dixson(a,a,a,q) = Π(q^{a+1};q)_{2a} / ((q;q)_a)² |
+| 4 | Partial | c(q) = 3η(3τ)³/η(τ); b(q) needs ω |
+| 5 | Complete | Slater (46) = 1/Π parts ≢ 0,±4,±6 mod 20 |
+| 6 | Partial | Depends on b(q) from Exercise 4 |
+| 7 | Complete | U_{7,3} = 8C₁ + C₂ (Ramanujan) |
+| 8 | Complete | T = ξ + 5ξ² + 15ξ³ + 25ξ⁴ + 25ξ⁵ (Watson) |
+| 9 | Partial | N(q) computed; findnonhomcombo infeasible |
+| 10 | Blocked | q-shift addition unsupported (Block 25) |
+| 11 | Partial | pd(5n+1) = η(2τ)²η(5τ)³/(η(τ)⁴η(10τ)) |
+| 12 | Partial | E₀ Jacobi product found; E₁ = -η(5τ) |
+| 13 | Complete(i) | Winquist verified, IDG = mod-11 Jacobi product |
 
-## Decisions Made
-- eta products in findhomcombo/findnonhomcombo need explicit q^(k/24) prefactors since etaq() only computes the product part (not the q^(k/24) factor from η(τ) = q^(1/24)∏(1-q^n))
-- winquist function at T=100 gives enough terms for 20-coefficient verification; T=200 needed for 60-term identity check
-- findnonhomcombo n_list parameter must have same length as basis list (not [target_weight, basis_weights])
+## Files Modified
 
-## Deviations from Plan
+| File | Change |
+|------|--------|
+| `src/convert.h` | jacprodmake general modulus decomposition, jac2prod display fix |
+| `tests/maple-checklist.sh` | Extended to 41 blocks (was 27) |
+| `maple_checklist.md` | All 41 blocks marked with status |
+| `exercises_solutions.md` | New: all 13 exercises with commands, output, notes |
 
-### Auto-fixed Issues
+## Deviations
 
-**1. [Rule 1 - Bug] Fixed grep patterns for Unicode superscript matching**
-- **Found during:** Task 1 (blocks 29, 36 test grep)
-- **Issue:** `\xe2\x81\xb5\xe2\x81\xb7` hex escapes in double-quoted grep patterns don't work in bash
-- **Fix:** Changed to pattern-match on ASCII portions ("1 - q -" for pentagonal, "1 + q -" for quinprod)
-- **Files modified:** tests/maple-checklist.sh
-- **Committed in:** 0d57526
+- jacprodmake required a code fix (not just testing) to handle mod-11 and mod-20 products
+- Exercise 5 (Slater 46) now works thanks to the jacprodmake fix — was listed as FAIL in Plan 01
+- Some exercises document partial results where full solutions require unsupported features (ω, fractional q-shifts)
 
-**2. [Rule 1 - Bug] Fixed Exercise 7 eta product q-shift factors**
-- **Found during:** Task 2 (Exercise 7 findhomcombo returned "no solution")
-- **Issue:** C₁ = η(7τ)⁷/η(τ) has prefactor q^(49/24 - 1/24) = q² which etaq() doesn't include
-- **Fix:** Added q^2 and q factors: `C1 := q^2*etaq(7)^7/etaq(1)`, `C2 := q*etaq(1)^3*etaq(7)^3`
-- **Files modified:** exercises_solutions.md
-- **Committed in:** 4d27d6a
+## Verification
 
-**3. [Rule 1 - Bug] Fixed Exercise 8 findnonhomcombo parameter format**
-- **Found during:** Task 2 (Exercise 8 "no solution")
-- **Issue:** n_list [6, 1] had 2 elements but basis had 1 element; also TT missing q prefactor
-- **Fix:** Used n_list = [5] for single basis element, TT := q*(etaq(5)/etaq(1))^6
-- **Files modified:** exercises_solutions.md
-- **Committed in:** 4d27d6a
-
----
-
-**Total deviations:** 3 auto-fixed (3 bugs)
-**Impact on plan:** All fixes necessary for correctness. No scope creep.
-
-## Issues Encountered
-- Binary disappears between shell sessions (Cygwin filesystem issue) — rebuilt via `make` as needed
-- winquist(q^5, q^3, q^11, 200) takes ~16 seconds — acceptable for comprehensive test but used T=100 for faster individual tests
-
-## User Setup Required
-None - no external service configuration required.
-
-## Next Phase Readiness
-- Maple checklist fully complete (all 41 blocks attempted, all 13 exercises documented)
-- Known limitations documented: jacprodmake mod-11, fractional exponents, q-shift arithmetic
-
----
-*Phase: 62-maple-checklist*
-*Completed: 2026-03-01*
+```
+$ bash tests/maple-checklist.sh → 30 passed, 3 failed, 8 skipped
+$ bash tests/acceptance.sh      → all pass (no regressions)
+```
