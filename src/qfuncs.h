@@ -201,7 +201,7 @@ inline Series etaq(const Series& q, int k, int T) {
     } else {
         result = Series::one(T);
         for (int n = 1; k * n < T; ++n) {
-            Series qkn = q.truncTo(T).pow(k * n);
+            Series qkn = q.withTrunc(T).pow(k * n);
             Series factor = Series::one(T) - qkn;
             result = (result * factor).truncTo(T);
         }
@@ -217,8 +217,8 @@ inline Series etaq(const Series& q, int k, int T) {
 inline Series aqprod(const Series& a, const Series& q, int n, int T) {
     if (n <= 0) return Series::one(T);
     Series result = Series::one(T);
-    Series qt = q.truncTo(T);
-    Series at = a.truncTo(T);
+    Series qt = q.withTrunc(T);
+    Series at = a.withTrunc(T);
     for (int k = 0; k < n; ++k) {
         Series qk = qt.pow(k);
         Series factor = Series::one(T) - (at * qk);
@@ -232,7 +232,7 @@ inline Series qbin(const Series& q, int m, int n, int T) {
     if (m < 0 || m > n) return Series::zero(T);
     if (m == 0 || m == n) return Series::one(T);
     Series result = Series::one(T);
-    Series qt = q.truncTo(T);
+    Series qt = q.withTrunc(T);
     for (int i = 1; i <= m; ++i) {
         Series num = Series::one(T) - qt.pow(n - m + i);
         Series den = Series::one(T) - qt.pow(i);
@@ -244,32 +244,50 @@ inline Series qbin(const Series& q, int m, int n, int T) {
 
 // ============ Theta functions ============
 
-inline Series theta2(const Series& /*q*/, int T) {
+inline Series theta2(const Series& q_arg, int T) {
+    int k = 1;
+    if (q_arg.c.size() == 1) {
+        auto it = q_arg.c.begin();
+        if (it->second == Frac(1) && it->first > 0)
+            k = it->first;
+    }
     Series result = Series::zero(T);
     result.trunc = T;
-    result.q_shift = Frac(1, 4);
-    for (int n = 0; n * (n + 1) < T; ++n) {
-        int exp = n * (n + 1);
+    result.q_shift = Frac(k, 4);
+    for (int n = 0; n * (n + 1) * k < T; ++n) {
+        int exp = n * (n + 1) * k;
         result.setCoeff(exp, Frac(2));
     }
     return result;
 }
 
-inline Series theta3(const Series& /*q*/, int T) {
+inline Series theta3(const Series& q_arg, int T) {
+    int k = 1;
+    if (q_arg.c.size() == 1) {
+        auto it = q_arg.c.begin();
+        if (it->second == Frac(1) && it->first > 0)
+            k = it->first;
+    }
     Series result = Series::one(T);
     result.trunc = T;
-    for (int n = 1; n * n < T; ++n) {
-        int exp = n * n;
+    for (int n = 1; n * n * k < T; ++n) {
+        int exp = n * n * k;
         result.setCoeff(exp, result.coeff(exp) + Frac(2));
     }
     return result;
 }
 
-inline Series theta4(const Series& /*q*/, int T) {
+inline Series theta4(const Series& q_arg, int T) {
+    int k = 1;
+    if (q_arg.c.size() == 1) {
+        auto it = q_arg.c.begin();
+        if (it->second == Frac(1) && it->first > 0)
+            k = it->first;
+    }
     Series result = Series::one(T);
     result.trunc = T;
-    for (int n = 1; n * n < T; ++n) {
-        int exp = n * n;
+    for (int n = 1; n * n * k < T; ++n) {
+        int exp = n * n * k;
         int sign = (n % 2 == 0) ? 2 : -2;
         result.setCoeff(exp, result.coeff(exp) + Frac(sign));
     }
@@ -279,8 +297,8 @@ inline Series theta4(const Series& /*q*/, int T) {
 inline Series theta(const Series& z, const Series& q, int T) {
     Series result = Series::zero(T);
     result.trunc = T;
-    Series zt = z.truncTo(T);
-    Series qt = q.truncTo(T);
+    Series zt = z.withTrunc(T);
+    Series qt = q.withTrunc(T);
     for (int i = -T; i <= T; ++i) {
         Series zi = (i >= 0) ? zt.pow(i) : zt.inverse().pow(-i);
         Series qi2 = qt.pow(i * i);
@@ -297,10 +315,14 @@ inline Series theta(const Series& z, const Series& q, int T) {
 
 inline Series tripleprod(const Series& z, const Series& q, int T) {
     Series result = Series::one(T);
-    Series zt = z.truncTo(T);
-    Series qt = q.truncTo(T);
+    Series zt = z.withTrunc(T);
+    Series qt = q.withTrunc(T);
     Series zinv = zt.inverse();
-    for (int n = 1; n < T; ++n) {
+    int qmin = 1;
+    for (const auto& [e, v] : qt.c) {
+        if (e > 0) { qmin = e; break; }
+    }
+    for (int n = 1; qmin * n < T; ++n) {
         Series f1 = Series::one(T) - (zt * qt.pow(n - 1));
         Series f2 = Series::one(T) - (zinv * qt.pow(n));
         Series f3 = Series::one(T) - qt.pow(n);
@@ -312,19 +334,22 @@ inline Series tripleprod(const Series& z, const Series& q, int T) {
 
 inline Series quinprod(const Series& z, const Series& q, int T) {
     Series result = Series::one(T);
-    Series zt = z.truncTo(T);
-    Series qt = q.truncTo(T);
+    Series zt = z.withTrunc(T);
+    Series qt = q.withTrunc(T);
     Series zinv = zt.inverse();
-    for (int n = 1; n < T; ++n) {
+    int qmin = 1;
+    for (const auto& [e, v] : qt.c) {
+        if (e > 0) { qmin = e; break; }
+    }
+    for (int n = 1; qmin * n < T; ++n) {
         Series f1 = Series::one(T) + (zt * qt.pow(n - 1));
         Series f2 = Series::one(T) + (qt.pow(n) * zinv);
         Series f3 = Series::one(T) - qt.pow(n);
         result = (result * f1 * f2 * f3).truncTo(T);
     }
-    for (int m = 1; 2 * m - 1 < T; ++m) {
-        int e = 2 * m - 1;
-        Series f4 = Series::one(T) - (zt.pow(2) * qt.pow(e));
-        Series f5 = Series::one(T) - (qt.pow(e) * zinv.pow(2));
+    for (int m = 1; qmin * (2 * m - 1) < T; ++m) {
+        Series f4 = Series::one(T) - (zt.pow(2) * qt.pow(2 * m - 1));
+        Series f5 = Series::one(T) - (qt.pow(2 * m - 1) * zinv.pow(2));
         result = (result * f4 * f5).truncTo(T);
     }
     result.trunc = T;
@@ -334,9 +359,9 @@ inline Series quinprod(const Series& z, const Series& q, int T) {
 inline Series winquist(const Series& a, const Series& b, const Series& q, int T) {
     Series result = Series::zero(T);
     result.trunc = T;
-    Series at = a.truncTo(T);
-    Series bt = b.truncTo(T);
-    Series qt = q.truncTo(T);
+    Series at = a.withTrunc(T);
+    Series bt = b.withTrunc(T);
+    Series qt = q.withTrunc(T);
     Series ainv = at.inverse();
     Series binv = bt.inverse();
     for (int n = 0; 3 * n * (n + 1) / 2 < T; ++n) {

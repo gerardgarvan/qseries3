@@ -107,6 +107,17 @@ struct Series {
         return s;
     }
 
+    Series withTrunc(int T) const {
+        Series s;
+        s.trunc = T;
+        s.q_shift = q_shift;
+        for (const auto& [e, v] : c) {
+            if (e < T && !v.isZero())
+                s.c[e] = v;
+        }
+        return s;
+    }
+
     // Arithmetic
     Series operator-() const {
         Series s;
