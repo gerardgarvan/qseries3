@@ -1028,10 +1028,10 @@ Plans:
   1. Adding two series whose q_shifts differ by an integer (e.g., 0 and -1) succeeds — coefficients are index-shifted to align rather than throwing
   2. `normalize_q_shift()` absorbs integer part of q_shift into coefficient indices, keeping q_shift ∈ [0,1)
   3. Block 25 in the Maple checklist passes — `findpoly` with `theta2(q)²/theta3(q)²` and `theta2(q³)²/theta3(q³)²` produces the expected cubic relation
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 63 to break down)
+- [ ] 63-01-PLAN.md — normalize_q_shift() + expanded fractional display + Block 25 fix
 
 ### Phase 64: Fractional Power Infrastructure
 **Goal**: Series can be raised to any rational exponent via generalized binomial coefficients

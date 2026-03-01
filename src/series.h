@@ -96,6 +96,35 @@ struct Series {
             c.erase(e);
     }
 
+    // Absorb integer part of q_shift into coefficient indices, keeping q_shift in [0, 1)
+    void normalize_q_shift() {
+        if (q_shift.isZero()) return;
+
+        auto [quot, rem] = BigInt::divmod(q_shift.num, q_shift.den);
+        if (!rem.isZero() && rem.neg)
+            quot = quot - BigInt(1);
+
+        if (quot.isZero()) return;
+
+        int F = quot.d.empty() ? 0 : static_cast<int>(quot.d[0]);
+        if (quot.neg) F = -F;
+
+        std::map<int, Frac> new_c;
+        for (const auto& [e, v] : c)
+            new_c[e + F] = v;
+        c = std::move(new_c);
+
+        trunc += F;
+        q_shift = q_shift - Frac(BigInt(quot), BigInt(1));
+
+        if (trunc <= 0) {
+            c.clear();
+            trunc = 0;
+        }
+
+        clean();
+    }
+
     Series truncTo(int T) const {
         Series s;
         s.trunc = std::min(trunc, T);
@@ -170,6 +199,7 @@ struct Series {
             }
         }
         s.clean();
+        s.normalize_q_shift();
         return s;
     }
 
@@ -207,6 +237,7 @@ struct Series {
                 if (newExp >= -invH.trunc)
                     result.c[newExp] = v;
             }
+            result.normalize_q_shift();
             return result;
         }
         Frac c0 = coeff(0);
@@ -224,6 +255,7 @@ struct Series {
             }
             g.c[n] = -(Frac(1) / c0) * sum;
         }
+        g.normalize_q_shift();
         return g;
     }
 
@@ -265,6 +297,7 @@ struct Series {
                 s.c[newExp] = v;
         }
         s.clean();
+        s.normalize_q_shift();
         return s;
     }
 
