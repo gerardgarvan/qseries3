@@ -938,13 +938,41 @@ Plans:
   5. History persistence works on both Unix and Windows (home directory resolution)
 **Plans**: TBD
 
+### Phase 60: etamake scalar factor and non-integer q exponents
+
+**Goal:** [To be planned]
+**Depends on:** Phase 59
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 60 to break down)
+
+### Phase 61: fix integer exponents only gap
+
+**Goal:** [To be planned]
+**Depends on:** Phase 60
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 61 to break down)
+
+### Phase 62: maple checklist satisfied
+
+**Goal:** Verify and ensure all Maple qseries tutorial examples (qseriesdoc.md) produce correct output in qseries3, including double sums, fractional q-powers, mod(), and Jacobi product identification
+**Depends on:** Phase 61
+**Plans:** 2 plans
+
+Plans:
+- [ ] 62-01-PLAN.md — Fix theta2/3/4 q-argument and tripleprod/quinprod T semantics, test blocks 1-27
+- [ ] 62-02-PLAN.md — Test blocks 28-41, create exercise solutions, finalize checklist
+
 ---
 
 ## Milestone v4.1 (Distribution) — phases 57–59:
 
-- [ ] **Phase 57: CI/CD Release Pipeline** — Tag-triggered GitHub Actions workflow builds cross-platform binaries and creates GitHub Release with assets
-- [ ] **Phase 58: Docker** — Multi-stage Dockerfile, ghcr.io publish, Makefile targets, acceptance tests in container
-- [ ] **Phase 59: Install Script** — One-liner curl install with platform detection, SHA256 verification, version selection
+- [x] **Phase 57: CI/CD Release Pipeline** — Tag-triggered GitHub Actions workflow builds cross-platform binaries and creates GitHub Release with assets (completed 2026-02-28)
+- [x] **Phase 58: Docker** — Multi-stage Dockerfile, ghcr.io publish, Makefile targets, acceptance tests in container (completed 2026-02-28)
+- [x] **Phase 59: Install Script** — One-liner curl install with platform detection, SHA256 verification, version selection (completed 2026-02-28)
 
 ### Phase 57: CI/CD Release Pipeline
 **Goal**: Pushing a version tag automatically builds cross-platform binaries and creates a GitHub Release
