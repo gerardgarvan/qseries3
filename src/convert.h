@@ -385,27 +385,29 @@ inline std::vector<JacFactor> jacprodmake(const Series& f, int T) {
         }
         if (match * 100 < range * 80) continue;
 
-        // Decompose e[1..b] into JAC: x1=e[1], x2=e[2], x0=e[5]-e[1]-e[2] for b=5
+        // Decompose e[1..b] into JAC(a,b) exponents.
+        // JAC(a,b,∞) for a>0 covers residues a, b-a, and b (mod b).
+        // x[a] = e[a] with symmetry check e[a] == e[b-a].
+        // x[0] = e[b] - Σ x[a] for a=1..floor((b-1)/2) [- x[b/2] if even].
         std::map<int, Frac> x;
-        for (int i = 0; i < b; ++i) {
-            Frac ei = (e.count(i + 1)) ? e[i + 1] : Frac(0);
-            if (i == 0) x[0] = ei;
-            else if (i < (b + 1) / 2) x[i] = ei;
+        Frac sum_x(0);
+        bool sym_ok = true;
+        for (int a = 1; a <= (b - 1) / 2; ++a) {
+            Frac ea = e.count(a) ? e[a] : Frac(0);
+            Frac eba = e.count(b - a) ? e[b - a] : Frac(0);
+            if (!(ea == eba)) { sym_ok = false; break; }
+            x[a] = ea;
+            sum_x = sum_x + ea;
         }
-        if (b >= 2) {
-            Frac e1 = (e.count(1)) ? e[1] : Frac(0);
-            Frac e2 = (e.count(2)) ? e[2] : Frac(0);
-            Frac eb = (e.count(b)) ? e[b] : Frac(0);
-            x[0] = eb - e1 - e2;
+        if (!sym_ok) continue;
+        if (b % 2 == 0) {
+            int half = b / 2;
+            Frac eh = e.count(half) ? e[half] : Frac(0);
+            x[half] = eh;
+            sum_x = sum_x + eh;
         }
-        if (b == 5) {
-            Frac e1 = (e.count(1)) ? e[1] : Frac(0);
-            Frac e2 = (e.count(2)) ? e[2] : Frac(0);
-            Frac e5 = (e.count(5)) ? e[5] : Frac(0);
-            x[0] = e5 - e1 - e2;
-            x[1] = e1;
-            x[2] = e2;
-        }
+        Frac eb_val = e.count(b) ? e[b] : Frac(0);
+        x[0] = eb_val - sum_x;
 
         result.clear();
         if (x[0] != Frac(0)) result.push_back({0, b, x[0]});
@@ -444,15 +446,17 @@ inline std::string jac2prod(const std::vector<JacFactor>& jac) {
         } else {
             part = "(" + qa + ",q^" + std::to_string(b) + ")_∞ (" + qba + ",q^" + std::to_string(b) + ")_∞ (q^" + std::to_string(b) + ",q^" + std::to_string(b) + ")_∞";
         }
-        if (ex > 1) part += "^" + std::to_string(ex);
+        int absex = (ex > 0) ? ex : -ex;
+        if (absex > 1) part += "^" + std::to_string(absex);
         if (ex > 0) num_parts.push_back(part);
-        else for (int i = 0; i < -ex; ++i) den_parts.push_back(part);
+        else den_parts.push_back(part);
     }
     std::string num_str, den_str;
     for (const auto& s : num_parts) num_str += (num_str.empty() ? "" : " ") + s;
     for (const auto& s : den_parts) den_str += (den_str.empty() ? "" : " ") + s;
-    if (den_str.empty()) return num_str.empty() ? "1" : num_str;
-    return "1 / ((" + den_str + "))";
+    if (num_str.empty()) num_str = "1";
+    if (den_str.empty()) return num_str;
+    return num_str + " / (" + den_str + ")";
 }
 
 #endif

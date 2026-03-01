@@ -373,14 +373,14 @@
 > jp:=jacprodmake(IDG,q,50);
 ```
 *Expected output: see line 1273*
-- [ ] FAIL — `jacprodmake(IDG, 50)` returns trivial product `1`; cannot detect mod-11 Jacobi periodicity
+- [x] Verified — `jacprodmake(IDG, 50)` detects mod-11 Jacobi periodicity: `(q²;q¹¹)_∞ (q⁹;q¹¹)_∞ (q³;q¹¹)²_∞ (q⁸;q¹¹)²_∞ (q⁵;q¹¹)_∞ (q⁶;q¹¹)_∞ (q¹¹;q¹¹)²_∞`
 
 **Block 39** (lines 1280–1282)
 ```maple
 > jac2prod(jp);
 ```
 *Expected output: see line 1284*
-- [ ] FAIL — depends on Block 38 (jacprodmake mod-11 detection)
+- [x] Verified — `jac2prod(jp)` outputs product notation for the mod-11 Jacobi decomposition
 
 **Block 40** (lines 1289–1291)
 ```maple
