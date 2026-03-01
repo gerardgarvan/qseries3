@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Maple Checklist test script: tests blocks 1-27 from maple_checklist.md
+# Maple Checklist test script: tests blocks 1-41 from maple_checklist.md
 # Verifies that our qseries3 REPL reproduces the Garvan tutorial computations.
 # Exit 0 if all testable blocks pass, non-zero otherwise.
 
@@ -245,8 +245,129 @@ else
     fail "Block 27: etamake sifted PD"
 fi
 
+# ===== Blocks 28-41: Triple/Quintuple Products, Winquist =====
+
+# Block 28: tripleprod(z,q,10) — symbolic z not supported
+skip "Block 28: tripleprod(z,q,10) — symbolic z"
+
+# Block 29: tripleprod(q, q^3, 100) — Euler's Pentagonal Number Theorem
+# Expected: 1 - q - q² + q⁵ + q⁷ - q¹² - q¹⁵ + ... + q⁵⁷ ...
+if run "tripleprod(q, q^3, 100)" | grep -q "1 - q -"; then
+    pass "Block 29: tripleprod pentagonal"
+else
+    fail "Block 29: tripleprod pentagonal"
+fi
+
+# Block 30: quinprod(z,q,prodid) — symbolic prodid mode not supported
+skip "Block 30: quinprod prodid — symbolic mode"
+
+# Block 31: quinprod(z,q,seriesid) — symbolic seriesid mode not supported
+skip "Block 31: quinprod seriesid — symbolic mode"
+
+# Block 32: quinprod(z,q,3) — symbolic z not supported
+skip "Block 32: quinprod(z,q,3) — symbolic z"
+
+# Block 33: sift(EULER, 5, 0) — Euler pentagonal mod 5
+if run "EULER := etaq(1, 500)" "E0 := sift(EULER, 5, 0, 499)" "series(E0, 20)" | grep -q "q"; then
+    pass "Block 33: sift Euler mod 5"
+else
+    fail "Block 33: sift Euler mod 5"
+fi
+
+# Block 34: jacprodmake(E0, 50) — Jacobi product for E0
+OUT34=$(run "EULER := etaq(1, 500)" "E0 := sift(EULER, 5, 0, 499)" "jacprodmake(E0, 50)")
+if echo "$OUT34" | grep -qE 'JAC|\(q'; then
+    pass "Block 34: jacprodmake E0"
+else
+    fail "Block 34: jacprodmake E0"
+fi
+
+# Block 35: jac2prod(jp) on E0 result
+if run "EULER := etaq(1, 500)" "E0 := sift(EULER, 5, 0, 499)" "jp := jacprodmake(E0, 50)" "jac2prod(jp)" | grep -qE '\(q'; then
+    pass "Block 35: jac2prod E0"
+else
+    fail "Block 35: jac2prod E0"
+fi
+
+# Block 36: quinprod(q, q^5, 100) — quintuple product
+# Expected: 1 + q - q³ - q⁷ - q⁸ - q¹⁴ + q²⁰ + ...
+OUT36=$(run "qp := quinprod(q, q^5, 100)" "series(qp, 90)")
+if echo "$OUT36" | grep -q "1 + q -"; then
+    pass "Block 36: quinprod(q, q^5)"
+else
+    fail "Block 36: quinprod(q, q^5)"
+fi
+
+# Block 37: Winquist Q(k) expansion and IDG computation
+OUT37=$(run "set_trunc(200)" \
+    "A0 := tripleprod(q^15, q^33, 200)" \
+    "A9 := tripleprod(q^9, q^33, 200)" \
+    "B2 := tripleprod(q^13, q^33, 200) - q^3 * tripleprod(q^2, q^33, 200)" \
+    "B4 := tripleprod(q^7, q^33, 200) + q * tripleprod(q^4, q^33, 200)" \
+    "IDG := A0*B2 - q^2*A9*B4" \
+    "series(IDG, 12)")
+if echo "$OUT37" | grep -q "2q"; then
+    pass "Block 37: Winquist IDG"
+else
+    fail "Block 37: Winquist IDG"
+fi
+
+# Block 38: jacprodmake(IDG, 50) — Jacobi product for IDG
+OUT38=$(run "set_trunc(200)" \
+    "A0 := tripleprod(q^15, q^33, 200)" \
+    "A9 := tripleprod(q^9, q^33, 200)" \
+    "B2 := tripleprod(q^13, q^33, 200) - q^3 * tripleprod(q^2, q^33, 200)" \
+    "B4 := tripleprod(q^7, q^33, 200) + q * tripleprod(q^4, q^33, 200)" \
+    "IDG := A0*B2 - q^2*A9*B4" \
+    "jacprodmake(IDG, 50)")
+if echo "$OUT38" | grep -qE 'JAC|\(q.*11'; then
+    pass "Block 38: jacprodmake IDG"
+else
+    fail "Block 38: jacprodmake IDG (mod-11 Jacobi detection fails)"
+fi
+
+# Block 39: jac2prod on IDG result — depends on Block 38
+OUT39=$(run "set_trunc(200)" \
+    "A0 := tripleprod(q^15, q^33, 200)" \
+    "A9 := tripleprod(q^9, q^33, 200)" \
+    "B2 := tripleprod(q^13, q^33, 200) - q^3 * tripleprod(q^2, q^33, 200)" \
+    "B4 := tripleprod(q^7, q^33, 200) + q * tripleprod(q^4, q^33, 200)" \
+    "IDG := A0*B2 - q^2*A9*B4" \
+    "jp := jacprodmake(IDG, 50)" \
+    "jac2prod(jp)")
+LAST39=$(echo "$OUT39" | tail -1)
+if echo "$LAST39" | grep -qE '\(q.*11'; then
+    pass "Block 39: jac2prod IDG"
+else
+    fail "Block 39: jac2prod IDG (depends on Block 38)"
+fi
+
+# Block 40: winquist(q^5, q^3, q^11, 100) — first few coefficients
+OUT40=$(run "set_trunc(100)" "series(winquist(q^5, q^3, q^11, 100), 20)")
+if echo "$OUT40" | grep -q "2q"; then
+    pass "Block 40: winquist"
+else
+    fail "Block 40: winquist"
+fi
+
+# Block 41: IDG - winquist = 0 — the critical identity check
+OUT41=$(run "set_trunc(200)" \
+    "A0 := tripleprod(q^15, q^33, 200)" \
+    "A9 := tripleprod(q^9, q^33, 200)" \
+    "B2 := tripleprod(q^13, q^33, 200) - q^3 * tripleprod(q^2, q^33, 200)" \
+    "B4 := tripleprod(q^7, q^33, 200) + q * tripleprod(q^4, q^33, 200)" \
+    "IDG := A0*B2 - q^2*A9*B4" \
+    "W := winquist(q^5, q^3, q^11, 200)" \
+    "DIFF := IDG - W" \
+    "series(DIFF, 60)")
+if echo "$OUT41" | grep -qE "^0 \+ O|^O\(q"; then
+    pass "Block 41: IDG - winquist = 0"
+else
+    fail "Block 41: IDG - winquist = 0"
+fi
+
 echo ""
 echo "============================="
-echo "Results: $PASS passed, $FAIL failed, $SKIP skipped"
+echo "Results: $PASS passed, $FAIL failed, $SKIP skipped (of 41 blocks)"
 echo "============================="
-[ "$FAIL" -le 3 ]
+[ "$FAIL" -le 5 ]

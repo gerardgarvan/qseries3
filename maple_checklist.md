@@ -289,14 +289,14 @@
 > tripleprod(z,q,10);
 ```
 *Expected output: see line 1074*
-- [ ] Verified
+- [~] SKIP — `tripleprod(z,q,10)` requires symbolic variable z; qseries3 only supports concrete q-series
 
 **Block 29** (lines 1076–1078)
 ```maple
 > tripleprod(q,q^3,10);
 ```
 *Expected output: see line 1080*
-- [ ] Verified
+- [x] Verified — outputs Euler pentagonal: `1 - q - q² + q⁵ + q⁷ - q¹² - q¹⁵ + q²² + q²⁶ - q³⁵ - q⁴⁰ + q⁵¹ + q⁵⁷ ...`
 
 ### 6.2 The Quintuple Product Identity
 
@@ -306,21 +306,21 @@
 > quinprod(z,q,prodid);
 ```
 *Expected output: see line 1117*
-- [ ] Verified
+- [~] SKIP — `quinprod(z,q,prodid)` requires symbolic z and `prodid` mode; not supported
 
 **Block 31** (lines 1119–1121)
 ```maple
 > quinprod(z,q,seriesid);
 ```
 *Expected output: see line 1123*
-- [ ] Verified
+- [~] SKIP — `quinprod(z,q,seriesid)` requires symbolic z and `seriesid` mode; not supported
 
 **Block 32** (lines 1125–1127)
 ```maple
 > quinprod(z,q,3);
 ```
 *Expected output: see line 1129*
-- [ ] Verified
+- [~] SKIP — `quinprod(z,q,3)` requires symbolic z; not supported
 
 **Block 33** (lines 1141–1145)
 ```maple
@@ -329,21 +329,21 @@
 > E0:=sift(EULER,q,5,0,499);
 ```
 *Expected output: see line 1147*
-- [ ] Verified
+- [x] Verified — sifts Euler product mod 5, residue 0
 
 **Block 34** (lines 1149–1151)
 ```maple
 > jp:=jacprodmake(E0,q,50);
 ```
 *Expected output: see line 1153*
-- [ ] Verified
+- [x] Verified — produces Jacobi product; `jac2series` confirms match with E0
 
 **Block 35** (lines 1160–1162)
 ```maple
 > jac2prod(jp);
 ```
 *Expected output: see line 1164*
-- [ ] Verified
+- [x] Verified — outputs product notation `(q,q^5)_∞ ...`
 
 **Block 36** (lines 1171–1174)
 ```maple
@@ -351,7 +351,7 @@
 > series(qp,q,100);
 ```
 *Expected output: see line 1176*
-- [ ] Verified
+- [x] Verified — `quinprod(q, q^5, 100)` matches E0 sift result through q⁸⁵
 
 ### 6.3 Winquist's Identity
 
@@ -366,35 +366,35 @@
 > series(IDG,q,10);
 ```
 *Expected output: see line 1264*
-- [ ] Verified
+- [x] Verified — outputs `1 - q² - 2q³ + q⁵ + q⁷ + q⁹ + O(q¹¹)` matching expected
 
 **Block 38** (lines 1269–1271)
 ```maple
 > jp:=jacprodmake(IDG,q,50);
 ```
 *Expected output: see line 1273*
-- [ ] Verified
+- [ ] FAIL — `jacprodmake(IDG, 50)` returns trivial product `1`; cannot detect mod-11 Jacobi periodicity
 
 **Block 39** (lines 1280–1282)
 ```maple
 > jac2prod(jp);
 ```
 *Expected output: see line 1284*
-- [ ] Verified
+- [ ] FAIL — depends on Block 38 (jacprodmake mod-11 detection)
 
 **Block 40** (lines 1289–1291)
 ```maple
 > series(winquist(q^5,q^3,q^11,20),q,20);
 ```
 *Expected output: see line 1293*
-- [ ] Verified
+- [x] Verified — outputs `1 - q² - 2q³ + q⁵ + q⁷ + q⁹ + q¹¹ + q¹² - q¹³ - q¹⁵ - q¹⁶ - q¹⁸ + O(q²⁰)` matching expected
 
 **Block 41** (lines 1298–1300)
 ```maple
 > series(IDG-winquist(q^5,q^3,q^11,20),q,60);
 ```
 *Expected output: see line 1302*
-- [ ] Verified
+- [x] Verified — difference is `0 + O(q⁶⁰)` confirming Winquist's identity
 
 ---
 
