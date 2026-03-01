@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 ## Current Position
 
 Phase: 62 — Maple Checklist
-Plan: 01
+Plan: 02
 Status: Complete
-Last activity: 2026-03-01 — Executed 62-01: theta/tripleprod fixes, blocks 1-27 tested (20/27 pass)
+Last activity: 2026-03-01 — Executed 62-02: blocks 28-41 tested (28/41 total pass), all 13 exercises documented
 
 Progress: [██████████] 100%
 
@@ -96,6 +96,7 @@ Progress: [██████████] 100%
 - [Phase 50-example-audit]: Plan 50-01: Audited all examples across demo/manual/website; fixed version 1.3→2.0, version→version(), help→help(); all REPL examples verified against binary output
 - [Phase 51-ansi-color-clear]: Plan 51-01: ansi namespace (gold/red/dim/bold/reset) gated on stdin_is_tty() && !NO_COLOR; prompt gold, errors red, timing dim; Ctrl+L and clear command; clear command also gated on TTY; zero ANSI in piped output
 - [Phase 52-karatsuba]: Plan 52-01: Hybrid Karatsuba/schoolbook multiply; KARATSUBA_THRESHOLD=32 limbs; mulSchoolbook/addVec/subVec vector helpers; karatsubaMultiply recursive with 3-multiply decomposition; operator* dispatches automatically
+- [Phase 62-maple-checklist]: Plan 62-02: eta products need q^(k/24) prefactors in findhomcombo; findnonhomcombo n_list length must match basis length; jacprodmake mod-11 detection is known limitation; Watson modular equation T=ξ+5ξ²+15ξ³+25ξ⁴+25ξ⁵
 
 ### Roadmap Evolution
 
@@ -156,7 +157,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 62-01-PLAN.md — Maple checklist blocks 1-27
+Stopped at: Completed 62-02-PLAN.md — Maple checklist blocks 28-41 + all 13 exercises
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
