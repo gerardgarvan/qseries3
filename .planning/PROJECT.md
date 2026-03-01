@@ -8,13 +8,20 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 **Rogers-Ramanujan must work.** Given `Σ q^(n²) / (q;q)_n`, prodmake must recover the product form with denominators only at exponents ≡ ±1 (mod 5). If this test passes, the core math is correct. Everything else builds on it.
 
-## Current Milestone: v4.1 Distribution
+## Current Milestone: v4.2 Fix Block Failures
 
-**Goal:** Make qseries easy to install and run on any platform with a one-liner install script and a Docker image.
+**Goal:** Fix the 3 remaining Maple checklist failures (blocks 13-14, 25) and the 3 dependent partial exercises, achieving near-complete Maple tutorial compatibility.
 
 **Target features:**
-- Docker image (build + run qseries in a container)
-- One-liner install script (curl | bash for Linux/macOS, PowerShell for Windows)
+- Half-integer Jacobi exponent support in jacprodmake (blocks 13-14)
+- q-shift addition for mixed fractional shifts in Series arithmetic (block 25)
+- Fix dependent exercises (Ex 4 b(q), Ex 9 N(q), Ex 10 findpoly)
+
+---
+
+## Previous Milestone: v4.1 Distribution ✓
+
+**Shipped:** CI/CD release pipeline, Docker image, one-liner install script, etamake scalar/q-shift fixes, theta/tripleprod/quinprod bug fixes, maple checklist (30/41 pass, 13 exercises documented).
 
 ---
 
