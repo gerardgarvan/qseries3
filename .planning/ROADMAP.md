@@ -512,7 +512,7 @@ Plans:
 | 54. Benchmarking Suite | 0/? | Complete    | 2026-02-28 |
 | 55. Smart Tab Completion | 0/? | Complete    | 2026-02-28 |
 | 56. Session Save/Load + History | 0/? | Not started | - |
-| 63. Q-Shift Arithmetic Fix | 0/? | Not started | - |
+| 63. Q-Shift Arithmetic Fix | 0/? | Complete    | 2026-03-01 |
 | 64. Fractional Power Infrastructure | 0/? | Not started | - |
 | 65. Jacobi Half-Integer Exponents | 0/? | Not started | - |
 | 66. Exercise Solutions & Regression | 0/? | Not started | - |
@@ -1015,7 +1015,7 @@ Plans:
 
 ## Milestone v4.2 (Fix Block Failures) — phases 63–66:
 
-- [ ] **Phase 63: Q-Shift Arithmetic Fix** - Absorb integer q_shift differences in Series::operator+, unblocking Block 25 and theta quotient arithmetic
+- [x] **Phase 63: Q-Shift Arithmetic Fix** - Absorb integer q_shift differences in Series::operator+, unblocking Block 25 and theta quotient arithmetic (completed 2026-03-01)
 - [ ] **Phase 64: Fractional Power Infrastructure** - Series::powFrac(Frac) via generalized binomial series for exact rational fractional powers
 - [ ] **Phase 65: Jacobi Half-Integer Exponents** - Fix jacprodmake middle-element decomposition and jac2series fractional dispatch for Blocks 13-14
 - [ ] **Phase 66: Exercise Solutions & Regression** - Verify exercises 4/9/10 with fixed infrastructure, full regression gate
@@ -1028,7 +1028,7 @@ Plans:
   1. Adding two series whose q_shifts differ by an integer (e.g., 0 and -1) succeeds — coefficients are index-shifted to align rather than throwing
   2. `normalize_q_shift()` absorbs integer part of q_shift into coefficient indices, keeping q_shift ∈ [0,1)
   3. Block 25 in the Maple checklist passes — `findpoly` with `theta2(q)²/theta3(q)²` and `theta2(q³)²/theta3(q³)²` produces the expected cubic relation
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 63-01-PLAN.md — normalize_q_shift() + expanded fractional display + Block 25 fix
