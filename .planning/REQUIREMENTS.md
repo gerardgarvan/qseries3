@@ -586,5 +586,46 @@ Requirements for milestone v4.1 — Docker image, install script, and CI/CD rele
 
 ---
 
+## v4.2 Requirements (Fix Block Failures)
+
+Requirements for milestone v4.2 — fix 3 Maple checklist block failures and 3 dependent exercises.
+
+### Q-Shift Arithmetic
+
+- [ ] **QSHIFT-01**: Series addition allows mismatched q_shifts when the difference is an integer — coefficients are index-shifted to align
+- [ ] **QSHIFT-02**: Block 25 (findpoly with theta2/theta3 quotients) passes in the Maple checklist test
+
+### Fractional Jacobi Exponents
+
+- [ ] **JAC-01**: JacFactor exponents support Frac values (not just int) — e.g., JAC(7,14,∞)^(1/2)
+- [ ] **JAC-02**: Series::powFrac(Frac) computes fractional powers via generalized binomial series
+- [ ] **JAC-03**: jac2series correctly reconstructs series from half-integer JAC exponents
+- [ ] **JAC-04**: Blocks 13-14 (jacprodmake on Slater's identity) pass in the Maple checklist test
+
+### Exercise Fixes
+
+- [ ] **EX-01**: Exercise 4 b(q) computed using eta product identity b(q) = η(τ)³/η(3τ)
+- [ ] **EX-02**: Exercise 9 N(q) computation attempted with findnonhomcombo
+- [ ] **EX-03**: Exercise 10 findpoly works with q-shift-fixed theta series
+
+### Regression
+
+- [ ] **REG-04**: All existing acceptance tests and maple-checklist tests still pass
+
+---
+
+## Traceability (v4.2)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| QSHIFT-01, QSHIFT-02 | TBD | Pending |
+| JAC-01, JAC-02, JAC-03, JAC-04 | TBD | Pending |
+| EX-01, EX-02, EX-03 | TBD | Pending |
+| REG-04 | TBD | Pending |
+
+**Coverage:** 10/10 v4.2 requirements mapped ✓
+
+---
+
 *Requirements defined: 2025-02-24*
-*Last updated: 2026-02-28 after v4.1 requirements*
+*Last updated: 2026-03-01 after v4.2 requirements*
