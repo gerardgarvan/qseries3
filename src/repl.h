@@ -1072,12 +1072,13 @@ inline std::string formatProdmake(const std::map<int, Frac>& a, bool mapleStyle 
 
 inline std::string formatEtamake(const std::vector<std::pair<int, Frac>>& eta) {
     std::string scalar_str;
-    Frac q_shift_val(0);
+    Frac input_q_shift(0);
+    Frac eta_q_power(0);
     std::vector<std::string> num_parts, den_parts;
     for (const auto& [k, e] : eta) {
         if (e.isZero()) continue;
         if (k == -1) {
-            q_shift_val = e;
+            input_q_shift = e;
             continue;
         }
         if (k == 0) {
@@ -1091,6 +1092,7 @@ inline std::string formatEtamake(const std::vector<std::pair<int, Frac>>& eta) {
         if (e.den == BigInt(1) && e.num.d.size() == 1 && e.num.d[0] <= 100)
             ex = e.num.neg ? -static_cast<int>(e.num.d[0]) : static_cast<int>(e.num.d[0]);
         if (ex == 0) continue;
+        eta_q_power = eta_q_power + Frac(k * ex, 24);
         int abs_ex = ex < 0 ? -ex : ex;
         if (abs_ex != 1) part += Series::expToUnicode(abs_ex);
         if (ex > 0)
@@ -1098,19 +1100,28 @@ inline std::string formatEtamake(const std::vector<std::pair<int, Frac>>& eta) {
         else
             den_parts.push_back(part);
     }
+    // Compensating q-power: difference between input shift and what etas imply
+    Frac comp = input_q_shift - eta_q_power;
+
     std::string num_str, den_str;
     for (const auto& s : num_parts) num_str += (num_str.empty() ? "" : " ") + s;
     for (const auto& s : den_parts) den_str += (den_str.empty() ? "" : " ") + s;
     std::string prefix = scalar_str.empty() ? "" : scalar_str + " ";
-    std::string qshift_str;
-    if (!(q_shift_val == Frac(0)))
-        qshift_str = "q" + Series::fracExpStr(q_shift_val) + " ";
-    if (!qshift_str.empty()) {
-        if (!prefix.empty())
-            prefix = prefix + qshift_str;
-        else
-            prefix = qshift_str;
+
+    // Add compensating q-power to numerator or denominator
+    if (!(comp == Frac(0))) {
+        Frac neg_comp = Frac(0) - comp;
+        if (comp < Frac(0)) {
+            std::string qstr = "q" + Series::fracExpStr(neg_comp);
+            den_parts.insert(den_parts.begin(), qstr);
+            den_str = "";
+            for (const auto& s : den_parts) den_str += (den_str.empty() ? "" : " ") + s;
+        } else {
+            std::string qstr = "q" + Series::fracExpStr(comp);
+            prefix = prefix + qstr + " ";
+        }
     }
+
     if (num_str.empty() && den_str.empty()) return prefix.empty() ? "1" : prefix;
     if (den_str.empty()) return prefix + num_str;
     bool need_parens = den_parts.size() > 1;
