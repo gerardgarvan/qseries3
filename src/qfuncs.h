@@ -247,6 +247,7 @@ inline Series qbin(const Series& q, int m, int n, int T) {
 inline Series theta2(const Series& /*q*/, int T) {
     Series result = Series::zero(T);
     result.trunc = T;
+    result.q_shift = Frac(1, 4);
     for (int n = 0; n * (n + 1) < T; ++n) {
         int exp = n * (n + 1);
         result.setCoeff(exp, Frac(2));

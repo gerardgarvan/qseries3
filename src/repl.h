@@ -580,9 +580,11 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         throw std::runtime_error(runtimeErr(name, "expects 1, 2, or 3 arguments"));
     }
     if (name == "etamake") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
-        return etamake(ev(0), static_cast<int>(evi(1)));
+        if (args.size() == 2)
+            return etamake(ev(0), static_cast<int>(evi(1)));
+        if (args.size() == 3)
+            return etamake(ev(0), static_cast<int>(evi(2)));
+        throw std::runtime_error(runtimeErr(name, "expects 2 or 3 arguments"));
     }
     if (name == "jacprodmake") {
         if (args.size() != 2)
@@ -971,8 +973,23 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
         }
         case Expr::Tag::BinOp: {
             if (e->binOp == BinOp::Pow && isQLike(e->left.get())) {
-                int64_t expVal = evalToInt(e->right.get(), env, sumIndices);
-                return Series::qpow(static_cast<int>(expVal), env.T);
+                EvalResult rr = eval(e->right.get(), env, sumIndices);
+                if (std::holds_alternative<int64_t>(rr)) {
+                    return Series::qpow(static_cast<int>(std::get<int64_t>(rr)), env.T);
+                }
+                Series rs = toSeries(rr, "q^exponent", env.T);
+                if (rs.c.size() == 1 && rs.c.count(0)) {
+                    Frac fv = rs.c.at(0);
+                    if (fv.den == BigInt(1)) {
+                        int iv = fv.num.d.empty() ? 0 : static_cast<int>(fv.num.d[0]);
+                        if (fv.num.neg) iv = -iv;
+                        return Series::qpow(iv, env.T);
+                    }
+                    Series s = Series::one(env.T);
+                    s.q_shift = fv;
+                    return s;
+                }
+                throw std::runtime_error("q^(expr): exponent must be a constant");
             }
             Series l = toSeries(eval(e->left.get(), env, sumIndices), "binary op", env.T);
             Series r = toSeries(eval(e->right.get(), env, sumIndices), "binary op", env.T);
@@ -1055,9 +1072,14 @@ inline std::string formatProdmake(const std::map<int, Frac>& a, bool mapleStyle 
 
 inline std::string formatEtamake(const std::vector<std::pair<int, Frac>>& eta) {
     std::string scalar_str;
+    Frac q_shift_val(0);
     std::vector<std::string> num_parts, den_parts;
     for (const auto& [k, e] : eta) {
         if (e.isZero()) continue;
+        if (k == -1) {
+            q_shift_val = e;
+            continue;
+        }
         if (k == 0) {
             if (!(e == Frac(1))) scalar_str = e.str();
             continue;
@@ -1080,7 +1102,16 @@ inline std::string formatEtamake(const std::vector<std::pair<int, Frac>>& eta) {
     for (const auto& s : num_parts) num_str += (num_str.empty() ? "" : " ") + s;
     for (const auto& s : den_parts) den_str += (den_str.empty() ? "" : " ") + s;
     std::string prefix = scalar_str.empty() ? "" : scalar_str + " ";
-    if (num_str.empty() && den_str.empty()) return prefix.empty() ? "1" : scalar_str;
+    std::string qshift_str;
+    if (!(q_shift_val == Frac(0)))
+        qshift_str = "q" + Series::fracExpStr(q_shift_val) + " ";
+    if (!qshift_str.empty()) {
+        if (!prefix.empty())
+            prefix = prefix + qshift_str;
+        else
+            prefix = qshift_str;
+    }
+    if (num_str.empty() && den_str.empty()) return prefix.empty() ? "1" : prefix;
     if (den_str.empty()) return prefix + num_str;
     bool need_parens = den_parts.size() > 1;
     std::string denom = need_parens ? "(" + den_str + ")" : den_str;

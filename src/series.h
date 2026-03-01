@@ -12,11 +12,13 @@
 struct Series {
     std::map<int, Frac> c;
     int trunc;
+    Frac q_shift;  // rational q-power offset: series represents q^{q_shift} * Σ c[n] q^n
 
     // Constructors / factories
     static Series zero(int T) {
         Series s;
         s.trunc = T;
+        s.q_shift = Frac(0);
         return s;
     }
 
@@ -24,6 +26,7 @@ struct Series {
         Series s;
         s.c[0] = Frac(1);
         s.trunc = T;
+        s.q_shift = Frac(0);
         return s;
     }
 
@@ -31,6 +34,7 @@ struct Series {
         Series s;
         s.c[1] = Frac(1);
         s.trunc = T;
+        s.q_shift = Frac(0);
         return s;
     }
 
@@ -40,6 +44,7 @@ struct Series {
             s.c[e] = Frac(1);
         }
         s.trunc = T;
+        s.q_shift = Frac(0);
         return s;
     }
 
@@ -49,6 +54,7 @@ struct Series {
             s.c[0] = f;
         }
         s.trunc = T;
+        s.q_shift = Frac(0);
         return s;
     }
 
@@ -93,6 +99,7 @@ struct Series {
     Series truncTo(int T) const {
         Series s;
         s.trunc = std::min(trunc, T);
+        s.q_shift = q_shift;
         for (const auto& [e, v] : c) {
             if (e < s.trunc && !v.isZero())
                 s.c[e] = v;
@@ -104,14 +111,18 @@ struct Series {
     Series operator-() const {
         Series s;
         s.trunc = trunc;
+        s.q_shift = q_shift;
         for (const auto& [e, v] : c)
             s.c[e] = -v;
         return s;
     }
 
     Series operator+(const Series& o) const {
+        if (!(q_shift == o.q_shift) && !c.empty() && !o.c.empty())
+            throw std::runtime_error("cannot add series with different q-shifts");
         Series s;
         s.trunc = std::min(trunc, o.trunc);
+        s.q_shift = c.empty() ? o.q_shift : q_shift;
         for (const auto& [e, v] : c) {
             if (e < s.trunc)
                 s.c[e] = v;
@@ -134,6 +145,7 @@ struct Series {
         Series s;
         int t = std::min(trunc, o.trunc);
         s.trunc = t;
+        s.q_shift = q_shift + o.q_shift;
         for (const auto& [e1, c1] : c) {
             for (const auto& [e2, c2] : o.c) {
                 int exp = e1 + e2;
@@ -155,6 +167,7 @@ struct Series {
             return zero(trunc);
         Series s;
         s.trunc = trunc;
+        s.q_shift = q_shift;
         for (const auto& [e, v] : c)
             s.c[e] = v * f;
         return s;
@@ -163,10 +176,9 @@ struct Series {
     Series inverse() const {
         int m = minExp();
         if (m != 0) {
-            // f = q^m * h, h[0]!=0. 1/f = q^{-m} * (1/h)
-            // Handles m>0 (e.g. q) and m<0 (e.g. q^{-1} from previous inverse)
             Series h;
             h.trunc = trunc - m;
+            h.q_shift = Frac(0);
             if (h.trunc <= 0) h.trunc = 1;
             for (const auto& [e, v] : c) {
                 int newExp = e - m;
@@ -178,6 +190,7 @@ struct Series {
             Series invH = h.inverse();
             Series result;
             result.trunc = trunc;
+            result.q_shift = Frac(0) - q_shift;
             for (const auto& [e, v] : invH.c) {
                 int newExp = e - m;
                 if (newExp >= -invH.trunc)
@@ -190,6 +203,7 @@ struct Series {
             throw std::invalid_argument("Series::inverse: constant term zero");
         Series g;
         g.trunc = trunc;
+        g.q_shift = Frac(0) - q_shift;
         g.c[0] = Frac(1) / c0;
         for (int n = 1; n < trunc; ++n) {
             Frac sum(0);
@@ -233,6 +247,7 @@ struct Series {
         int absK = (k < 0) ? -k : k;
         Series s;
         s.trunc = trunc * absK;
+        s.q_shift = q_shift * Frac(k);
         for (const auto& [e, v] : c) {
             int newExp = e * k;
             if (newExp < s.trunc)
@@ -255,10 +270,28 @@ struct Series {
         return neg ? "⁻" + s : s;
     }
 
+    static std::string fracExpStr(const Frac& f) {
+        if (f.den == BigInt(1) && f.num.d.size() <= 1) {
+            int v = f.num.d.empty() ? 0 : static_cast<int>(f.num.d[0]);
+            if (f.num.neg) v = -v;
+            return expToUnicode(v);
+        }
+        return "^(" + f.str() + ")";
+    }
+
     std::string str(int maxTerms = 30) const {
         std::string oTerm = " + O(q" + expToUnicode(trunc) + ")";
-        if (c.empty())
+        std::string prefix;
+        if (!(q_shift == Frac(0))) {
+            prefix = "q" + fracExpStr(q_shift) + " * (";
+        }
+
+        if (c.empty()) {
+            if (!prefix.empty())
+                return prefix + "0" + oTerm + ")";
             return "0" + oTerm;
+        }
+
         std::string out;
         int count = 0;
         for (const auto& [e, v] : c) {
@@ -286,6 +319,8 @@ struct Series {
             ++count;
         }
         out += " + O(q" + expToUnicode(trunc) + ")";
+        if (!prefix.empty())
+            return prefix + out + ")";
         return out;
     }
 

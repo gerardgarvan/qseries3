@@ -27,6 +27,8 @@ inline Series sift(const Series& f, int n, int k, int T) {
 // k=0 entry stores the scalar leading coefficient (omitted when 1)
 inline std::vector<std::pair<int, Frac>> etamake(const Series& f, int T) {
     std::vector<std::pair<int, Frac>> result;
+    if (!(f.q_shift == Frac(0)))
+        result.push_back({-1, f.q_shift});
     Series g = f.truncTo(T);
     int me = g.minExp();
     Frac lead = g.coeff(me);
