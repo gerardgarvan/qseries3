@@ -325,30 +325,54 @@ struct Series {
 
     std::string str(int maxTerms = 30) const {
         std::string oTerm = " + O(q" + expToUnicode(trunc) + ")";
-        std::string prefix;
-        if (!(q_shift == Frac(0))) {
-            prefix = "q" + fracExpStr(q_shift) + " * (";
+
+        if (q_shift.isZero()) {
+            if (c.empty())
+                return "0" + oTerm;
+            std::string out;
+            int count = 0;
+            for (const auto& [e, v] : c) {
+                if (count >= maxTerms) break;
+                if (count > 0) {
+                    if (v < Frac(0))
+                        out += " - ";
+                    else
+                        out += " + ";
+                }
+                Frac av = v.abs();
+                bool showNeg = (count == 0 && v < Frac(0));
+                if (e == 0) {
+                    if (showNeg) out += "-";
+                    out += av.isOne() ? "1" : av.str();
+                } else {
+                    if (av.isOne()) {
+                        if (showNeg) out += "-";
+                    } else {
+                        if (showNeg) out += "-";
+                        out += av.str();
+                    }
+                    out += (e == 1) ? "q" : ("q" + expToUnicode(e));
+                }
+                ++count;
+            }
+            out += oTerm;
+            return out;
         }
 
-        if (c.empty()) {
-            if (!prefix.empty())
-                return prefix + "0" + oTerm + ")";
+        // Fractional q_shift: expanded term display
+        if (c.empty())
             return "0" + oTerm;
-        }
-
         std::string out;
         int count = 0;
         for (const auto& [e, v] : c) {
             if (count >= maxTerms) break;
+            Frac actual_exp = Frac(e) + q_shift;
             if (count > 0) {
-                if (v < Frac(0))
-                    out += " - ";
-                else
-                    out += " + ";
+                out += (v < Frac(0)) ? " - " : " + ";
             }
             Frac av = v.abs();
             bool showNeg = (count == 0 && v < Frac(0));
-            if (e == 0) {
+            if (actual_exp.isZero()) {
                 if (showNeg) out += "-";
                 out += av.isOne() ? "1" : av.str();
             } else {
@@ -358,13 +382,17 @@ struct Series {
                     if (showNeg) out += "-";
                     out += av.str();
                 }
-                out += (e == 1) ? "q" : ("q" + expToUnicode(e));
+                if (actual_exp.den == BigInt(1)) {
+                    int iexp = actual_exp.num.d.empty() ? 0 : static_cast<int>(actual_exp.num.d[0]);
+                    if (actual_exp.num.neg) iexp = -iexp;
+                    out += (iexp == 1) ? "q" : ("q" + expToUnicode(iexp));
+                } else {
+                    out += "q^(" + actual_exp.str() + ")";
+                }
             }
             ++count;
         }
-        out += " + O(q" + expToUnicode(trunc) + ")";
-        if (!prefix.empty())
-            return prefix + out + ")";
+        out += oTerm;
         return out;
     }
 

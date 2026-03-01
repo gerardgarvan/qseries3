@@ -219,14 +219,13 @@ fi
 skip "Block 24: collect — formatting only"
 
 # Block 25: findpoly on theta2/theta3 quotients (§4.5)
-# Requires adding series with different q-shifts — currently unsupported
-OUT25=$(run "x1 := theta2(q,100)^2/theta2(q^3,40)^2" \
-            "x2 := theta3(q,100)^2/theta3(q^3,40)^2" \
-            "x := x1 + x2" 2>&1)
-if echo "$OUT25" | grep -q "error"; then
-    fail "Block 25: findpoly (cannot add series with different q-shifts)"
+if run "x1 := theta2(q,100)^2/theta2(q^3,40)^2" \
+       "x2 := theta3(q,100)^2/theta3(q^3,40)^2" \
+       "x := x1 + x2" \
+       "findpoly(x, x, 3, 3)" | grep -q "X"; then
+    pass "Block 25: findpoly theta2/theta3 quotients"
 else
-    pass "Block 25: findpoly"
+    fail "Block 25: findpoly theta2/theta3 quotients"
 fi
 
 # Block 26: sift partition function (§5)
