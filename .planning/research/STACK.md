@@ -1,255 +1,265 @@
-# Technology Stack: Distribution Features (Docker Image + Install Script)
+# Technology Stack: Half-Integer Jacobi Exponents & q-Shift Arithmetic Fixes
 
-**Project:** q-series REPL — Docker image creation and one-liner install scripts
-**Researched:** 2026-02-28
-**Overall confidence:** HIGH (Docker and GitHub Releases are mature, well-documented ecosystems)
+**Project:** q-series REPL — Milestone: Fix 3 Maple checklist failures + 3 dependent exercises
+**Researched:** 2026-03-01
+**Overall confidence:** HIGH (all changes are internal to existing types; no new dependencies)
+
+---
 
 ## Executive Summary
 
-The qseries binary is already statically linked (~1.5MB), which makes distribution trivially simple. The Docker image uses a two-stage build producing a ~3.5MB image. Install scripts are self-contained shell/PowerShell scripts that download pre-built binaries from GitHub Releases. No new C++ dependencies are needed. The only additions are DevOps files: a Dockerfile, two install scripts, and a GitHub Actions workflow.
+All three checklist failures (Blocks 13, 14, 25) and three dependent exercise gaps (Exercises 4/b(q), 9/N(q), 10/findpoly) trace to two missing capabilities in the existing codebase:
+
+1. **Series square root** — needed to reconstruct JAC factors with half-integer exponents
+2. **q-shift normalization** — needed so series with integer-offset q-shifts can be added
+
+No new types, no new files, no external dependencies. All fixes are extensions to `series.h` and `convert.h`, plus a new `Frac::isqrt()`-style helper. The existing `JacFactor = std::tuple<int, int, Frac>` already stores Frac exponents — the limitation is entirely in the reconstruction (`jac2series_impl`) and display (`jac2prod`) code that truncates non-integer exponents to zero.
 
 ---
 
-## Docker Stack
+## Recommended Stack Changes
 
-### Base Images
+### Core: series.h Extensions
 
-| Stage | Image | Tag | Size | Why |
-|-------|-------|-----|------|-----|
-| Build | `gcc` | `14-bookworm` | ~1.4 GB | Official GCC image with C++20 support. Debian Bookworm base provides stable `g++ -static` support. Pin to `14` not `latest` for reproducible builds. |
-| Runtime | `scratch` | (empty) | 0 B | The qseries binary is fully static (`-static` flag), needs no libc, no CA certs, no timezone data. `scratch` is the correct choice. |
+| Addition | Type | Purpose | Why |
+|----------|------|---------|-----|
+| `Series::sqrt()` | New method | Formal power series square root via coefficient recurrence | Required by `jac2series_impl` to handle JAC exponents with den=2. The recurrence g[n] = (f[n] - Σ g[j]g[n-j]) / (2g[0]) is exact over Q when f[0] is a perfect rational square. |
+| `Series::nthroot(int n)` | New method | Generalized n-th root (optional, sqrt is the urgent case) | Future-proofing for JAC exponents with den=3,4,... Not needed for current failures but trivial to add once sqrt works. |
+| `Series::normalize_q_shift()` | New method | Absorb integer part of q_shift into coefficient map | Fixes Block 25 and Exercise 10. When q_shift has integer part k, shift all indices by k and set q_shift to fractional remainder. |
+| `operator+` update | Modification | Call normalize before shift comparison | After normalization, series with q_shift=-1 and q_shift=0 become both q_shift=0, enabling addition. |
 
-**Why `scratch` over `distroless/static-debian12`?**
-- qseries is a REPL that does math. It makes no network calls, reads no TLS certificates, needs no timezone data.
-- `distroless` adds ~9MB for features we don't use.
-- `scratch` + static binary = smallest possible image (~3.5MB total).
+### Core: frac.h Extension
 
-**Why `gcc:14-bookworm` over Alpine musl build?**
-- The existing codebase compiles with glibc's `g++ -static`. Alpine uses musl libc, which could introduce subtle behavioral differences.
-- The `gcc` official image matches the project's existing compile toolchain exactly.
-- Build stage size doesn't matter (it's discarded in multi-stage).
+| Addition | Type | Purpose | Why |
+|----------|------|---------|-----|
+| `Frac::is_perfect_square()` | New method | Check if num and den are both perfect squares | Guard for Series::sqrt() — the constant term must have a rational square root. |
+| `Frac::rational_sqrt()` | New method | Compute exact sqrt when possible | Returns Frac(sqrt(num), sqrt(den)) after verifying both are perfect squares. |
 
-### Dockerfile Pattern
+### Core: bigint.h Extension
 
-```dockerfile
-FROM gcc:14-bookworm AS builder
-WORKDIR /build
-COPY src/ src/
-COPY Makefile .
-RUN g++ -std=c++20 -O2 -static -Wall -Wextra -o qseries src/main.cpp
+| Addition | Type | Purpose | Why |
+|----------|------|---------|-----|
+| `BigInt::isqrt()` | New method | Integer square root via Newton's method | Required by Frac::rational_sqrt(). Base-10^9 Newton iteration: x_{k+1} = (x_k + n/x_k) / 2 until convergence. |
+| `BigInt::is_perfect_square()` | New method | Check isqrt(n)^2 == n | Guard for rational sqrt. |
 
-FROM scratch
-COPY --from=builder /build/qseries /qseries
-ENTRYPOINT ["/qseries"]
+### Convert: convert.h Modifications
+
+| Change | Type | Purpose | Why |
+|--------|------|---------|-----|
+| `jac2series_impl` fractional exponent handling | Modification | Handle exp with den=2 via sqrt | Currently: `int ex = 0; if (exp.den == BigInt(1)) ...` silently drops non-integer exponents. Fix: decompose p/2 as (f^p)^(1/2) or f.sqrt().pow(p). |
+| `jac2prod` fractional display | Modification | Format `^(13/2)`, `√` notation | Currently: `int ex = 0; if (exp.den == BigInt(1)) ...` skips fractional exponents entirely. |
+| `jacprodmake` half-integer allowance | Verification | Confirm decomposition already produces Frac x[a] | The existing logic uses Frac arithmetic throughout — x[a] = e[a] where e[a] = -prodmake_result[a]. If prodmake returns non-integer a[n], the decomposition naturally produces half-integer x[a]. Needs testing, not code change. |
+
+---
+
+## Detailed Algorithm: Series Square Root
+
+Given f = Σ f[n] q^n with f[0] a perfect rational square, compute g = f^(1/2):
+
+```
+g[0] = rational_sqrt(f[0])
+for n = 1 to T-1:
+    sum = Σ_{j=1}^{n-1} g[j] * g[n-j]
+    g[n] = (f[n] - sum) / (2 * g[0])
 ```
 
-Key decisions:
-- **Direct `g++` call, not `make`**: The Dockerfile doesn't need the full Makefile (demo files, test targets). One compilation command is clearer and more reproducible.
-- **`ENTRYPOINT` not `CMD`**: Users run `docker run -it qseries` and land directly in the REPL. No shell needed (scratch has none anyway).
-- **`-it` required**: The REPL reads stdin. Docker docs confirm interactive containers need `-it` flags.
-- **No `.dockerignore` needed initially**: The build context is small (src/ is header files + main.cpp). If the repo grows, add one later.
+**Correctness:** g² = f holds coefficient-by-coefficient. The n-th coefficient of g² is:
+`Σ_{j=0}^{n} g[j]g[n-j] = 2*g[0]*g[n] + Σ_{j=1}^{n-1} g[j]g[n-j]`
+Setting this equal to f[n] and solving for g[n] yields the recurrence.
 
-### Docker Image Size Estimate
+**Complexity:** O(T²) Frac operations — same as Series multiplication. No issue for T ≤ 500.
 
-| Component | Size |
-|-----------|------|
-| scratch base | 0 B |
-| qseries static binary | ~1.5 MB |
-| **Total image** | **~1.5 MB** |
-
-### Docker Hub / GHCR Hosting
-
-| Option | Recommendation | Why |
-|--------|---------------|-----|
-| GitHub Container Registry (ghcr.io) | **Use this** | Free for public repos, integrated with GitHub Actions, no separate account needed |
-| Docker Hub | Skip | Requires separate account, rate limits on free tier, unnecessary for a niche academic tool |
-
-Image name: `ghcr.io/gerardgarvan/qseries:latest` plus version tags like `:v2.0`.
+**Edge cases:**
+- f[0] = 0: not a valid input (leading coefficient must be nonzero)
+- f[0] = 1: g[0] = 1, simplifies to g[n] = (f[n] - Σ g[j]g[n-j]) / 2
+- f[0] not a perfect square: throw runtime_error (not representable in exact Q arithmetic)
+- q_shift handling: result.q_shift = f.q_shift / Frac(2)
 
 ---
 
-## Install Script Stack
+## Detailed Algorithm: q-Shift Normalization
 
-### Binary Naming Convention
+Given Series s with q_shift = p/d (a Frac):
 
-Use the standard pattern: `qseries-{os}-{arch}{ext}`
+```
+int_part = floor(p/d)    // integer part
+frac_part = p/d - int_part
 
-| Platform | Binary Name | Notes |
-|----------|-------------|-------|
-| Linux x86_64 | `qseries-linux-amd64` | Static binary, runs on any Linux distro |
-| Linux ARM64 | `qseries-linux-arm64` | For ARM servers/Raspberry Pi |
-| macOS x86_64 | `qseries-darwin-amd64` | Intel Macs |
-| macOS ARM64 | `qseries-darwin-arm64` | Apple Silicon Macs |
-| Windows x86_64 | `qseries-windows-amd64.exe` | Cross-compiled via MinGW (already supported in build.sh) |
+new_coefficients = {}
+for each (exponent e, coefficient c) in s.c:
+    new_coefficients[e + int_part] = c
 
-No `.tar.gz` wrapping — the binary is a single file (~1.5MB), small enough to download directly. Tarballs add complexity for zero benefit at this size.
-
-### Hosting: GitHub Releases
-
-| Aspect | Decision | Why |
-|--------|----------|-----|
-| Where to host binaries | GitHub Releases | Free, unlimited bandwidth for public repos, versioned, integrates with `gh` CLI and API |
-| Release naming | `v2.0`, `v2.1`, etc. | Matches git tags. Semantic versioning. |
-| Asset upload | GitHub Actions `softprops/action-gh-release` | Automates uploading binaries on tag push |
-
-**Why NOT raw repo files or a separate CDN:**
-- GitHub Releases is the standard for open-source binary distribution
-- Provides stable download URLs: `https://github.com/gerardgarvan/qseries3/releases/download/v2.0/qseries-linux-amd64`
-- Built-in checksums (SHA256) via release notes
-- No hosting costs, no CDN configuration
-
-### Unix Install Script (`install.sh`)
-
-**Pattern:** `curl -fsSL https://raw.githubusercontent.com/gerardgarvan/qseries3/main/install.sh | bash`
-
-Core logic:
-1. Detect OS via `uname -s` → `linux` or `darwin`
-2. Detect arch via `uname -m` → `amd64` or `arm64`
-3. Fetch latest release tag from GitHub API (or accept `--version` arg)
-4. Download binary with `curl -fsSL` from GitHub Releases
-5. Install to `~/.local/bin/qseries` (no sudo required)
-6. Warn if `~/.local/bin` is not in `$PATH`
-
-**Key design choices:**
-- **`~/.local/bin` as default**: Follows XDG convention, no root required. Falls back to `/usr/local/bin` with sudo if user passes `--global`.
-- **No `jq` dependency**: Parse GitHub API JSON with `grep` + `cut` (the response format is stable and simple).
-- **POSIX sh, not bash**: Use `#!/bin/sh` for maximum compatibility (Alpine, BusyBox, etc.).
-- **Verify with `sha256sum`/`shasum`**: Download the checksum file from the release and verify. Skip if tools aren't available (warn but don't fail).
-
-### Windows Install Script (`install.ps1`)
-
-**Pattern:** `irm https://raw.githubusercontent.com/gerardgarvan/qseries3/main/install.ps1 | iex`
-
-(`irm` = `Invoke-RestMethod`, `iex` = `Invoke-Expression` — standard PowerShell shorthand)
-
-Core logic:
-1. Detect architecture via `$env:PROCESSOR_ARCHITECTURE`
-2. Query GitHub API for latest release
-3. Download `qseries-windows-amd64.exe` with `Invoke-WebRequest`
-4. Place in `$env:LOCALAPPDATA\qseries\` and add to user PATH
-5. Print success message with usage instructions
-
-**Key design choices:**
-- **`$env:LOCALAPPDATA\qseries\`**: Standard Windows per-user app location. No admin required.
-- **User PATH modification**: `[Environment]::SetEnvironmentVariable("Path", ..., "User")` — persists across sessions without admin.
-- **No Scoop/Chocolatey/WinGet**: Overengineering for a niche tool. A 1.5MB binary doesn't need a package manager. Add later only if demand warrants.
-
----
-
-## Cross-Platform Build (GitHub Actions)
-
-### CI/CD Workflow
-
-The GitHub Actions workflow builds binaries for all platforms on each tagged release.
-
-| Runner | Target | Compiler | Flags | Notes |
-|--------|--------|----------|-------|-------|
-| `ubuntu-24.04` | linux-amd64 | `g++-13` | `-std=c++20 -O2 -static` | Pin g++-13 explicitly (GCC 14 had C++20 libstdc++ issues on Ubuntu 24.04) |
-| `ubuntu-24.04` + QEMU | linux-arm64 | Cross-compiler | `-std=c++20 -O2 -static` | Via `aarch64-linux-gnu-g++` package or `uraimo/run-on-arch-action` |
-| `macos-latest` (arm64) | darwin-arm64 | `clang++` | `-std=c++20 -O2` | macOS doesn't support `-static`. Binary links dynamically to libSystem (Apple requirement). Still works — libSystem is always present. |
-| `macos-13` (x86_64) | darwin-amd64 | `clang++` | `-std=c++20 -O2` | Intel Mac runner. Same dynamic linking caveat. |
-| `ubuntu-24.04` | windows-amd64 | `x86_64-w64-mingw32-g++` | `-std=c++20 -O2 -static` | Cross-compile Windows binary on Linux. Already proven in existing `build.sh`. |
-
-### macOS Static Linking Caveat
-
-**Apple does not support `-static` for user programs.** All macOS binaries must dynamically link `libSystem.dylib` (the kernel interface). This is a hard platform constraint, not a toolchain issue.
-
-**Impact on qseries:** Minimal. The binary has zero external dependencies beyond the C++ standard library. On macOS, `libc++.dylib` and `libSystem.dylib` are always present (they ship with the OS). The binary will work on any macOS version with C++20 runtime support (macOS 13+).
-
-**For the install script:** This means the macOS binary is not portable across arbitrary systems like the Linux static binary is, but that's fine — macOS users always have the required dylibs.
-
-### GitHub Actions Key Configuration
-
-| Action | Version | Purpose |
-|--------|---------|---------|
-| `actions/checkout` | `v4` | Check out repo |
-| `softprops/action-gh-release` | `v2` | Create release and upload binaries |
-| `docker/login-action` | `v3` | Authenticate to GHCR for Docker push |
-| `docker/build-push-action` | `v6` | Build and push Docker image |
-
-### Trigger Strategy
-
-```yaml
-on:
-  push:
-    tags: ['v*']
+s.c = new_coefficients
+s.q_shift = frac_part     // always in [0, 1) after normalization
 ```
 
-Tag-based releases only. No CI on every push (the project doesn't have a test suite that runs in CI yet). When a version tag is pushed, the workflow:
-1. Builds all platform binaries in parallel (matrix strategy)
-2. Creates a GitHub Release with all binaries attached
-3. Builds and pushes Docker image to GHCR
+**Floor for Frac:** `floor(p/d) = p / d` using integer division rounding toward -∞:
+- If p ≥ 0: floor = p.num / p.den (integer division)
+- If p < 0: floor = -((-p.num + p.den - 1) / p.den) (ceiling of |p|/d, negated)
+
+**When to normalize:**
+- After multiplication (q_shift = a.q_shift + b.q_shift can exceed 1)
+- After division/inverse (q_shift = a.q_shift - b.q_shift can be negative)
+- After pow (q_shift = a.q_shift * n can grow arbitrarily)
+- Before addition (to make shifts compatible)
+
+**Tradeoff:** Normalize eagerly (in *, /, pow) vs. lazily (only before +). Eager is safer — prevents q_shift from growing and makes addition always work without explicit user action. The cost is negligible: one Frac floor operation + coefficient map rebuild.
+
+**Recommendation: Eager normalization.** Apply in operator*, operator/, inverse(), pow(), subs_q(). This makes q_shift always in [0, 1), and addition between compatible series "just works."
 
 ---
 
-## Makefile Integration
+## Detailed Fix: jac2series_impl Fractional Exponents
 
-### New Targets
+Current code (lines 353-361 of convert.h):
+```cpp
+int ex = 0;
+if (exp.den == BigInt(1) && exp.num.d.size() == 1 && exp.num.d[0] <= 1000)
+    ex = exp.num.neg ? -static_cast<int>(exp.num.d[0]) : static_cast<int>(exp.num.d[0]);
+if (ex > 0) { /* pow */ } else if (ex < 0) { /* inv then pow */ }
+```
 
-| Target | Command | Purpose |
-|--------|---------|---------|
-| `docker` | `docker build -t qseries .` | Build Docker image locally |
-| `docker-run` | `docker run -it qseries` | Run REPL in container |
+This silently ignores non-integer exponents (ex stays 0, factor is skipped).
 
-These integrate with the existing Makefile without modifying any existing targets. The `all` target remains unchanged.
+**Fix approach:**
+1. Check if `exp.den == BigInt(2)` (half-integer case)
+2. Extract integer numerator p from exp = p/2
+3. Compute `fac.sqrt().pow(p)` if p > 0, or `fac.inverse().sqrt().pow(-p)` if p < 0
+4. General case: `fac.nthroot(den).pow(num)` (den extracted as int from exp.den)
 
-### No Changes to Existing Build
-
-The Dockerfile calls `g++` directly, not `make`. The install scripts download pre-built binaries. Neither requires changes to the existing Makefile, `build.sh`, or source code.
+For the Slater identity (Block 13), the exponents are 13/2 and -1/2, both with den=2.
 
 ---
 
-## What NOT to Add
+## Block 25 Trace: Why q-Shift Normalization Fixes It
 
-| Temptation | Why Skip It |
-|------------|-------------|
-| Homebrew formula | Requires maintaining a tap repo, approval process. For a niche academic tool, `curl \| bash` is simpler and works today. Add only if there's demand. |
-| Scoop/Chocolatey/WinGet packages | Same reasoning. Package manager integration is maintenance overhead with little payoff for a specialized tool. |
-| Nix flake | Niche within niche. Skip. |
-| Flatpak/Snap/AppImage | These are for GUI apps with desktop integration. A CLI REPL doesn't benefit. |
-| Multi-arch Docker image | `linux/amd64` only for now. ARM Docker users are rare enough that building multi-arch is unnecessary complexity. The install script covers ARM Linux natively. |
-| `cosign` image signing | Nice for enterprise security. Overkill for an academic math tool. |
-| Auto-update mechanism | The binary is 1.5MB. Users can re-run the install script. No need for a built-in updater. |
+```
+theta2(q, 100)         → q_shift = 1/4, coeffs at 0, 2, 6, 12, ...
+theta2(q, 100)^2       → q_shift = 1/2 (via multiplication: 1/4 + 1/4)
+theta2(q^3, 40)        → q_shift = 3/4, coeffs at 0, 6, 18, ...
+theta2(q^3, 40)^2      → q_shift = 3/2 (via multiplication: 3/4 + 3/4)
+x1 = t2(q)^2 / t2(q^3)^2  → q_shift = 1/2 - 3/2 = -1  [INTEGER!]
+
+theta3(q, 100)^2       → q_shift = 0
+theta3(q^3, 40)^2      → q_shift = 0
+x2 = t3(q)^2 / t3(q^3)^2  → q_shift = 0
+
+x1 + x2 → FAILS: q_shift -1 ≠ 0
+```
+
+After normalization of x1: q_shift -1 → absorb into coefficients (shift all indices by -1), q_shift becomes 0. Now x1 + x2 works.
+
+Similarly for the `a` computation in Block 25:
+```
+theta2(q)*theta2(q^3)  → q_shift = 1/4 + 3/4 = 1  [INTEGER!]
+theta3(q)*theta3(q^3)  → q_shift = 0
+
+After normalizing the theta2 product: q_shift 1 → absorbed, becomes 0.
+Addition now works.
+```
+
+And for `c^3` where `c = 3*q^(1/3)*etaq(3,T)^3/etaq(1,T)`:
+```
+c has q_shift = 1/3
+c^3 has q_shift = 1  [INTEGER!]
+After normalization: q_shift becomes 0.
+```
+
+**All q-shift issues in Block 25 reduce to integer offsets after arithmetic.** Normalization handles them all.
+
+---
+
+## Exercise Fixes Enabled by Stack Changes
+
+| Exercise | Current Status | Fix | Stack Change Used |
+|----------|---------------|-----|-------------------|
+| 4 (b(q)) | Partial — ω unsupported | Define `bq := etaq(1,T)^3 / etaq(3,T)` directly (known eta product result) | None — workaround using known answer |
+| 6 (relations) | Partial — depends on b(q) | Use b(q) workaround from Exercise 4 | None |
+| 9 (N(q)) | Partial — findnonhomcombo infeasible | Use larger truncation; may need to accept partial result | None — performance issue, not missing capability |
+| 10 (findpoly) | Blocked — q-shift addition | After q-shift normalization, compute m = θ₃²/θ₃(q³)² and y = c³/a³, then findpoly(x, y, ...) | q-shift normalization |
 
 ---
 
 ## Alternatives Considered
 
-| Category | Recommended | Alternative | Why Not |
-|----------|-------------|-------------|---------|
-| Docker runtime base | `scratch` | `distroless/static-debian12` | qseries makes no network calls, needs no CA certs. scratch saves ~9MB and is simpler. |
-| Docker build base | `gcc:14-bookworm` | `alpine:3.20` + `build-base` | Alpine uses musl; project is tested with glibc. Avoid introducing a new libc variant. |
-| Binary hosting | GitHub Releases | S3/R2 + CDN | Unnecessary infrastructure for a free open-source tool. GitHub Releases has unlimited bandwidth. |
-| Install approach | `curl \| bash` script | Homebrew/Scoop | Scripts are zero-overhead. Package managers require ongoing maintenance of formula/manifests. |
-| CI | GitHub Actions | GitLab CI / CircleCI | Repo is on GitHub. Native integration wins. |
-| Container registry | GHCR (ghcr.io) | Docker Hub | Free, no rate limits for public repos, same GitHub auth. |
-| Windows cross-compile | MinGW on Linux runner | MSVC on Windows runner | MinGW cross-compile is already proven in `build.sh`. Windows runners are slower and more expensive (2x minutes). |
+| Decision | Chosen | Alternative | Why Not |
+|----------|--------|-------------|---------|
+| Series sqrt algorithm | Coefficient recurrence | Newton iteration on series | Newton converges quadratically but requires more complex code; recurrence is O(T²) either way and simpler |
+| q-shift normalization timing | Eager (in *, /, pow) | Lazy (only in +) | Eager prevents accumulation of large integer offsets and makes all code paths consistent |
+| Half-integer scope | den=2 only initially | General rational exponents | Only den=2 appears in the reference document; general case can be added later via nthroot |
+| BigInt isqrt algorithm | Newton's method in base 10^9 | Binary search | Newton converges in O(log(digits)) iterations; binary search is O(digits × log(digits)) |
+| b(q) computation | Direct eta product formula | Algebraic number support for ω | Adding algebraic extension fields (Z[ω]) would require a new number type, new arithmetic, new parser support — massive scope for one exercise |
 
 ---
 
-## Version Pinning Summary
+## No New Dependencies
 
-| Tool/Image | Pin To | Why |
-|------------|--------|-----|
-| `gcc` Docker image | `14-bookworm` | Matches project's C++20 needs. Don't use `latest` — major GCC version bumps can break builds. |
-| `ubuntu` runner | `ubuntu-24.04` | Explicit over `ubuntu-latest` to avoid surprise migrations. |
-| `macos` runner | `macos-latest` + `macos-13` | `macos-latest` = ARM64 (Apple Silicon), `macos-13` = last Intel runner. |
-| `actions/checkout` | `v4` | Current stable. |
-| `softprops/action-gh-release` | `v2` | Current stable. |
-| `docker/build-push-action` | `v6` | Current stable. |
-| `g++` on Ubuntu | `g++-13` | Explicit install to avoid GCC 14 libstdc++ issues on Ubuntu 24.04. |
+All changes use existing types:
+- `BigInt` for integer square root
+- `Frac` for rational square root
+- `Series` for formal power series sqrt
+- `std::map<int, Frac>` for coefficient storage (unchanged)
+- `JacFactor = std::tuple<int, int, Frac>` for JAC factors (unchanged — already uses Frac exponent)
+
+**Zero new headers. Zero new structs. Zero external packages.**
+
+---
+
+## Implementation Ordering
+
+```
+1. BigInt::isqrt() + is_perfect_square()     [bigint.h, ~20 lines]
+   └─ test: isqrt(1000000000000000000) = 1000000000
+   
+2. Frac::rational_sqrt() + is_perfect_square()  [frac.h, ~15 lines]
+   └─ test: Frac(9,4).rational_sqrt() = Frac(3,2)
+   
+3. Series::sqrt()                            [series.h, ~20 lines]
+   └─ test: (1+q)^2 → sqrt → should give 1+q
+
+4. Series::normalize_q_shift()               [series.h, ~15 lines]
+   └─ test: {q_shift=-1, c[0]=1} → {q_shift=0, c[-1]=1}
+
+5. Eager normalization in *, /, pow, inverse  [series.h, ~8 lines per method]
+   └─ test: theta2(q,20)^2 / theta2(q^3,10)^2 has q_shift=0
+
+6. jac2series_impl half-integer support       [convert.h, ~15 lines]
+   └─ test: JAC(0,14,∞)^(13/2) reconstructs to expected series
+
+7. jac2prod fractional display                [convert.h, ~10 lines]
+   └─ test: exponent 1/2 displays as √, exponent 13/2 displays as ^(13/2)
+
+8. Verify jacprodmake produces half-integer results  [testing only]
+   └─ test: Block 13 Slater series → JAC(0,14)^(13/2) output
+```
+
+Steps 1-3 are the sqrt chain (bottom-up dependency).
+Steps 4-5 are the q-shift chain (independent of sqrt).
+Steps 6-7 require step 3.
+Step 8 requires steps 6-7.
+
+**Steps 1-3 and 4-5 can be developed in parallel.**
+
+---
+
+## Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| prodmake returns exact half-integers for Slater series | LOW risk (algorithm is exact over Q) | HIGH — if a[n] aren't exact half-integers, jacprodmake can't identify the product | Verify with explicit computation: compute prodmake for the Block 13 series and inspect exponents |
+| Coefficient index shift in normalize produces negative indices | MEDIUM — series already supports negative keys in std::map | LOW — map handles negative keys naturally | Test with theta2 products that produce q_shift = -1 |
+| sqrt of non-perfect-square constant term | LOW — JAC(a,b,∞) series always start with 1 | MEDIUM — throws at runtime | Guard with is_perfect_square() check + clear error message |
+| Performance regression from eager normalization | LOW — one map rebuild per operation | LOW — negligible compared to O(T²) multiply | Profile if any test becomes noticeably slower |
 
 ---
 
 ## Sources
 
-| Source | Confidence | URL |
-|--------|------------|-----|
-| Docker official C++ multi-stage guide | HIGH | https://docs.docker.com/guides/cpp/multistage |
-| GCC Docker Hub official image | HIGH | https://hub.docker.com/_/gcc |
-| Apple static linking documentation | HIGH | https://developer.apple.com/library/archive/qa/qa1118/_index.html |
-| GitHub Actions runner images | HIGH | https://github.com/actions/runner-images |
-| GitHub Actions ubuntu-latest changelog | HIGH | https://github.blog/changelog/2024-09-25-actions-new-images-and-ubuntu-latest-changes/ |
-| scratch vs distroless comparison (2026) | MEDIUM | https://oneuptime.com/blog/post/2026-02-08-how-to-choose-between-scratch-and-distroless-base-images/view |
-| install.sh patterns | MEDIUM | Community gists and release-lab/install repo |
-| softprops/action-gh-release | HIGH | https://github.com/softprops/action-gh-release |
+- **Block 13-14 expected output:** `qseriesdoc.md` lines 526-530 — `JAC(0,14,∞)^(13/2)` with `√JAC(7,14,∞)`
+- **Block 25 Maple commands:** `qseriesdoc.md` lines 916-926 — theta2/theta3 quotients + findpoly
+- **Formal power series square root algorithm:** Standard result in combinatorics/computer algebra — coefficient recurrence from g² = f
+- **q-shift design:** Existing `series.h` q_shift field (line 15) — already Frac-typed, just missing normalization
+- **JacFactor type:** `convert.h` line 329 — `std::tuple<int, int, Frac>` already supports fractional exponents in the type
+- **Phase 62 verification:** `.planning/phases/62-maple-checklist/62-VERIFICATION.md` — documents all three failures as "known limitations"
+
+**Confidence:** HIGH — all algorithms are well-known, all types already exist, all changes are local to 3 files.

@@ -1,442 +1,329 @@
-# Domain Pitfalls — Distribution Features (Docker Image + Install Script)
+# Domain Pitfalls — Half-Integer Jacobi Exponents & Q-Shift Arithmetic Fixes
 
-**Domain:** Adding Docker image and install script distribution to an existing zero-dependency C++20 REPL
-**Researched:** 2026-02-28
-**Overall confidence:** HIGH (verified with official docs, Docker docs, Apple Developer docs, community experience)
+**Domain:** Adding half-integer Jacobi product exponents, mixed q-shift addition, and double-sum support to existing C++20 q-series REPL
+**Researched:** 2026-03-01
+**Overall confidence:** HIGH (verified against codebase, reference doc qseriesdoc.md, and Maple output)
 
 ---
 
 ## Critical Pitfalls
 
-Mistakes that cause broken installs, non-functional Docker containers, or security vulnerabilities.
+Mistakes that cause silent wrong answers, crashes, or require multi-file rewrites.
 
 ---
 
-### Pitfall 1: macOS Does Not Support Fully Static Binaries
+### Pitfall 1: `jac2prod` and `jac2series_impl` Silently Discard Fractional Exponents
 
-**What goes wrong:** Using `-static` on macOS produces a binary that either fails to link or is killed on execution. On Apple Silicon (arm64), the XNU kernel's Mach-O loader explicitly rejects static binaries.
+**What goes wrong:** Both `jac2prod` (display) and `jac2series_impl` (series reconstruction) extract `int ex` from the Frac exponent with a guard `exp.den == BigInt(1)`. When the exponent is 13/2 or 1/2, this check fails and `ex` stays 0. The factor is silently skipped — no error, no warning, just wrong output.
 
-**Why it happens:** Apple does not guarantee binary compatibility at the kernel syscall level. All macOS programs must dynamically link to `libSystem.dylib` (which wraps libc, libpthread, etc.). Apple's official documentation (QA1118) states: "Apple does not support statically linked binaries on Mac OS X. A statically linked binary assumes binary compatibility at the kernel syscall interface, and we do not make any guarantees on that front." On arm64/Apple Silicon, the kernel enforces this — static executables are killed with `SIGKILL`.
+**Where it is:**
+
+- `convert.h:354` — `jac2series_impl`: `if (exp.den == BigInt(1) && exp.num.d.size() == 1 && exp.num.d[0] <= 1000)` → extracts int, else ex=0 → factor is identity
+- `convert.h:438` — `jac2prod`: same pattern, `if (exp.den == BigInt(1) ...)` → ex=0 → `continue` skips the factor
 
 **Consequences:**
-- The build command `g++ -std=c++20 -O2 -static -o qseries main.cpp` that works on Linux **will fail on macOS**
-- x86_64 macOS: binary may compile but is officially unsupported and may break on OS updates
-- arm64 macOS: binary is killed immediately on execution
-- Users or CI running on macOS get confusing build failures or runtime crashes
+- `jac2prod(jp)` for Slater (46) shows nothing or a partial product — the 13/2 and 1/2 exponents vanish
+- `jac2series(jp, 500)` reconstructs the wrong series — missing factors means coefficients are wrong
+- No error is thrown, so users trust the output
 
 **Prevention:**
-1. On macOS, omit `-static` entirely — the resulting binary will dynamically link to system `libSystem.dylib` but nothing else (no external dependencies to worry about since the project has zero deps)
-2. In the Makefile, detect the OS and conditionally set `LDFLAGS`:
-   ```makefile
-   UNAME_S := $(shell uname -s)
-   ifeq ($(UNAME_S),Darwin)
-       LDFLAGS =
-   else
-       LDFLAGS = -static
-   endif
-   ```
-3. In the install script, do NOT pass `-static` when `uname` reports `Darwin`
-4. Document in README that macOS binaries are dynamically linked to system libraries (this is expected and fine)
+1. In `jac2prod`: display fractional exponents using `^(num/den)` notation. E.g., `JAC(0,14,∞)^(13/2)`. For exponent 1/2, display as `√JAC(...)` or `JAC(...)^(1/2)`.
+2. In `jac2series_impl`: implement `Series::pow(Frac)` for half-integer exponents, or decompose JAC(a,b)^(1/2) into its constituent (q^a;q^b)^(1/2) factors and use the identity `f^(1/2) = exp(1/2 · log f)` via formal power series logarithm.
+3. Alternative for `jac2series_impl`: extract numerator and denominator separately. For exponent p/q, compute `fac^p` then take the q-th root (via Newton iteration on formal power series).
 
-**Detection:** CI builds on macOS runners will fail or produce killed binaries if `-static` is passed.
-**Severity:** CRITICAL — blocks macOS distribution entirely if not handled
-**Phase:** Docker/install script phase — must be addressed in build matrix and install script logic
+**Detection:** Any `JacFactor` with `exp.den != BigInt(1)` that reaches `jac2prod` or `jac2series_impl` will be silently dropped.
+
+**Severity:** CRITICAL — silent wrong output, no error thrown
+**Phase:** Half-integer Jacobi exponents phase (Task 1: display, Task 2: series reconstruction)
 
 ---
 
-### Pitfall 2: Docker Container Lacks TTY — REPL Hangs or Crashes
+### Pitfall 2: `jacprodmake` Decomposition Cannot Produce Fractional x[a] Values
 
-**What goes wrong:** Running `docker run qseries` (without `-it` flags) causes the REPL to either hang waiting for input, produce no output, or crash because `tcgetattr()` fails on a non-TTY stdin.
+**What goes wrong:** The jacprodmake algorithm decomposes prodmake exponents e[n] into JAC(a,b) factors by assigning `x[a] = e[a]` directly. Since prodmake always returns integer a[n], and e[n] = -a[n], all x[a] values are integers. But Block 13 (Slater 46) needs JAC(0,14)^(13/2) and JAC(7,14)^(1/2) — half-integer exponents that cannot arise from the current algorithm.
 
-**Why it happens:** Docker containers don't allocate a pseudo-TTY by default. The qseries REPL uses `termios.h` functions (`tcgetattr`, `tcsetattr`) to enter raw mode for tab completion and arrow key navigation. Without a TTY, these calls fail. The REPL also checks `stdin_is_tty()` (`isatty(fileno(stdin))`) which returns false in a bare container.
+**Why it happens:** The mathematical issue is subtle. For a JAC factor with `a > 0`, `JAC(a,b)^e` contributes exponent `e` to residues `a`, `b-a`, and `b` (mod b). When `2a = b` (the middle residue), `JAC(b/2, b)^e = (q^{b/2};q^b)^{2e} (q^b;q^b)^e` — note the doubling for the middle element because `a = b-a`. The current code assigns `x[b/2] = e[b/2]`, but `JAC(b/2, b)^{x[b/2]}` contributes `2·x[b/2]` to the prodmake exponent at residue `b/2`. So `x[b/2]` should be `e[b/2] / 2`, which is fractional when `e[b/2]` is odd.
+
+**Where it is:** `convert.h:395-408` — the decomposition loop handles `b % 2 == 0` case with `x[half] = e[half]` but doesn't account for the doubling that JAC(b/2, b) produces at residue b/2.
 
 **Consequences:**
-- `docker run qseries` with no flags: REPL detects non-TTY stdin, falls into script mode (reads stdin line-by-line), then exits immediately since stdin is empty
-- Users unfamiliar with Docker (mathematicians!) think the tool is broken
-- If the REPL doesn't gracefully handle `tcgetattr` failure, it could crash or enter an undefined state
+- Block 13 returns empty result (verification `recon == f` at line 422 fails)
+- Exercise 5 happens to have modulus 20 with all even-residue exponents, so it works by accident
 
 **Prevention:**
-1. In `README.md` and Dockerfile, prominently document: `docker run -it qseries`
-2. In the Docker image's `ENTRYPOINT` or a wrapper script, detect missing TTY and print a helpful error:
-   ```bash
-   if [ ! -t 0 ]; then
-     echo "Error: qseries is interactive. Run with: docker run -it qseries"
-     exit 1
-   fi
-   ```
-3. Verify that the REPL's `RawModeGuard` constructor gracefully handles `tcgetattr` returning -1 (it currently does — sets `active = false`)
-4. Consider supporting `docker run qseries <<< "etaq(0,20)"` for non-interactive single-expression mode (script mode already handles this)
-5. Set `ENTRYPOINT ["/usr/local/bin/qseries"]` (exec form) in Dockerfile so signals propagate correctly
+1. Fix the decomposition: for `a = b/2`, set `x[a] = e[a] / 2` (since JAC(a,b) contributes 2·x[a] to residue a when a = b-a)
+2. For `a = 0`, `JAC(0,b)^e` contributes `e` to residue 0 only. So `x[0] = e[b] - Σ_{a>0} x[a]` (current formula is correct IF the other x[a] are correct)
+3. For general `a ≠ b/2, a > 0`, `JAC(a,b)^e` contributes `e` to both residues `a` and `b-a`. The symmetry check `e[a] == e[b-a]` is correct; `x[a] = e[a]` is correct
+4. After the fix, x[a] values can be Frac. Store them as Frac and pass through to JacFactor
 
-**Detection:** Test `docker run qseries` without `-it` — it should produce a clear error message or sensible fallback, not a hang.
-**Severity:** CRITICAL — default `docker run` experience is completely broken without mitigation
-**Phase:** Docker image phase — Dockerfile and entry point script
+**Detection:** Block 13 with period b=14: JAC(7,14) has a=7=b/2, and the prodmake exponent at residue 7 is odd, so x[7] must be 1/2.
+**Severity:** CRITICAL — blocks a documented acceptance test
+**Phase:** Half-integer Jacobi exponents phase (must fix decomposition BEFORE display/reconstruction)
 
 ---
 
-### Pitfall 3: glibc Static Linking Warnings and NSS Runtime Failures
+### Pitfall 3: `operator+` Throws on Integer-Different Q-Shifts That Are Mathematically Compatible
 
-**What goes wrong:** Compiling with `-static` on a glibc-based Linux system (Ubuntu, Debian) produces warnings about NSS (Name Service Switch) and may cause runtime failures for DNS-related functions. More importantly, the resulting "static" binary may still require shared libraries at runtime.
+**What goes wrong:** `Series::operator+` throws `"cannot add series with different q-shifts"` when q_shifts differ, even when the difference is an integer. For Block 25, `x1 = theta2(q)²/theta2(q³)²` has `q_shift = -1` and `x2 = theta3(q)²/theta3(q³)²` has `q_shift = 0`. Their sum `x1 + x2` is mathematically well-defined (just shift x1's coefficients by +1), but the code throws.
 
-**Why it happens:** glibc's NSS subsystem (`/etc/nsswitch.conf`) dynamically loads `libnss_*.so` libraries at runtime, even when the binary is compiled with `-static`. This is an architectural decision in glibc — static linking doesn't fully work. The compiler emits: "Using 'getaddrinfo' in statically linked applications requires at runtime the shared libraries from the glibc version used for linking."
+**Why it matters:** The q_shift arithmetic is correct:
+- `theta2(q).q_shift = 1/4`, so `theta2(q)².q_shift = 1/2`
+- `theta2(q³).q_shift = 3/4`, so `theta2(q³)².q_shift = 3/2`
+- `x1.q_shift = 1/2 - 3/2 = -1` (integer!)
+- `x2.q_shift = 0 - 0 = 0`
+- Difference = 1 → should be addable by index shifting
 
-**Why this matters for qseries:** The qseries REPL itself does zero networking, so NSS/getaddrinfo isn't a direct concern. However, a glibc-static binary may not be truly portable across Linux distributions because glibc version compatibility is not guaranteed. The binary baked in one glibc version's symbols and layout.
-
-**Prevention:**
-1. Use Alpine Linux (musl libc) as the Docker build base — musl has zero issues with static linking and produces truly portable binaries
-2. Docker multi-stage build: compile on `alpine:3.20` with `apk add g++`, producing a genuinely portable static binary
-3. For the install script's pre-built binaries, compile Linux binaries on Alpine/musl to guarantee portability
-4. Do NOT compile release binaries on Ubuntu/Debian if distributing as static — use Alpine or cross-compile with musl
-
-**Detection:** Run `ldd dist/qseries` — should report "not a dynamic executable" (truly static). If it lists shared libraries, the binary isn't actually static.
-**Severity:** CRITICAL — "static" binaries that secretly require shared libs will fail on other distros
-**Phase:** Docker image phase (build stage) and CI/CD phase (release binary builds)
-
----
-
-### Pitfall 4: Install Script Security — curl | bash Risks
-
-**What goes wrong:** The `curl -sSL https://example.com/install.sh | bash` pattern exposes users to supply-chain attacks, partial-download execution, and content-sniffing attacks.
-
-**Why it happens:** Three distinct attack vectors:
-1. **Server-side user-agent sniffing:** A compromised server can detect when a script is being piped to bash (vs. viewed in a browser) and serve different content — malicious payload to `curl`, clean script to browsers
-2. **Partial download:** If the connection drops mid-transfer, bash executes the incomplete script, potentially leaving the system in a broken state (e.g., PATH modified but binary not installed)
-3. **MITM without verification:** If the URL uses HTTP or the user disables certificate verification, the script can be modified in transit
+**Where it is:** `series.h:132-133` — `if (!(q_shift == o.q_shift) && !c.empty() && !o.c.empty()) throw ...`
 
 **Consequences:**
-- Mathematician users (not security-savvy) may blindly run `curl | sudo bash`
-- A compromised GitHub Pages or CDN could distribute malware
-- Partial downloads could corrupt user's PATH or leave orphaned files
+- Block 25 fails (findpoly on theta2/theta3 quotients)
+- Exercise 10 fails (same root cause)
+- Any identity mixing theta2 (which has q_shift) with theta3/theta4 (which don't) is blocked
 
 **Prevention:**
-1. Always use HTTPS URLs — never offer HTTP install URLs
-2. Provide checksum verification in install instructions:
-   ```bash
-   curl -sSL https://github.com/.../install.sh -o install.sh
-   sha256sum install.sh  # User verifies against published hash
-   bash install.sh
-   ```
-3. Make the install script idempotent — re-running it should be safe
-4. Use `set -euo pipefail` at the top of the install script so partial execution fails fast
-5. Wrap the entire script in a function that's called at the end, preventing partial-download execution:
-   ```bash
-   #!/bin/bash
-   set -euo pipefail
-   main() {
-       # ... all install logic ...
-   }
-   main "$@"
-   ```
-6. Never require `sudo` in the install script — install to `~/.local/bin` or `~/bin` instead
-7. Offer alternative install methods: manual download, `brew tap`, or just `git clone && make`
+1. Compute `delta = q_shift - o.q_shift`
+2. If `delta` is an integer (i.e., `delta.den == BigInt(1)`), shift coefficients by `int(delta)` to align
+3. If `delta` is non-integer, still throw — these series genuinely can't be added term-by-term
+4. Choose the smaller q_shift as the result's q_shift
+5. Apply same logic to `operator-` (which goes through `operator+` via `*this + (-o)` — already correct)
 
-**Detection:** Code review the install script for all these patterns before publishing.
-**Severity:** CRITICAL — security vulnerability affecting user trust
-**Phase:** Install script phase
+**Detection:** Any expression like `theta2(q)^n / theta2(q^k)^n + theta3(q)^n / theta3(q^k)^n` will trigger the error.
+**Severity:** CRITICAL — blocks two checklist items and a key exercise
+**Phase:** Q-shift arithmetic phase (should be Phase 1 — other changes depend on this working)
+
+---
+
+### Pitfall 4: Shifting Coefficients During Addition Can Create Exponents Below `minExp` Expectations
+
+**What goes wrong:** When aligning q_shifts by shifting coefficients, some exponents may move into negative territory or beyond the truncation bound. Downstream code like `prodmake`, `etamake`, and `inverse()` has assumptions about coefficient ranges.
+
+**Concrete example:** Series A has q_shift=-2 with coefficients at {0,1,2,...}. Series B has q_shift=0 with coefficients at {0,1,2,...}. To add them, shift A's coefficients by +2 (to align to q_shift=0). Now A has coefficients at {2,3,4,...}. This is fine. But the reverse: shift B's coefficients by -2, giving B coefficients at {-2,-1,0,1,...}. Now B has negative exponents.
+
+**Where assumptions break:**
+- `prodmake` (convert.h:88): requires `b[0] != 0` and normalizes by `b[0]`. If the series has been shifted so the "constant term" is at a negative exponent, prodmake sees `b[0] = 0` and fails
+- `Series::inverse()` (series.h:189): handles negative minExp by shifting, but the shift logic assumes the shift brings minExp to 0. If additions introduced unexpected negative exponents, the inverse's internal normalization may be wrong
+- `clean()` (series.h:89): erases coefficients with `e >= trunc` but NOT negative exponents — negative-exponent coefficients persist silently
+- `etamake` (convert.h:46): iterates `k = 1; while k < T` — negative exponents are invisible to this scan
+
+**Prevention:**
+1. When shifting coefficients during addition, always shift the series with the LARGER q_shift downward (i.e., increase its exponents). This way no new negative exponents are introduced
+2. Choose `result.q_shift = min(a.q_shift, b.q_shift)` as the base
+3. Shift the other series' coefficients by `int(other.q_shift - result.q_shift)` — this is always non-negative, so exponents only increase
+4. Add an assertion: after addition, no coefficient should have an exponent below what the input series had
+
+**Detection:** Unit test `(q^(-1) * f) + g` where f and g are simple polynomials — check that result has correct exponents.
+**Severity:** CRITICAL — silent coefficient misalignment causes wrong answers in downstream algorithms
+**Phase:** Q-shift arithmetic phase (same phase as Pitfall 3)
 
 ---
 
 ## Major Pitfalls
 
-Mistakes that cause significant usability problems or broken CI pipelines.
+Mistakes that cause wrong answers or significant usability problems.
 
 ---
 
-### Pitfall 5: Docker CRLF Line Ending Corruption with -t Flag
+### Pitfall 5: `jac2series_impl` Needs Formal Power Series Square Root — Non-Trivial Algorithm
 
-**What goes wrong:** When Docker allocates a TTY (`-t` flag), it converts `\n` to `\r\n` (CRLF) in output. This corrupts output when piped from a Docker container, breaking scripts that parse qseries output.
+**What goes wrong:** To reconstruct a series from JAC(a,b)^(1/2), you need the square root of a formal power series. The naive approach `f.pow(1)` uses integer exponentiation (via binary exponentiation), which can't compute half-integer powers. There's no `Series::sqrt()` method.
 
-**Why it happens:** Docker's `-t` flag puts the terminal in raw mode and enables the TTY's `onlcr` (output NL to CR-NL) translation. This is standard TTY behavior but breaks programmatic output parsing.
+**Why it's non-trivial:** The formal power series square root of `1 + a₁q + a₂q² + ...` is computed via Newton iteration:
+```
+g₀ = 1
+gₙ₊₁ = (gₙ + f/gₙ) / 2
+```
+doubling precision each step. This requires division (already implemented) but the convergence must be tracked carefully — each iteration must be truncated to avoid exponential coefficient growth.
 
-**Consequences:**
-- `docker run -it qseries <<< "etaq(0,10)" | head -1` contains invisible `\r` characters
-- Scripts that compare Docker output to expected output fail on line endings
-- CI tests piping into Docker may produce spurious failures
+**Alternative:** Use the identity `f^(1/2) = exp(1/2 · log(f))` where log and exp are formal power series operations:
+```
+log(1 + g) = g - g²/2 + g³/3 - ...
+exp(h) = 1 + h + h²/2! + h³/3! + ...
+```
+This works but requires implementing `Series::log()` and `Series::exp()`.
+
+**Simpler alternative for JacFactor specifically:** For exponent p/2, compute the integer-exponent parts separately. `JAC(a,b)^(3/2) = JAC(a,b) · JAC(a,b)^(1/2)`. Only the ^(1/2) part needs a square root. And JAC(a,b) itself decomposes into `(q^a;q^b)_∞ · (q^{b-a};q^b)_∞ · (q^b;q^b)_∞`, each of which is an Euler-type product. The square root of an Euler product can be computed via prodmake's framework: if `f = Π(1-q^n)^{a_n}`, then `f^(1/2) = Π(1-q^n)^{a_n/2}`, where each factor `(1-q^n)^{a_n/2}` can be expanded term-by-term using the binomial series for `(1-x)^r` with rational r.
 
 **Prevention:**
-1. Document that `-it` is for interactive use only; for scripted use, use `-i` without `-t`:
-   ```bash
-   echo "etaq(0,10)" | docker run -i qseries  # Correct for scripting
-   docker run -it qseries                       # Correct for interactive
-   ```
-2. In CI tests against Docker, always use `-i` (not `-it`) and strip trailing `\r` defensively
-3. The REPL already handles script mode (non-TTY stdin) correctly, so `-i` without `-t` works naturally
+1. Implement `Series::pow(Frac r)` using Newton square root or the binomial series approach
+2. Test with `(etaq(1,T))^(1/2)` — should satisfy `f² = etaq(1,T)` to truncation
+3. Handle sign carefully: `(1-q)^(1/2)` has alternating sign coefficients that grow
 
-**Detection:** Compare `docker run -it qseries <<< "1+1" | xxd | head` output — look for `0d 0a` (CRLF) vs `0a` (LF).
-**Severity:** MAJOR — breaks scripted usage of Docker image
-**Phase:** Docker image phase — document in README, test in CI
+**Detection:** `jac2series(jp, 100)` where jp contains a 1/2 exponent — compare against direct series computation.
+**Severity:** MAJOR — blocking feature, but alternative computation paths exist
+**Phase:** Half-integer Jacobi exponents phase (Task 2, after decomposition and display are fixed)
 
 ---
 
-### Pitfall 6: Alpine/musl Locale and UTF-8 Issues
+### Pitfall 6: `formatJacprodmake` Display Doesn't Handle Fractional Exponents
 
-**What goes wrong:** The qseries REPL running in an Alpine Docker container may mishandle Unicode characters (mathematical symbols in output or user input) because Alpine's musl libc has limited locale support compared to glibc.
+**What goes wrong:** The `jac2prod` function in `convert.h:434-460` constructs display strings like `(q^a,q^b)_∞^{ex}`. The exponent `ex` is extracted as `int`, so fractional exponents show as nothing (factor omitted) or `^0` (factor present but exponent missing).
 
-**Why it happens:** musl libc doesn't support the full glibc locale system. By default, Alpine containers have no locale set, and `setlocale(LC_ALL, "")` may not enable UTF-8 as expected.
-
-**Consequences:**
-- Mathematical symbols or special characters in output may display as garbage
-- Users typing Unicode in the REPL may see corrupted input echoing
-- `std::locale` operations may behave differently than on desktop Linux
+**Where it is:** `convert.h:438-439` — the int extraction:
+```cpp
+int ex = 0;
+if (exp.den == BigInt(1) && exp.num.d.size() == 1 && exp.num.d[0] <= 100)
+    ex = exp.num.neg ? -static_cast<int>(exp.num.d[0]) : static_cast<int>(exp.num.d[0]);
+```
 
 **Prevention:**
-1. Set `ENV LANG=C.UTF-8` in the Dockerfile — musl has built-in support for C.UTF-8
-2. The qseries REPL doesn't currently use `setlocale` or `std::locale` heavily (it deals in ASCII math notation), so impact is low
-3. Test with non-ASCII input to verify behavior
+1. Replace the int extraction with Frac-aware display
+2. For integer exponents: continue using `^n` notation (current behavior)
+3. For half-integer exponents: use `^(p/q)` notation, e.g., `(q^14,q^14)_∞^(13/2)`
+4. Special case: exponent 1/2 → display as `√(...)` for readability (matching Maple's `√JAC(7,14,∞)`)
+5. The `abs_ex` calculation for num/den partitioning must also use Frac comparison (`exp > Frac(0)` vs `exp < Frac(0)`)
 
-**Detection:** Run `docker run -it qseries` and type/paste a Unicode character — verify it doesn't crash.
-**Severity:** MAJOR if the REPL processes any non-ASCII, MINOR for pure ASCII math
-**Phase:** Docker image phase — single ENV line in Dockerfile
+**Detection:** Create a JacFactor with Frac(1,2) exponent and call `jac2prod` — currently shows empty or wrong output.
+**Severity:** MAJOR — display is wrong but computation would still be possible if other code is fixed
+**Phase:** Half-integer Jacobi exponents phase (Task 1: display)
 
 ---
 
-### Pitfall 7: PATH Management Across Shells (bash, zsh, fish)
+### Pitfall 7: Double-Sum Performance for b(q) and N(q) — O(T²) Frac Operations
 
-**What goes wrong:** The install script adds the binary to `PATH` by modifying the wrong shell config file, or modifies a file that isn't sourced in the user's shell, leaving the binary not on `PATH` despite a "successful" install.
+**What goes wrong:** The REPL's `sum()` evaluator (repl.h:1042-1053) creates a Series for each iteration and calls `operator+`, making nested double sums O(T²) in Series additions, each O(T) in coefficient count, giving O(T³) Frac operations total. For T=200 this means ~10⁸ BigInt multiplications.
 
-**Why it happens:** Different shells read different config files:
-- **bash**: `~/.bashrc` (interactive) vs `~/.bash_profile` (login) — and bash login shells DON'T read `~/.bashrc` unless `~/.bash_profile` sources it
-- **zsh** (default on macOS since Catalina): `~/.zshrc`
-- **fish**: `~/.config/fish/config.fish` (completely different syntax: `set PATH $PATH /new/path` instead of `export PATH=`)
+**Concrete cases:**
+- **b(q) = Σ_m Σ_n ω^(m-n) · q^(m²+mn+n²)**: requires ω = exp(2πi/3) which is irrational. This is fundamentally impossible in exact rational arithmetic — not a performance issue but an algebraic one.
+- **N(q) = Σ_{m,n} (−1)^(m+n) (2m+1)(2n+1) · q^((m²+m+n²+n)/2)**: double sum with ~√T iterations per sum. For T=100: ~10×10 = 100 iterations, each creating a Series. Feasible.
+- **UE function from Block 17**: `Σ_m Σ_n legendre(m,5)·n⁵·q^(m·n)`. For T=50: outer loop m=1..50, inner n=1..floor(50/m). Total ~230 terms. Feasible if each is a simple q-power addition.
 
-Modifying only `~/.bashrc` fails for macOS users (who use zsh by default). Modifying `~/.profile` works for bash login shells but not zsh or fish.
-
-**Consequences:**
-- User installs successfully, opens a new terminal, types `qseries`, gets "command not found"
-- macOS users (zsh default) are the most likely to be affected
-- fish users need completely different syntax and are always forgotten
+**Why it's slow:** Each sum body evaluation creates a fresh Series, and `acc = (acc + term).truncTo(T)` copies all coefficients. With k iterations, this is O(k·T) work. For a double sum with O(√T) × O(√T) iterations, total is O(T²).
 
 **Prevention:**
-1. Install binary to a directory already on most PATH configurations:
-   - `~/.local/bin` (XDG standard, often already on PATH in modern distros)
-   - `/usr/local/bin` (requires sudo — avoid if possible)
-2. Detect the user's current shell from `$SHELL` and modify the correct file:
-   ```bash
-   case "$(basename "$SHELL")" in
-       bash) RC_FILE="$HOME/.bashrc" ;;
-       zsh)  RC_FILE="$HOME/.zshrc" ;;
-       fish) RC_FILE="$HOME/.config/fish/config.fish" ;;
-       *)    RC_FILE="$HOME/.profile" ;;
-   esac
-   ```
-3. For fish, use `fish_add_path` or `set -Ua fish_user_paths ~/.local/bin` instead of `export PATH=...`
-4. Check if the directory is already on PATH before modifying any config files
-5. Print clear instructions at the end: "Restart your terminal or run: `source ~/.zshrc`"
-6. Prefer `~/.local/bin` and tell users to add it themselves if it's not on PATH — less magical, more reliable
+1. For double sums that just accumulate `coeff * q^exp` terms, bypass Series arithmetic entirely — accumulate into a single coefficient map directly. This is O(#terms) instead of O(#terms × T).
+2. In the REPL evaluator, detect the pattern `sum(sum(c * q^e, ...), ...)` and optimize to direct coefficient accumulation.
+3. Alternatively, accept the O(T²) cost for moderate T (≤ 200) and document that T > 500 with double sums may be slow.
+4. For b(q) specifically: implement it as a specialized function `bq(T)` that uses the eta product identity `b(q) = η(τ)³/η(3τ)` instead of the double sum definition. This avoids ω entirely.
 
-**Detection:** Test the install script with bash, zsh, and fish shells. Verify `which qseries` works in a new terminal session for each.
-**Severity:** MAJOR — "command not found" after successful install is a terrible first experience
-**Phase:** Install script phase
+**Detection:** Time `sum(sum(q^(m*n), n, 1, 100), m, 1, 100)` with set_trunc(200) — should complete in < 5 seconds. If > 30 seconds, optimization is needed.
+**Severity:** MAJOR — blocks exercise completion for large T
+**Phase:** Double-sum optimization (can be deferred — exercises work at smaller T)
 
 ---
 
-### Pitfall 8: GitHub Actions arm64 Linux Build — QEMU Emulation is Extremely Slow
+### Pitfall 8: Verification Step in `jacprodmake` Fails for Fractional Exponents
 
-**What goes wrong:** Cross-compiling or building arm64 Linux binaries on GitHub Actions using QEMU emulation takes 10-50x longer than native builds, causing CI timeouts and wasted minutes.
+**What goes wrong:** After decomposing prodmake exponents into JAC factors, `jacprodmake` reconstructs the series via `jac2series_impl(result, T)` and checks `recon.coeff(n) != f.coeff(n)` for all n. If `jac2series_impl` can't handle fractional exponents (Pitfall 5), the verification fails and jacprodmake returns empty — even though the decomposition was correct.
 
-**Why it happens:** GitHub now offers native arm64 Linux runners (`ubuntu-24.04-arm`), but many tutorials and existing workflows still use `docker/setup-qemu-action` + `docker buildx` for multi-arch builds. QEMU user-space emulation of aarch64 on x86_64 runners is functional but extremely slow for compilation.
+**Where it is:** `convert.h:420-426`:
+```cpp
+Series recon = jac2series_impl(result, T);
+bool ok = true;
+for (int n = 0; n < T && ok; ++n) {
+    if (recon.coeff(n) != f.coeff(n)) ok = false;
+}
+if (ok) return result;
+```
 
-**Consequences:**
-- A 30-second native build becomes 10-25 minutes under QEMU
-- CI minutes quota depletes rapidly
-- Flaky timeouts on compilation-heavy builds
-
-**Prevention:**
-1. Use GitHub's native arm64 runners: `runs-on: ubuntu-24.04-arm` (GA since Jan 2026)
-2. For Docker multi-arch images, use a build matrix with native runners per arch instead of QEMU:
-   ```yaml
-   strategy:
-     matrix:
-       include:
-         - runner: ubuntu-24.04
-           arch: amd64
-         - runner: ubuntu-24.04-arm
-           arch: arm64
-   runs-on: ${{ matrix.runner }}
-   ```
-3. If native runners aren't available (e.g., in public repos with limited minutes), cross-compile instead of emulating: use `aarch64-linux-gnu-g++` on an x86_64 runner
-
-**Detection:** Monitor CI build times — if arm64 steps take >5 minutes for a simple C++ compile, you're using emulation.
-**Severity:** MAJOR — wastes CI time and budget, may cause timeout failures
-**Phase:** CI/CD phase (if adding GitHub Actions for release builds)
-
----
-
-### Pitfall 9: Docker Signal Handling — Ctrl+C Doesn't Kill the REPL
-
-**What goes wrong:** Pressing Ctrl+C in `docker run -it qseries` doesn't send SIGINT to the REPL process, leaving users stuck with no way to exit except `docker kill`.
-
-**Why it happens:** Two common causes:
-1. Using shell form `ENTRYPOINT` (`ENTRYPOINT /usr/local/bin/qseries`) wraps the process in `/bin/sh -c`, so signals go to shell PID 1, not the REPL
-2. PID 1 in a container has special signal semantics — it doesn't receive the default signal handlers, so SIGINT/SIGTERM are ignored unless explicitly handled
-
-**Consequences:**
-- Users can't exit the REPL with Ctrl+C (expected behavior)
-- Users can't exit with Ctrl+D if the REPL doesn't handle EOF
-- `docker stop qseries` waits the full 10-second timeout before force-killing
+**Consequences:** Even if the decomposition algorithm is fixed (Pitfall 2), the verification will reject correct results because reconstruction fails.
 
 **Prevention:**
-1. Use exec form for ENTRYPOINT: `ENTRYPOINT ["/usr/local/bin/qseries"]` — this runs the binary as PID 1 directly, no shell wrapper
-2. Alternatively, use `tini` as an init process (Alpine: `apk add tini`, then `ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/qseries"]`) — tini handles signal forwarding properly
-3. Verify the REPL handles SIGINT (Ctrl+C) and EOF (Ctrl+D) gracefully — the current code already handles these in the raw mode input loop
-4. Add a `STOPSIGNAL SIGINT` to the Dockerfile if SIGTERM isn't handled
+1. Fix `jac2series_impl` to handle fractional exponents BEFORE or IN PARALLEL with the decomposition fix
+2. Alternatively, skip verification when fractional exponents are detected and rely on the decomposition algebra being correct
+3. If skipping verification, add a confidence flag to the output so users know the result wasn't verified
 
-**Detection:** Run `docker run -it qseries`, press Ctrl+C — verify it exits cleanly. Run `docker stop <container>` — verify it stops within 1-2 seconds, not 10.
-**Severity:** MAJOR — users get stuck in the container
-**Phase:** Docker image phase — ENTRYPOINT format and signal handling
+**Detection:** Fix Pitfall 2 but not Pitfall 5 → jacprodmake still returns empty for Block 13.
+**Severity:** MAJOR — creates a dependency between display/decomposition fix and reconstruction fix
+**Phase:** Half-integer Jacobi exponents phase (ordering constraint: reconstruction must work before or with decomposition)
 
 ---
 
 ## Moderate Pitfalls
 
-Mistakes that cause confusing errors or partial failures.
+Mistakes that cause confusing behavior or partial failures.
 
 ---
 
-### Pitfall 10: Docker Multi-Stage Build — Missing Static Libs in Alpine
+### Pitfall 9: Q-Shift Propagation Through `subs_q(k)` With Integer-Shifted Series
 
-**What goes wrong:** The Alpine build stage fails with linker errors because static libraries for libstdc++ or libgcc aren't installed.
-
-**Why it happens:** Alpine's `g++` package doesn't always include `libstdc++.a` (the static version). By default, `apk add g++` installs the shared library. Static linking requires `gcc-static` (for libgcc) and possibly building with specific flags.
+**What goes wrong:** After allowing integer-different q_shift addition, a series may have a non-zero integer q_shift (e.g., q_shift = -1). When `subs_q(k)` is called, it does `q_shift *= Frac(k)`. For q_shift = -1 and k = 3, the result has q_shift = -3. This is correct, but downstream code that later adds this to a series with q_shift = 0 now has a larger integer gap to bridge, potentially shifting many coefficients.
 
 **Prevention:**
-1. Install the right packages: `apk add g++ musl-dev` (musl-dev provides static libc)
-2. Verify with a test build in the Docker stage that `ldd` reports "not a dynamic executable"
-3. Multi-stage Dockerfile pattern:
-   ```dockerfile
-   FROM alpine:3.20 AS builder
-   RUN apk add --no-cache g++ musl-dev make
-   COPY src/ src/
-   COPY Makefile .
-   RUN make LDFLAGS=-static
+1. After integer-shift addition, normalize the result: absorb the integer q_shift into the coefficient map by shifting all exponents by `int(q_shift)` and setting q_shift to 0
+2. This normalization should happen at the end of `operator+`, not deferred
+3. Add a method `Series::normalize_q_shift()` that does: for each (e, v) in c, move to (e + int_q_shift, v), then set q_shift to the fractional remainder
 
-   FROM alpine:3.20
-   COPY --from=builder /app/dist/qseries /usr/local/bin/qseries
-   ENTRYPOINT ["/usr/local/bin/qseries"]
-   ```
-4. The final stage can even use `FROM scratch` since the binary is fully static — smallest possible image
-
-**Detection:** Build fails at link time with "cannot find -lstdc++" or similar.
-**Severity:** MODERATE — blocks Docker build but easy to fix once diagnosed
-**Phase:** Docker image phase
+**Detection:** Compute `x := theta2(q)^2/theta2(q^3)^2 + theta3(q)^2/theta3(q^3)^2`, then `subs_q(x, 5)` — check that q_shift is handled correctly.
+**Severity:** MODERATE — surprising q_shift accumulation, not wrong but confusing
+**Phase:** Q-shift arithmetic phase (enhancement after core fix)
 
 ---
 
-### Pitfall 11: Install Script Assumes `curl` or `wget` Exists
+### Pitfall 10: `etamake` Breaks When Input Has Non-Zero Integer Q-Shift
 
-**What goes wrong:** The install script uses `curl` to download the binary, but the user's system doesn't have `curl` installed (some minimal Linux installs, some Docker base images, older systems).
+**What goes wrong:** `etamake` starts with `if (!(f.q_shift == Frac(0))) result.push_back({-1, f.q_shift})` and then normalizes the series. If the input has q_shift = -1 (from an integer-shift addition), etamake records this as a fractional q-power prefix. But q_shift = -1 should be absorbed into the coefficient exponents, not treated as a separate factor.
+
+**Where it is:** `convert.h:30-31`
 
 **Prevention:**
-1. Try `curl` first, fall back to `wget`:
-   ```bash
-   if command -v curl &>/dev/null; then
-       curl -sSL "$URL" -o "$DEST"
-   elif command -v wget &>/dev/null; then
-       wget -q "$URL" -O "$DEST"
-   else
-       echo "Error: curl or wget required. Install one and retry."
-       exit 1
-   fi
-   ```
-2. Also check for `tar` or `unzip` if distributing archives
-3. Check for `chmod` availability (it's standard but good to be defensive)
+1. At the start of `etamake`, normalize the input: if q_shift is integer, shift coefficients and set q_shift = 0
+2. Only record q_shift as a {-1, q_shift} entry when q_shift is genuinely fractional (non-integer)
+3. This avoids `etamake` producing spurious `q^(-1)` prefixes
 
-**Detection:** Test install script on minimal Docker images (`debian:slim`, `alpine`).
-**Severity:** MODERATE — install fails with confusing error
-**Phase:** Install script phase
+**Detection:** Compute a series with q_shift = -1 via integer-shifted addition, then run `etamake` — should identify eta product correctly, not show `q^(-1) * eta(...)`.
+**Severity:** MODERATE — wrong display but underlying identification may still work
+**Phase:** Q-shift arithmetic phase (must normalize before passing to etamake)
 
 ---
 
-### Pitfall 12: Binary Naming Convention — `.exe` Extension on Linux/macOS
+### Pitfall 11: Session Save/Load Doesn't Preserve Integer-Shifted Coefficient Maps
 
-**What goes wrong:** The current Makefile builds `dist/qseries.exe` — this works on Cygwin/Windows but looks wrong on Linux/macOS and confuses users.
+**What goes wrong:** `saveSession` serializes series as `S varname trunc exp1:coeff1 exp2:coeff2 ...` and separately records q_shift. If a series has been integer-shifted (q_shift = 0, but coefficients were moved), the save/load round-trip is fine. But if the series retains a non-zero integer q_shift (because normalization wasn't applied), the q_shift is NOT saved in the current format.
 
-**Why it happens:** The Makefile was written in a Cygwin environment where `.exe` is conventional. On Linux/macOS, executable binaries typically have no extension.
+**Where it is:** `repl.h:210-215` — the S line format doesn't include q_shift:
+```cpp
+f << "S " << varname << " " << s.trunc;
+for (const auto& [exp, coeff] : s.c)
+    f << " " << exp << ":" << coeff.str();
+```
 
-**Consequences:**
-- Linux/macOS users must type `./qseries.exe` which feels wrong
-- Package managers and install scripts typically expect extensionless binaries
-- Docker images carrying `qseries.exe` look like Windows artifacts
+**Consequences:** Series with non-zero q_shift lose their q_shift on save/load. After loading, the series is wrong.
 
 **Prevention:**
-1. In the Makefile, conditionally name the binary:
-   ```makefile
-   ifeq ($(OS),Windows_NT)
-       BINARY = dist/qseries.exe
-   else
-       BINARY = dist/qseries
-   endif
-   ```
-2. In the install script, always install as `qseries` (no extension)
-3. In the Dockerfile, the built binary should be `/usr/local/bin/qseries`
+1. Either normalize q_shift before saving (convert integer q_shift to coefficient shifts)
+2. Or add q_shift to the S line format: `S varname trunc q_shift_num/q_shift_den exp1:coeff1 ...`
+3. Option 1 is simpler and avoids format changes
 
-**Detection:** Check `ls dist/` after building on Linux — `.exe` extension is the warning sign.
-**Severity:** MODERATE — cosmetic but affects user perception and scripting
-**Phase:** Docker + install script phase — both need the correct binary name
+**Detection:** Save a session with a series that has q_shift ≠ 0, load it, compare output.
+**Severity:** MODERATE — data loss on save/load
+**Phase:** Q-shift arithmetic phase (must fix save format or normalize before save)
 
 ---
 
-### Pitfall 13: Install Script Doesn't Verify Architecture Match
+### Pitfall 12: Binomial Series for `(1-q^n)^r` with Rational r Diverges — Need Truncation Discipline
 
-**What goes wrong:** User on arm64 macOS downloads the x86_64 binary (or vice versa), resulting in "Exec format error" or silent Rosetta 2 emulation with degraded performance.
+**What goes wrong:** Implementing `Series::pow(Frac r)` via the binomial series:
+```
+(1-x)^r = Σ_{k=0}^∞ C(r,k) (-x)^k
+```
+where `C(r,k) = r(r-1)...(r-k+1)/k!`. For non-integer r, this is an infinite series. Without careful truncation, computing too many terms wastes time, and computing too few gives wrong coefficients.
 
 **Prevention:**
-1. Detect architecture in the install script:
-   ```bash
-   ARCH=$(uname -m)
-   case "$ARCH" in
-       x86_64|amd64)  ARCH="x86_64" ;;
-       aarch64|arm64) ARCH="arm64" ;;
-       *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
-   esac
-   ```
-2. Construct download URL with both OS and arch: `qseries-${OS}-${ARCH}`
-3. On macOS with Rosetta 2, `uname -m` may report `x86_64` even on arm64 hardware — check `sysctl -n sysctl.proc_translated 2>/dev/null` to detect Rosetta
+1. The generalized binomial coefficient `C(r,k)` for rational `r = p/q` is `(p/q)(p/q - 1)...(p/q - k + 1) / k!`. Each factor is a Frac operation. For k up to T, this is O(T) Frac multiplications.
+2. Truncate at k where the first exponent of `(-x)^k` exceeds T. For x = q^n, this means k > T/n.
+3. Watch out: the generalized binomial coefficients grow factorially in denominator but the numerator also grows. For r = 1/2: C(1/2, k) = (-1)^(k+1) / (2^(2k-1) · k) · C(2k-2, k-1). These are rational but denominators grow exponentially. Frac::reduce() handles this but may be slow for large k.
+4. The binomial series for (1-q)^(1/2) converges formally (all coefficients are well-defined rationals), so truncation to O(q^T) is mathematically correct.
 
-**Detection:** Run `file qseries` to check the binary's architecture matches the host.
-**Severity:** MODERATE — "Exec format error" is confusing for non-technical users
-**Phase:** Install script phase and CI release matrix
+**Detection:** Compute `(1-q)^(1/2)` to 20 terms. First few coefficients should be: 1, -1/2, -1/8, -1/16, -5/128, -7/256, ...
+**Severity:** MODERATE — performance concern, not correctness (if truncated properly)
+**Phase:** Half-integer Jacobi exponents phase (part of Series::pow(Frac) implementation)
 
 ---
 
-### Pitfall 14: Docker Image Too Large — Shipping Build Tools in Runtime Image
+### Pitfall 13: Q-Shift Arithmetic in `operator*` After Integer-Shifted Addition
 
-**What goes wrong:** A single-stage Dockerfile includes `g++`, `make`, header files, and source code in the final image, inflating it from ~5 MB to 500+ MB.
+**What goes wrong:** After two series with integer-different q_shifts are added (Pitfall 3 fix), the result has some q_shift. Multiplying this result with another series adds q_shifts. If the addition result wasn't normalized (q_shift still non-zero integer), the multiplication produces a q_shift that might be unexpected.
 
-**Prevention:**
-1. Always use multi-stage builds — build stage has compilers, runtime stage has only the binary
-2. For a fully static binary, the final stage can be `FROM scratch` (0 bytes base) or `FROM alpine:3.20` (~7 MB base)
-3. Expected image sizes:
-   - `FROM scratch` + static binary: ~2-4 MB
-   - `FROM alpine` + static binary: ~10-12 MB
-   - `FROM ubuntu` + dynamic binary: ~80+ MB (bad)
-   - Single-stage with build tools: ~500+ MB (terrible)
-
-**Detection:** Run `docker images qseries` — if size exceeds 20 MB, investigate.
-**Severity:** MODERATE — wastes bandwidth, slow pulls, bad first impression
-**Phase:** Docker image phase
-
----
-
-### Pitfall 15: Cross-Platform GitHub Release Matrix Misses a Target
-
-**What goes wrong:** The CI release workflow builds binaries for some OS/arch combos but misses one (e.g., Linux arm64, or macOS x86_64), leaving some users without a pre-built binary.
+**Example:** `x = (f with q_shift=-1) + (g with q_shift=0)` → result has q_shift = -1. Then `x * h` (q_shift=0) → product has q_shift = -1. But if `x` had been normalized (q_shift=0, coefficients shifted), `x * h` would have q_shift = 0. The coefficients differ between these two representations.
 
 **Prevention:**
-1. Define the full target matrix explicitly:
-   | OS | Arch | Runner | Static? | Notes |
-   |---|---|---|---|---|
-   | Linux | x86_64 | `ubuntu-24.04` | Yes (musl) | Build on Alpine in Docker |
-   | Linux | arm64 | `ubuntu-24.04-arm` | Yes (musl) | Native ARM runner |
-   | macOS | arm64 | `macos-26` | No (-static omitted) | Apple Silicon native |
-   | macOS | x86_64 | `macos-26-large` | No (-static omitted) | Intel Mac |
-   | Windows | x86_64 | `windows-latest` | Yes | MinGW or MSVC |
-2. Name artifacts consistently: `qseries-linux-x86_64`, `qseries-linux-arm64`, `qseries-darwin-arm64`, `qseries-darwin-x86_64`, `qseries-windows-x86_64.exe`
-3. Test each artifact in CI (at least `./qseries --version` or `echo "1+1" | ./qseries`)
+1. Always normalize integer q_shifts into coefficient exponents immediately after addition
+2. This ensures q_shift is always either 0 or genuinely fractional throughout the computation
+3. Invariant to maintain: `q_shift.den == BigInt(1) implies q_shift == Frac(0)` (after normalization)
 
-**Detection:** Check GitHub release assets after each release — count should match the matrix.
-**Severity:** MODERATE — some user cohort can't install
-**Phase:** CI/CD phase
+**Detection:** Compute `x := theta2(q)^2/theta2(q^3)^2 + theta3(q)^2/theta3(q^3)^2`, then `x * etaq(1,100)`. Check that output matches the separately computed `(theta2^2/theta2_3^2) * eta + (theta3^2/theta3_3^2) * eta`.
+**Severity:** MODERATE — produces correct answer in wrong representation, may confuse downstream
+**Phase:** Q-shift arithmetic phase (normalize step)
 
 ---
 
@@ -446,101 +333,30 @@ Mistakes that cause cosmetic issues or minor confusion.
 
 ---
 
-### Pitfall 16: Docker termios Warning on Container Startup
+### Pitfall 14: Display of Half-Integer Exponents in `str()` Method
 
-**What goes wrong:** When the Alpine-based container starts, the REPL's `tcgetattr()` call may log a warning or debug message if `/dev/tty` isn't available in certain container runtimes (Podman, rootless Docker, CI environments).
+**What goes wrong:** `Series::str()` uses `expToUnicode(int n)` for exponent display, which only handles integers. If coefficients are at integer exponents but q_shift is fractional (e.g., 1/4), the `fracExpStr(Frac)` method handles the prefix. But if a future change introduces non-integer coefficient exponents (e.g., from normalizing a half-integer q_shift), `str()` would crash or produce garbage.
 
 **Prevention:**
-1. The existing `RawModeGuard` already handles `tcgetattr` failure gracefully (sets `active = false`)
-2. Ensure no error messages are printed on TTY detection failure — silent fallback to line mode is correct
-3. Test with `docker run --rm qseries` (no `-it`) to verify clean error handling
+1. Keep the invariant that coefficient map keys (`std::map<int, Frac>`) are always integers
+2. Non-integer powers belong in q_shift, never in the map keys
+3. Document this invariant
 
-**Severity:** MINOR — only affects unusual container runtimes
-**Phase:** Docker image phase (verification)
+**Severity:** MINOR — unlikely to manifest if q_shift normalization is done correctly
+**Phase:** Q-shift arithmetic phase (documentation)
 
 ---
 
-### Pitfall 17: Install Script Doesn't Clean Up on Failure
+### Pitfall 15: `clean()` and `truncTo()` Don't Interact With Q-Shift Normalization
 
-**What goes wrong:** If the install script fails partway through (e.g., download succeeds but `chmod` fails), it leaves a non-executable binary in `~/.local/bin` and a modified `~/.zshrc` with a PATH entry pointing to a broken install.
-
-**Prevention:**
-1. Use a temporary directory for downloads, only move to final location on success:
-   ```bash
-   TMPDIR=$(mktemp -d)
-   trap "rm -rf $TMPDIR" EXIT
-   download_to "$TMPDIR/qseries"
-   chmod +x "$TMPDIR/qseries"
-   mv "$TMPDIR/qseries" "$INSTALL_DIR/qseries"
-   ```
-2. Only modify PATH config files AFTER binary is confirmed working (`$INSTALL_DIR/qseries --version`)
-3. `trap` cleanup ensures temp files are removed even on Ctrl+C
-
-**Severity:** MINOR — leaves system in inconsistent state, but easy to manually fix
-**Phase:** Install script phase
-
----
-
-### Pitfall 18: Dockerfile COPY Context — Accidentally Including .git or Build Artifacts
-
-**What goes wrong:** `COPY . .` in the Dockerfile includes `.git/` (potentially hundreds of MB), `build/`, `dist/`, and other non-essential directories, dramatically slowing builds and inflating image size.
+**What goes wrong:** `clean()` erases coefficients with `e >= trunc`. After integer-shift normalization (shifting coefficients by delta), some coefficients that were `e < trunc` become `e + delta >= trunc` and should be cleaned. If normalization and clean() happen in different steps, coefficients leak past truncation.
 
 **Prevention:**
-1. Create a `.dockerignore` file:
-   ```
-   .git
-   .planning
-   build
-   dist
-   *.exe
-   qseries_debug
-   qseries_bench
-   demo
-   tests
-   website
-   .cursor
-   ```
-2. Alternatively, COPY only what's needed: `COPY src/ src/` and `COPY Makefile .`
+1. Call `clean()` after every q_shift normalization
+2. Or perform normalization inside `clean()` — if q_shift is integer, shift coefficients and reset q_shift, then erase out-of-bounds
 
-**Severity:** MINOR — slow builds but no functional impact
-**Phase:** Docker image phase
-
----
-
-### Pitfall 19: Windows Users Can't Run `install.sh`
-
-**What goes wrong:** Windows users (without WSL or Cygwin) can't execute the bash install script. They need a separate installation method.
-
-**Prevention:**
-1. Provide a `.zip` download with the Windows binary and simple instructions
-2. Consider a PowerShell install script for Windows:
-   ```powershell
-   Invoke-WebRequest -Uri $url -OutFile qseries.exe
-   ```
-3. Or simply provide direct download links on the website/GitHub releases page — Windows users are accustomed to downloading `.exe` files directly
-4. The Cygwin development environment is separate from the end-user experience
-
-**Severity:** MINOR — Windows users have alternative install paths (direct download)
-**Phase:** Install script phase (Windows variant)
-
----
-
-### Pitfall 20: Version String Not Embedded in Binary
-
-**What goes wrong:** The install script downloads and installs a binary, but there's no way to verify which version was installed. The Docker image tag and the binary version can drift.
-
-**Prevention:**
-1. Ensure `qseries --version` (or the `version` REPL command) reports a version string
-2. In CI release builds, inject the git tag into the binary at compile time:
-   ```makefile
-   VERSION ?= $(shell git describe --tags --always)
-   CXXFLAGS += -DVERSION=\"$(VERSION)\"
-   ```
-3. Docker image tags should match binary versions: `qseries:1.0.0`
-4. The install script should report what version it installed
-
-**Severity:** MINOR — makes debugging version mismatches harder
-**Phase:** CI/CD phase + install script phase
+**Severity:** MINOR — only causes extra coefficients beyond truncation, which most operations ignore
+**Phase:** Q-shift arithmetic phase (implementation detail)
 
 ---
 
@@ -548,52 +364,67 @@ Mistakes that cause cosmetic issues or minor confusion.
 
 | Phase Topic | Likely Pitfall | Mitigation | Ref |
 |---|---|---|---|
-| Dockerfile creation | Missing `-it` docs; users can't run REPL | Wrapper script + prominent docs | #2, #9 |
-| Dockerfile creation | Image bloat from build tools | Multi-stage build, `FROM scratch` or Alpine runtime | #14 |
-| Dockerfile creation | Signal handling broken | Exec-form ENTRYPOINT, consider tini | #9 |
-| Dockerfile creation | Build fails on static libstdc++ | Install `musl-dev`, verify with `ldd` | #10 |
-| Dockerfile creation | CRLF corruption in piped output | Document `-i` vs `-it` usage | #5 |
-| Dockerfile creation | Locale/UTF-8 problems | `ENV LANG=C.UTF-8` | #6 |
-| Dockerfile creation | Slow context, huge layers | `.dockerignore` file | #18 |
-| Install script | macOS rejects static binary | OS detection, omit `-static` on Darwin | #1 |
-| Install script | Wrong shell config modified | Detect `$SHELL`, handle bash/zsh/fish | #7 |
-| Install script | Security concerns | HTTPS, checksums, idempotent, `set -euo pipefail` | #4 |
-| Install script | Missing curl/wget | Feature detection with fallback | #11 |
-| Install script | Wrong architecture downloaded | `uname -m` detection, Rosetta check | #13 |
-| Install script | Partial failure leaves mess | Temp dir + trap cleanup | #17 |
-| Install script | Windows users excluded | Direct download or PowerShell script | #19 |
-| CI release builds | Binary named `.exe` on Linux | Conditional naming in Makefile | #12 |
-| CI release builds | Missing target in matrix | Explicit full matrix with test step | #15 |
-| CI release builds | arm64 builds via QEMU are slow | Use native `ubuntu-24.04-arm` runner | #8 |
-| CI release builds | No version in binary | Compile-time `-DVERSION` injection | #20 |
+| jacprodmake decomposition | Middle residue (a = b/2) doubles contribution | Divide by 2 for middle element: `x[b/2] = e[b/2] / 2` | #2 |
+| jacprodmake decomposition | Verification rejects correct fractional results | Fix jac2series_impl first, or skip verification for fractional | #8 |
+| jac2prod display | Fractional exponents silently dropped | Replace int extraction with Frac-aware display | #1, #6 |
+| jac2series reconstruction | No Series::pow(Frac) method | Implement via Newton sqrt or binomial series | #5, #12 |
+| Series::operator+ q_shift fix | Negative exponents from wrong shift direction | Always shift the larger q_shift downward | #4 |
+| Series::operator+ q_shift fix | Non-normalized q_shift propagates | Normalize integer q_shifts immediately after addition | #9, #13 |
+| etamake with shifted input | Integer q_shift treated as fractional prefix | Normalize input q_shift before running etamake | #10 |
+| Session save/load | q_shift not preserved in file format | Normalize before saving, or extend format | #11 |
+| Double sums | O(T²) Frac operations for large T | Use smaller T, or implement coefficient accumulation | #7 |
+| b(q) exercise | ω = exp(2πi/3) is irrational | Use eta identity b(q) = η(τ)³/η(3τ) instead | #7 |
 
 ---
 
 ## Integration Pitfalls
 
-### Docker + termios Interaction
-The qseries REPL has three terminal modes: raw mode (interactive with tab/arrows), line mode (script/pipe), and WASM mode (no terminal). Docker must correctly trigger raw mode (via `-it`) or line mode (via `-i`). The existing `stdin_is_tty()` check handles this, but the Docker documentation must guide users to the right flags.
+### Ordering Dependency: Decomposition → Reconstruction → Display
 
-### Install Script + macOS + Build-from-Source
-If the install script offers a "build from source" fallback (when no pre-built binary matches), it must NOT pass `-static` on macOS. This is the most common build failure for macOS users compiling from source.
+The three jacprodmake fixes have a dependency chain:
+1. **Decomposition** (Pitfall 2): fix `x[b/2] = e[b/2] / 2` to produce fractional x[a]
+2. **Reconstruction** (Pitfall 5): implement `jac2series_impl` for Frac exponents, so verification works
+3. **Display** (Pitfall 6): fix `jac2prod` to show Frac exponents
 
-### Docker Image + CI Release Matrix
-The Docker image should use the same build process as the CI-built Linux binary (Alpine/musl, static linking). Don't maintain two different build recipes — divergence leads to one being tested and the other broken.
+If you fix (1) without (2), the verification step rejects the correct decomposition and jacprodmake returns empty. If you fix (1) and (3) without (2), display works but verification still fails. You must fix (2) before or simultaneously with (1).
 
-### Install Script + History File Permissions
-The qseries REPL writes `~/.qseries_history`. If the install script runs as root (via `sudo`) or creates files as root, the history file could end up owned by root, preventing the normal user from writing to it. The install script should NEVER need sudo.
+### Q-Shift Fix Interacts With Existing Theta Identity Tests
+
+The Block 25 fix (allowing integer-different q_shift addition) changes the behavior of `operator+`. Existing tests that rely on the throw (e.g., accidentally adding incompatible series and getting an error) will now silently produce a result instead. Verify that all existing acceptance tests still pass after the change — especially any test that involves theta2 in combination with theta3/theta4.
+
+### Double-Sum Optimization vs. Generality
+
+A specialized double-sum evaluator would be faster but adds complexity. The simpler approach (accept O(T²) for moderate T) may be sufficient for the exercises, which use T ≤ 200. Don't over-optimize unless profiling shows a real bottleneck.
+
+### Q-Shift Normalization Must Be Idempotent
+
+If normalization is called multiple times (e.g., in nested additions), it must produce the same result. Since normalization absorbs integer q_shift into coefficient indices and sets q_shift to the fractional remainder, calling it again on the result is a no-op (q_shift is already fractional or zero). This is naturally idempotent.
+
+---
+
+## Recommended Task Ordering
+
+Based on dependency analysis:
+
+1. **Q-shift arithmetic fix** (Pitfalls 3, 4, 9, 10, 13) — unblocks Block 25 and Exercise 10. No dependency on other fixes. Test immediately with theta2/theta3 quotient sums.
+
+2. **jac2series_impl fractional power** (Pitfall 5, 12) — implement Series::pow(Frac) via binomial series. Test with `(1-q)^(1/2)`. Required before jacprodmake fix can be verified.
+
+3. **jacprodmake decomposition fix** (Pitfall 2, 8) — fix middle-element doubling. Now verification via jac2series_impl works. Test with Block 13 (Slater 46).
+
+4. **jac2prod display fix** (Pitfalls 1, 6) — display fractional exponents. Cosmetic but needed for user verification.
+
+5. **Double-sum optimization** (Pitfall 7) — defer unless profiling shows need. Exercises work at moderate T.
 
 ---
 
 ## Sources
 
-- Apple Developer QA1118: Statically linked binaries on Mac OS X (https://developer.apple.com/library/archive/qa/qa1118/_index.html) — HIGH confidence
-- Apple Developer Forums Thread 706419: Static linking not supported — HIGH confidence
-- Docker Documentation: glibc and musl (https://docs.docker.com/dhi/core-concepts/glibc-musl/) — HIGH confidence
-- Alpine Linux wiki: Static linking with musl (https://build-your-own.org/blog/20221229_alpine/) — HIGH confidence
-- Docker run interactive/TTY options (https://www.baeldung.com/linux/docker-run-interactive-tty-options) — HIGH confidence
-- Docker PTY raw mode CRLF issue (https://stackoverflow.com/questions/54709650/) — HIGH confidence
-- GitHub Changelog: arm64 standard runners in private repos (Jan 2026) — HIGH confidence
-- GitHub Changelog: macOS 26 GA (Feb 2026) — HIGH confidence
-- Julia Evans: How to add a directory to PATH (https://jvns.ca/blog/2025/02/13/how-to-add-to-your-path/) — MEDIUM confidence
-- curl|bash security analysis (multiple sources) — HIGH confidence
+- `qseriesdoc.md` Output (15): JAC(0,14,∞)^(13|2) — confirms half-integer Jacobi exponents are expected — HIGH confidence
+- `src/convert.h:328-460` — current JacFactor implementation — HIGH confidence (code inspection)
+- `src/series.h:131-148` — current operator+ q_shift handling — HIGH confidence (code inspection)
+- `src/repl.h:1042-1053` — sum evaluator loop — HIGH confidence (code inspection)
+- `maple_checklist.md` Blocks 13, 14, 25 — documented failures — HIGH confidence (verified)
+- `exercises_solutions.md` Exercises 4, 6, 10 — documented blockers — HIGH confidence (verified)
+- Formal power series square root via Newton iteration — standard algorithm, see Knuth TAOCP Vol. 2 §4.7 — HIGH confidence
+- Generalized binomial coefficients for rational exponents — standard combinatorics — HIGH confidence
