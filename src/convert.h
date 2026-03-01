@@ -24,6 +24,7 @@ inline Series sift(const Series& f, int n, int k, int T) {
 }
 
 // etamake(f, T): identify f as eta-product; return list of (k, e_k) for η(kτ)^{e_k}
+// k=0 entry stores the scalar leading coefficient (omitted when 1)
 inline std::vector<std::pair<int, Frac>> etamake(const Series& f, int T) {
     std::vector<std::pair<int, Frac>> result;
     Series g = f.truncTo(T);
@@ -34,7 +35,8 @@ inline std::vector<std::pair<int, Frac>> etamake(const Series& f, int T) {
         return result;
     }
     g = (g / Series::constant(lead, T)).truncTo(T);
-
+    if (!(lead == Frac(1)))
+        result.push_back({0, lead});
 
     Series q_var = Series::q(T);
     const int max_iter = 2 * T;

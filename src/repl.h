@@ -1054,17 +1054,24 @@ inline std::string formatProdmake(const std::map<int, Frac>& a, bool mapleStyle 
 }
 
 inline std::string formatEtamake(const std::vector<std::pair<int, Frac>>& eta) {
+    std::string scalar_str;
     std::vector<std::string> num_parts, den_parts;
     for (const auto& [k, e] : eta) {
         if (e.isZero()) continue;
-        std::string part = "\xCE\xB7(" + (k == 1 ? "\xCF\x84" : std::to_string(k) + "\xCF\x84") + ")";
-        if (k != 1) part = "\xCE\xB7(" + std::to_string(k) + "\xCF\x84)";
+        if (k == 0) {
+            if (!(e == Frac(1))) scalar_str = e.str();
+            continue;
+        }
+        std::string part = (k == 1)
+            ? "\xCE\xB7(\xCF\x84)"
+            : "\xCE\xB7(" + std::to_string(k) + "\xCF\x84)";
         int ex = 0;
         if (e.den == BigInt(1) && e.num.d.size() == 1 && e.num.d[0] <= 100)
             ex = e.num.neg ? -static_cast<int>(e.num.d[0]) : static_cast<int>(e.num.d[0]);
         if (ex == 0) continue;
-        if (ex != 1) part += Series::expToUnicode(ex);
-        if (e > Frac(0))
+        int abs_ex = ex < 0 ? -ex : ex;
+        if (abs_ex != 1) part += Series::expToUnicode(abs_ex);
+        if (ex > 0)
             num_parts.push_back(part);
         else
             den_parts.push_back(part);
@@ -1072,10 +1079,13 @@ inline std::string formatEtamake(const std::vector<std::pair<int, Frac>>& eta) {
     std::string num_str, den_str;
     for (const auto& s : num_parts) num_str += (num_str.empty() ? "" : " ") + s;
     for (const auto& s : den_parts) den_str += (den_str.empty() ? "" : " ") + s;
-    if (num_str.empty() && den_str.empty()) return "1";
-    if (den_str.empty()) return num_str;
-    if (num_str.empty()) return "1 / (" + den_str + ")";
-    return num_str + " / (" + den_str + ")";
+    std::string prefix = scalar_str.empty() ? "" : scalar_str + " ";
+    if (num_str.empty() && den_str.empty()) return prefix.empty() ? "1" : scalar_str;
+    if (den_str.empty()) return prefix + num_str;
+    bool need_parens = den_parts.size() > 1;
+    std::string denom = need_parens ? "(" + den_str + ")" : den_str;
+    if (num_str.empty()) return prefix + "1 / " + denom;
+    return prefix + num_str + " / " + denom;
 }
 
 inline std::string formatQfactor(const QFactorResult& qf) {
