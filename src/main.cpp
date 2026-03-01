@@ -694,7 +694,7 @@ int main(int argc, char** argv) {
     if (argc > 1) {
         std::string arg = argv[1];
         if (arg == "--version") {
-            std::cout << "qseries 2.0\n";
+            std::cout << "qseries 4.1\n";
             return 0;
         }
         if (arg == "--test")
