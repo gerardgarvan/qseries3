@@ -344,20 +344,21 @@ inline Series jac2series_impl(const std::vector<JacFactor>& jac, int T) {
     Series q = Series::q(T);
     Series prod = Series::one(T);
     for (const auto& [a, b, exp] : jac) {
+        if (exp.isZero()) continue;
         Series fac;
         if (a == 0) {
             fac = jac_factor_series(b, b, T);
         } else {
-            fac = (jac_factor_series(a, b, T) * jac_factor_series(b - a, b, T) * jac_factor_series(b, b, T)).truncTo(T);
+            fac = (jac_factor_series(a, b, T) * jac_factor_series(b - a, b, T)
+                   * jac_factor_series(b, b, T)).truncTo(T);
         }
-        int ex = 0;
-        if (exp.den == BigInt(1) && exp.num.d.size() == 1 && exp.num.d[0] <= 1000)
-            ex = exp.num.neg ? -static_cast<int>(exp.num.d[0]) : static_cast<int>(exp.num.d[0]);
-        if (ex > 0) {
-            for (int i = 0; i < ex; ++i) prod = (prod * fac).truncTo(T);
-        } else if (ex < 0) {
-            auto inv = fac.inverse();
-            for (int i = 0; i < -ex; ++i) prod = (prod * inv).truncTo(T);
+        if (exp.den == BigInt(1)) {
+            int ex = 0;
+            if (exp.num.d.size() == 1 && exp.num.d[0] <= 1000)
+                ex = exp.num.neg ? -static_cast<int>(exp.num.d[0]) : static_cast<int>(exp.num.d[0]);
+            prod = (prod * fac.pow(ex)).truncTo(T);
+        } else {
+            prod = (prod * fac.powFrac(exp)).truncTo(T);
         }
     }
     prod.trunc = T;
@@ -403,8 +404,8 @@ inline std::vector<JacFactor> jacprodmake(const Series& f, int T) {
         if (b % 2 == 0) {
             int half = b / 2;
             Frac eh = e.count(half) ? e[half] : Frac(0);
-            x[half] = eh;
-            sum_x = sum_x + eh;
+            x[half] = eh / Frac(2);
+            sum_x = sum_x + x[half];
         }
         Frac eb_val = e.count(b) ? e[b] : Frac(0);
         x[0] = eb_val - sum_x;
@@ -434,10 +435,7 @@ inline Series jac2series(const std::vector<JacFactor>& jac, int T) {
 inline std::string jac2prod(const std::vector<JacFactor>& jac) {
     std::vector<std::string> num_parts, den_parts;
     for (const auto& [a, b, exp] : jac) {
-        int ex = 0;
-        if (exp.den == BigInt(1) && exp.num.d.size() == 1 && exp.num.d[0] <= 100)
-            ex = exp.num.neg ? -static_cast<int>(exp.num.d[0]) : static_cast<int>(exp.num.d[0]);
-        if (ex == 0) continue;
+        if (exp.isZero()) continue;
         std::string part;
         auto qa = (a == 1) ? "q" : ("q^" + std::to_string(a));
         auto qba = (b - a == 1) ? "q" : ("q^" + std::to_string(b - a));
@@ -446,10 +444,19 @@ inline std::string jac2prod(const std::vector<JacFactor>& jac) {
         } else {
             part = "(" + qa + ",q^" + std::to_string(b) + ")_∞ (" + qba + ",q^" + std::to_string(b) + ")_∞ (q^" + std::to_string(b) + ",q^" + std::to_string(b) + ")_∞";
         }
-        int absex = (ex > 0) ? ex : -ex;
-        if (absex > 1) part += "^" + std::to_string(absex);
-        if (ex > 0) num_parts.push_back(part);
-        else den_parts.push_back(part);
+        Frac absexp = (exp > Frac(0)) ? exp : Frac(-1) * exp;
+        if (!(absexp == Frac(1))) {
+            if (absexp.den == BigInt(1)) {
+                int ae = absexp.num.d.empty() ? 0 : static_cast<int>(absexp.num.d[0]);
+                part += "^" + std::to_string(ae);
+            } else {
+                part += "^(" + absexp.str() + ")";
+            }
+        }
+        if (exp > Frac(0))
+            num_parts.push_back(part);
+        else
+            den_parts.push_back(part);
     }
     std::string num_str, den_str;
     for (const auto& s : num_parts) num_str += (num_str.empty() ? "" : " ") + s;

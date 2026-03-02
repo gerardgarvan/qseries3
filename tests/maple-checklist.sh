@@ -109,13 +109,12 @@ else
 fi
 
 # Block 13: jacprodmake on Slater-type series (§3.4)
-# Expected: Jacobi product with half-integer exponents — our jacprodmake doesn't support fractional exponents
+# Expected: Jacobi product with half-integer exponents (e.g. ^(13/2), ^(1/2))
 OUT13=$(run "x := sum(q^(n*(n+1)/2)*aqprod(-q,q,n,100)/aqprod(q,q,2*n+1,100), n, 0, 10)" "jacprodmake(x, 50)")
-# Check that the jacprodmake output line (last non-empty) contains JAC, not just "1"
-if echo "$OUT13" | grep -qE 'JAC'; then
+if echo "$OUT13" | grep -qE '\(q.*q\^14'; then
     pass "Block 13: jacprodmake Slater"
 else
-    fail "Block 13: jacprodmake Slater (fractional Jacobi exponents unsupported)"
+    fail "Block 13: jacprodmake Slater"
 fi
 
 # Block 14: jac2series on Block 13 result — depends on Block 13
