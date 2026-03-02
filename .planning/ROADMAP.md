@@ -1020,6 +1020,41 @@ Plans:
 - [x] **Phase 65: Jacobi Half-Integer Exponents** - Fix jac2series_impl powFrac dispatch and jac2prod fractional display for Blocks 13-14 (completed 2026-03-02)
 - [x] **Phase 66: Exercise Solutions & Regression** - Verify exercises 4/9/10 with fixed infrastructure, full regression gate (completed 2026-03-02)
 
+## Milestone v4.3 (Modular Arithmetic) — phases 67–68:
+
+- [x] **Phase 67: Modular Series Arithmetic** - modp(f,p), nterms(f), Gaussian elimination over F_p, findhommodp for modular relation finding (completed 2026-03-02)
+- [x] **Phase 68: Modular Worksheet Verification** - Reproduce Garvan's mod-7 eta dissection worksheet end-to-end (completed 2026-03-02)
+
+### Phase 67: Modular Series Arithmetic [x] (completed 2026-03-02)
+**Goal**: Series coefficients can be reduced mod p, and linear algebra over F_p finds modular polynomial relations
+**Depends on**: Phase 66
+**Requirements**: MOD-01, MOD-02, MOD-03, MOD-04
+**Success Criteria** (what must be TRUE):
+  1. `modp(etaq(1,100), 7)` reduces all coefficients mod 7 and returns a valid Series
+  2. `nterms(f)` returns the count of non-zero coefficients in series f
+  3. `findhommodp([f1,f2,...,f8], 7, 1, 0)` finds homogeneous relations over F_7 — kernel may differ from `findhom` over Q
+  4. Gaussian elimination over F_p correctly handles modular inverse and produces correct kernels (e.g., matrix that is full-rank over Q but has kernel over F_7)
+  5. No regressions in existing test suites
+
+Plans:
+- [x] 67-01-PLAN.md — modp, nterms, F_p linear algebra, findhommodp (completed 2026-03-02)
+
+### Phase 68: Modular Worksheet Verification [x] (completed 2026-03-02)
+**Goal**: Garvan's mod-7 eta dissection worksheet runs end-to-end in qseries3
+**Depends on**: Phase 67
+**Requirements**: MOD-05
+**Success Criteria** (what must be TRUE):
+  1. `A0 := sum((-1)^(n+1)*n*(3*n-1)*q^(n*(3*n-1)), n, -20, 20)` computes the Ramanujan-type sum
+  2. `findhommodp` on the 8-element sifted eta list finds {X₇, X₈} (Output 1 from worksheet)
+  3. `modp(sift(A0, 7, k, 1000), 7)` for k=0..6 matches expected nterms (Output 3-4)
+  4. `jacprodmake` on sifted `etaq(2,1000)` residues produces correct Jacobi products (Output 7+)
+  5. All results match the Maple worksheet outputs
+
+Plans:
+- [x] 68-01-PLAN.md — Worksheet verification test suite (completed 2026-03-02)
+
+---
+
 ### Phase 63: Q-Shift Arithmetic Fix
 **Goal**: Series addition works for operands whose q_shifts differ by an integer
 **Depends on**: Phase 62
