@@ -1023,10 +1023,19 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
                     if (r.c.empty()) throw std::runtime_error("division by zero");
                     return l / r;
                 case BinOp::Pow: {
-                    int64_t expVal = evalToInt(e->right.get(), env, sumIndices);
-                    if (expVal > 10000 || expVal < -10000)
-                        throw std::runtime_error("pow: exponent magnitude too large (limit 10000)");
-                    return l.pow(static_cast<int>(expVal));
+                    try {
+                        int64_t expVal = evalToInt(e->right.get(), env, sumIndices);
+                        if (expVal > 10000 || expVal < -10000)
+                            throw std::runtime_error("pow: exponent magnitude too large (limit 10000)");
+                        return l.pow(static_cast<int>(expVal));
+                    } catch (...) {
+                        EnvValue rv = eval(e->right.get(), env, sumIndices);
+                        Series rs = toSeries(rv, "pow exponent", env.T);
+                        if (rs.c.size() == 1 && rs.c.count(0) && rs.q_shift.isZero()) {
+                            return l.powFrac(rs.c.at(0));
+                        }
+                        throw std::runtime_error("pow: exponent must be an integer or rational constant");
+                    }
                 }
             }
             __builtin_unreachable();
