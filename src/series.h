@@ -344,6 +344,24 @@ struct Series {
         return result;
     }
 
+    Series modp(int p) const {
+        if (p <= 0) throw std::runtime_error("modp: prime must be positive");
+        Series s;
+        s.trunc = trunc;
+        s.q_shift = q_shift;
+        for (const auto& [e, v] : c) {
+            if (v.den != BigInt(1))
+                throw std::runtime_error("modp: coefficient at q^" + std::to_string(e) + " is not an integer (" + v.str() + ")");
+            auto [q_bi, r] = BigInt::divmod(v.num, BigInt(p));
+            int64_t rem = r.d.empty() ? 0 : static_cast<int64_t>(r.d[0]);
+            if (r.neg) rem = -rem;
+            rem = ((rem % p) + p) % p;
+            if (rem != 0)
+                s.c[e] = Frac(static_cast<int64_t>(rem));
+        }
+        return s;
+    }
+
     // Composition: f(q) -> f(q^k)
     Series subs_q(int k) const {
         if (k == 0) {

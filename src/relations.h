@@ -113,6 +113,42 @@ inline std::vector<std::vector<Frac>> findhom(
     return kernel(MT);
 }
 
+// findhommodp(L, p, n, topshift): homogeneous relations mod p.
+inline std::vector<std::vector<int64_t>> findhommodp(
+    const std::vector<Series>& L, int p, int n, int topshift) {
+    if (L.empty() || n < 0) return {};
+    int T = L[0].trunc;
+    for (const auto& s : L) T = std::min(T, s.trunc);
+    int numCols = T + topshift;
+    if (numCols <= 0) return {};
+
+    std::vector<std::vector<int>> exps;
+    enumerate_hom_exponents(static_cast<int>(L.size()), n, {}, exps);
+
+    std::vector<Series> monomials;
+    for (const auto& e : exps) {
+        Series prod = Series::one(T);
+        for (size_t i = 0; i < L.size(); ++i) {
+            prod = (prod * L[i].truncTo(T).pow(e[i])).truncTo(T);
+        }
+        monomials.push_back(prod.modp(p));
+    }
+
+    auto M_frac = build_matrix(monomials, numCols);
+
+    int rows_m = static_cast<int>(M_frac.size());
+    int cols_m = rows_m > 0 ? static_cast<int>(M_frac[0].size()) : 0;
+    std::vector<std::vector<int64_t>> MT(cols_m, std::vector<int64_t>(rows_m));
+    for (int i = 0; i < rows_m; ++i)
+        for (int j = 0; j < cols_m; ++j) {
+            int64_t val = M_frac[i][j].num.d.empty() ? 0 : static_cast<int64_t>(M_frac[i][j].num.d[0]);
+            if (M_frac[i][j].num.neg) val = -val;
+            MT[j][i] = ((val % p) + p) % p;
+        }
+
+    return kernel_modp(MT, static_cast<int64_t>(p));
+}
+
 // findnonhom(L, n, topshift): nonhomogeneous relations degree <= n.
 inline std::vector<std::vector<Frac>> findnonhom(
     const std::vector<Series>& L, int n, int topshift) {

@@ -107,4 +107,72 @@ inline std::optional<std::vector<Frac>> solve(
     return x;
 }
 
+// --- F_p (modular) linear algebra ---
+
+inline int64_t mod_inverse(int64_t a, int64_t p) {
+    a = ((a % p) + p) % p;
+    if (a == 0) throw std::runtime_error("mod_inverse: zero has no inverse");
+    int64_t g = p, x = 0, y = 1;
+    int64_t a0 = a;
+    while (a0 != 0) {
+        int64_t q = g / a0;
+        int64_t t = g - q * a0; g = a0; a0 = t;
+        t = x - q * y; x = y; y = t;
+    }
+    if (g != 1) throw std::runtime_error("mod_inverse: not invertible mod " + std::to_string(p));
+    return ((x % p) + p) % p;
+}
+
+inline std::vector<int> gauss_to_rref_modp(std::vector<std::vector<int64_t>>& A, int64_t p) {
+    std::vector<int> pivot_cols;
+    if (A.empty() || A[0].empty()) return pivot_cols;
+    int rows = static_cast<int>(A.size());
+    int cols = static_cast<int>(A[0].size());
+    int pivot_row = 0;
+    for (int c = 0; c < cols; ++c) {
+        int r = pivot_row;
+        while (r < rows && A[r][c] == 0) ++r;
+        if (r >= rows) continue;
+        if (r != pivot_row) std::swap(A[r], A[pivot_row]);
+        int64_t inv = mod_inverse(A[pivot_row][c], p);
+        for (int j = 0; j < cols; ++j)
+            A[pivot_row][j] = (A[pivot_row][j] * inv) % p;
+        for (int i = 0; i < rows; ++i) {
+            if (i == pivot_row || A[i][c] == 0) continue;
+            int64_t scale = A[i][c];
+            for (int j = 0; j < cols; ++j)
+                A[i][j] = ((A[i][j] - scale * A[pivot_row][j]) % p + p) % p;
+        }
+        pivot_cols.push_back(c);
+        ++pivot_row;
+    }
+    return pivot_cols;
+}
+
+inline std::vector<std::vector<int64_t>> kernel_modp(std::vector<std::vector<int64_t>>& M, int64_t p) {
+    if (M.empty() || M[0].empty()) return {};
+    auto A = M;
+    auto pivot_cols = gauss_to_rref_modp(A, p);
+    int ncols = static_cast<int>(A[0].size());
+    std::vector<int> free_cols;
+    for (int j = 0; j < ncols; ++j) {
+        if (std::find(pivot_cols.begin(), pivot_cols.end(), j) == pivot_cols.end())
+            free_cols.push_back(j);
+    }
+    std::vector<std::vector<int64_t>> basis;
+    for (int j : free_cols) {
+        std::vector<int64_t> v(ncols, 0);
+        v[j] = 1;
+        for (size_t pi = 0; pi < pivot_cols.size(); ++pi) {
+            int pc = pivot_cols[pi];
+            int64_t sum = 0;
+            for (int fc : free_cols)
+                sum = (sum + A[pi][fc] * v[fc]) % p;
+            v[pc] = (p - sum % p) % p;
+        }
+        basis.push_back(std::move(v));
+    }
+    return basis;
+}
+
 #endif

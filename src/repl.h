@@ -328,6 +328,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"etamake", {"etamake(f,T)", "identify f as eta product"}},
         {"euler_phi", {"euler_phi(n)", "Euler's totient φ(n)"}},
         {"findhom", {"findhom(L,n,topshift)", "homogeneous polynomial relations between series in L"}},
+        {"findhommodp", {"findhommodp(L,p,n,topshift)", "homogeneous polynomial relations mod p"}},
         {"findhomcombo", {"findhomcombo(f,L,n,topshift[,etaopt])", "express f as polynomial in L"}},
         {"findnonhom", {"findnonhom(L,n,topshift)", "nonhomogeneous polynomial relations"}},
         {"findnonhomcombo", {"findnonhomcombo(f,L,n_list,topshift[,etaopt])", "express f as polynomial in L (nonhom)"}},
@@ -340,8 +341,10 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"partition", {"partition(n)", "partition number p(n)"}},
         {"prodmake", {"prodmake(f,T)", "Andrews' algorithm: series → infinite product"}},
         {"mod", {"mod(a,b)", "integer remainder a mod b"}},
+        {"modp", {"modp(f,p)", "reduce series coefficients modulo prime p"}},
         {"mobius", {"mobius(n)", "Möbius function μ(n): 0 if squared factor, (-1)^k otherwise"}},
         {"mprodmake", {"mprodmake(f,T)", "convert series to product (1+q^n1)(1+q^n2)..."}},
+        {"nterms", {"nterms(f)", "count non-zero coefficients in series"}},
         {"checkprod", {"checkprod(f) or checkprod(f,T) or checkprod(f,M,T)", "check if f is a nice product (exponents |a[n]| < M)"}},
         {"checkmult", {"checkmult(f) or checkmult(f,T) or checkmult(f,T,1)", "check if coefficients are multiplicative"}},
         {"clear_cache", {"clear_cache()", "clear memoization caches (etaq)"}},
@@ -753,6 +756,24 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         enumerate_hom_exponents(static_cast<int>(L.size()), n, {}, exps);
         return RelationKernelResult{std::move(basis), std::move(exps)};
     }
+    if (name == "findhommodp") {
+        if (args.size() != 4)
+            throw std::runtime_error(runtimeErr(name, "expects 4 arguments"));
+        auto L = evalListToSeries(args[0].get());
+        int p = static_cast<int>(evi(1));
+        int n = static_cast<int>(evi(2));
+        int topshift = static_cast<int>(evi(3));
+        auto basis = findhommodp(L, p, n, topshift);
+        std::vector<std::vector<int>> exps;
+        enumerate_hom_exponents(static_cast<int>(L.size()), n, {}, exps);
+        std::vector<std::vector<Frac>> frac_basis;
+        for (const auto& v : basis) {
+            std::vector<Frac> fv;
+            for (int64_t x : v) fv.push_back(Frac(x));
+            frac_basis.push_back(std::move(fv));
+        }
+        return RelationKernelResult{std::move(frac_basis), std::move(exps)};
+    }
     if (name == "findnonhom") {
         if (args.size() != 3)
             throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
@@ -864,6 +885,19 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         }
         std::cout << "]" << std::endl;
         return DisplayOnly{};
+    }
+    if (name == "modp") {
+        if (args.size() != 2)
+            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
+        Series f = ev(0);
+        int p = static_cast<int>(evi(1));
+        return f.modp(p);
+    }
+    if (name == "nterms") {
+        if (args.size() != 1)
+            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
+        Series f = ev(0);
+        return static_cast<int64_t>(f.c.size());
     }
     if (name == "mod") {
         if (args.size() != 2)
