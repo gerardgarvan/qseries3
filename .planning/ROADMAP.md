@@ -514,7 +514,7 @@ Plans:
 | 56. Session Save/Load + History | 0/? | Not started | - |
 | 63. Q-Shift Arithmetic Fix | 0/? | Complete    | 2026-03-01 |
 | 64. Fractional Power Infrastructure | 0/? | Complete    | 2026-03-02 |
-| 65. Jacobi Half-Integer Exponents | 0/? | Not started | - |
+| 65. Jacobi Half-Integer Exponents | 0/? | Complete    | 2026-03-02 |
 | 66. Exercise Solutions & Regression | 0/? | Not started | - |
 
 ### Phase 30: Output on next line after input
@@ -1017,7 +1017,7 @@ Plans:
 
 - [x] **Phase 63: Q-Shift Arithmetic Fix** - Absorb integer q_shift differences in Series::operator+, unblocking Block 25 and theta quotient arithmetic (completed 2026-03-01)
 - [x] **Phase 64: Fractional Power Infrastructure** - Series::powFrac(Frac) via generalized binomial series for exact rational fractional powers (completed 2026-03-02)
-- [ ] **Phase 65: Jacobi Half-Integer Exponents** - Fix jacprodmake middle-element decomposition and jac2series fractional dispatch for Blocks 13-14
+- [x] **Phase 65: Jacobi Half-Integer Exponents** - Fix jac2series_impl powFrac dispatch and jac2prod fractional display for Blocks 13-14 (completed 2026-03-02)
 - [ ] **Phase 66: Exercise Solutions & Regression** - Verify exercises 4/9/10 with fixed infrastructure, full regression gate
 
 ### Phase 63: Q-Shift Arithmetic Fix
@@ -1057,10 +1057,10 @@ Plans:
   2. `jac2series` correctly reconstructs series from half-integer JAC exponents by dispatching through `powFrac`
   3. Blocks 13 and 14 in the Maple checklist pass — jacprodmake on Slater identities yields correct fractional products
   4. `jac2prod` displays fractional exponents correctly (e.g., `^(1/2)`, `^(13/2)`)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 65 to break down)
+- [ ] 65-01-PLAN.md — Fix jac2series_impl powFrac dispatch + jac2prod fractional display + Blocks 13-14 verification
 
 ### Phase 66: Exercise Solutions & Regression
 **Goal**: All dependent exercises verified and full regression suite passes
