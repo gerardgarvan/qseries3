@@ -703,5 +703,76 @@ Requirements for partition rank and crank generating functions.
 
 ---
 
+---
+
+## v5.0 Requirements (t-core Package)
+
+Requirements for implementing Garvan's Maple tcore package — partition t-cores, t-quotients, GSK bijection, vector representations, and display.
+
+### Infrastructure
+
+- [ ] **INFRA-01**: Partition type (`struct Partition`) as new variant in `EvalResult` and `EnvValue`; assignable to variables
+- [ ] **INFRA-02**: List literals `[1,2,3,4]` evaluate to Partition values (non-decreasing order); empty list `[]` supported
+- [ ] **INFRA-03**: `partitions(n)` enumerates all partitions of n, returning a displayable list (with reasonable n limit)
+- [ ] **INFRA-04**: Partition display as `[λ₁, λ₂, ..., λ_k]`; partition conjugate utility function
+
+### Core t-core
+
+- [ ] **TCORE-01**: `rvec(ptn, t, k)` counts nodes in t-residue diagram colored k
+- [ ] **TCORE-02**: `istcore(ptn, t)` tests whether a partition is a t-core (returns boolean)
+- [ ] **TCORE-03**: `tcoreofptn(ptn, t)` computes the t-core of a partition
+- [ ] **TCORE-04**: `tquot(ptn, t)` computes the t-quotient (list of t partitions)
+- [ ] **TCORE-05**: `tcores(t, n)` lists all t-cores of n
+
+### GSK Bijection
+
+- [ ] **GSK-01**: `phi1(ptn, t)` returns [t-core, t-quotient] pair
+- [ ] **GSK-02**: `invphi1([core, quotient], t)` reconstructs the original partition
+- [ ] **GSK-03**: Size identity holds: |λ| = |core| + t × Σ|quotient_i|
+
+### Vectors
+
+- [ ] **VEC-01**: `ptn2nvec(ptn, t)` computes the n-vector of a t-core
+- [ ] **VEC-02**: `nvec2ptn(nvec)` reconstructs a t-core from its n-vector
+- [ ] **VEC-03**: `ptn2rvec(ptn, t)` computes the r-vector
+- [ ] **VEC-04**: `nvec2alphavec(nvec)` converts n-vector to alpha-vector (t=5 and t=7)
+
+### Statistics
+
+- [ ] **STAT-08**: `tcrank(ptn, t)` computes the t-core crank (mod t), handling overflow via modular exponentiation
+
+### Display
+
+- [ ] **DISP-01**: `tresdiag(ptn, t)` prints the t-residue diagram
+- [ ] **DISP-02**: `makebiw(ptn, t, m)` prints the bi-infinite words W₀ through W_{t-1}
+
+## Traceability (v5.0)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| INFRA-01 | Phase 70 | Pending |
+| INFRA-02 | Phase 70 | Pending |
+| INFRA-03 | Phase 70 | Pending |
+| INFRA-04 | Phase 70 | Pending |
+| TCORE-01 | Phase 71 | Pending |
+| TCORE-02 | Phase 71 | Pending |
+| TCORE-03 | Phase 71 | Pending |
+| TCORE-04 | Phase 72 | Pending |
+| TCORE-05 | Phase 71 | Pending |
+| GSK-01 | Phase 72 | Pending |
+| GSK-02 | Phase 72 | Pending |
+| GSK-03 | Phase 72 | Pending |
+| VEC-01 | Phase 73 | Pending |
+| VEC-02 | Phase 73 | Pending |
+| VEC-03 | Phase 73 | Pending |
+| VEC-04 | Phase 73 | Pending |
+| STAT-08 | Phase 74 | Pending |
+| DISP-01 | Phase 74 | Pending |
+| DISP-02 | Phase 74 | Pending |
+
+**Coverage:** 19/19 v5.0 requirements mapped ✓
+
+---
+
 *Requirements defined: 2025-02-24*
-*Last updated: 2026-03-02 after v4.4 requirements*
+*Last updated: 2026-03-02 after v5.0 requirements*

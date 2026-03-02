@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v4.2 (Fix Block Failures)
+**Current focus:** Milestone v5.0 (t-core Package)
 
 ## Current Position
 
-Phase: 66 of 66 (Exercise Solutions & Regression)
-Plan: 01 complete (1 of 1)
-Status: Phase 66 complete — Milestone v4.2 (Fix Block Failures) finished
-Last activity: 2026-03-01 — 66-01 executed (exercise verification + full regression)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-02 — Milestone v5.0 (t-core Package) started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 

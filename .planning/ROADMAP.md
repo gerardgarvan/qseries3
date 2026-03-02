@@ -519,6 +519,12 @@ Plans:
 | 67. Modular Series Arithmetic | 1/1 | Complete    | 2026-03-02 |
 | 68. Modular Worksheet Verification | 1/1 | Complete    | 2026-03-02 |
 | 69. Rank and Crank Functions | 1/1 | Complete    | 2026-03-02 |
+| 70. Partition Type Infrastructure | 0/? | Not started | —          |
+| 71. Core t-core Algorithms | 0/? | Not started | —          |
+| 72. t-Quotient and GSK Bijection | 0/? | Not started | —          |
+| 73. Vector Representations | 0/? | Not started | —          |
+| 74. t-core Crank and Display | 0/? | Not started | —          |
+| 75. Integration Testing | 0/? | Not started | —          |
 
 ### Phase 30: Output on next line after input
 
@@ -1032,6 +1038,15 @@ Plans:
 
 - [x] **Phase 69: Rank and Crank Functions** - rankgf(m,T) and crankgf(m,T) generating functions for partition rank and crank statistics (completed 2026-03-02)
 
+## Milestone v5.0 (t-core Package) — phases 70–75:
+
+- [ ] **Phase 70: Partition Type Infrastructure** — Add Partition type to REPL: list literals `[1,2,3]` → Partition, display, variable assignment, `partitions(n)` enumeration, conjugate utility
+- [ ] **Phase 71: Core t-core Algorithms** — `tcore.h` with `rvec`, `istcore`, `tcoreofptn`, `tcores`; REPL dispatch and help entries
+- [ ] **Phase 72: t-Quotient and GSK Bijection** — `tquot`, `phi1`, `invphi1` with rim hook insertion; size identity verification
+- [ ] **Phase 73: Vector Representations** — `ptn2nvec`, `nvec2ptn`, `ptn2rvec`, `nvec2alphavec`; roundtrip tests
+- [ ] **Phase 74: t-core Crank and Display** — `tcrank` with modular exponentiation, `tresdiag`, `makebiw`
+- [ ] **Phase 75: Integration Testing** — End-to-end tests with Maple tcore examples, regression suite
+
 ### Phase 67: Modular Series Arithmetic [x] (completed 2026-03-02)
 **Goal**: Series coefficients can be reduced mod p, and linear algebra over F_p finds modular polynomial relations
 **Depends on**: Phase 66
@@ -1059,4 +1074,70 @@ Plans:
 
 Plans:
 - [x] 68-01-PLAN.md — Worksheet verification test suite (completed 2026-03-02)
+
+### Phase 70: Partition Type Infrastructure [ ] 
+**Goal**: Add partition (integer list) data type to the REPL so partitions can be created, stored, and displayed
+**Depends on**: None (foundational)
+**Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04
+**Success Criteria** (what must be TRUE):
+  1. `[4,2,2,1]` evaluates to a Partition and displays as `[4, 2, 2, 1]`
+  2. `p := [3,3,1]` stores a Partition in variable p; `p` displays it
+  3. `partitions(5)` enumerates all 7 partitions of 5
+  4. `[]` evaluates to the empty partition
+  5. `conjpart([4,2,2,1])` returns the conjugate partition `[4, 3, 1, 1]`
+
+### Phase 71: Core t-core Algorithms [ ]
+**Goal**: Implement the fundamental t-core building blocks: rvec, istcore, tcoreofptn, tcores
+**Depends on**: Phase 70
+**Requirements**: TCORE-01, TCORE-02, TCORE-03, TCORE-05
+**Success Criteria** (what must be TRUE):
+  1. `rvec([4,2,2,1], 3, 0)` returns the correct count of 0-colored nodes
+  2. `istcore([3,1], 3)` returns true (3-core); `istcore([4,2,2,1], 3)` returns false
+  3. `tcoreofptn([4,2,2,1], 3)` returns the 3-core of the partition
+  4. `tcores(3, 4)` lists all 3-cores of 4 (should be `[3,1]` only)
+  5. All modular arithmetic uses safe `((x % p) + p) % p` pattern
+
+### Phase 72: t-Quotient and GSK Bijection [ ]
+**Goal**: Implement tquot, phi1, invphi1 — the Garvan-Kim-Stanton bijection between partitions and [core, quotient] pairs
+**Depends on**: Phase 71
+**Requirements**: TCORE-04, GSK-01, GSK-02, GSK-03
+**Success Criteria** (what must be TRUE):
+  1. `tquot([4,2,2,1], 3)` returns a list of 3 partitions
+  2. `phi1([4,2,2,1], 3)` returns `[core, quotient]` pair
+  3. `invphi1(phi1([4,2,2,1], 3), 3)` returns `[4,2,2,1]` (roundtrip)
+  4. Size identity: |λ| = |core| + t × Σ|quotient_i| holds for all test cases
+  5. Works for t=2,3,5,7 with various partition sizes
+
+### Phase 73: Vector Representations [ ]
+**Goal**: Implement n-vector, r-vector, and alpha-vector representations of t-cores
+**Depends on**: Phase 71
+**Requirements**: VEC-01, VEC-02, VEC-03, VEC-04
+**Success Criteria** (what must be TRUE):
+  1. `ptn2nvec([3,1], 3)` returns the correct 3-element n-vector
+  2. `nvec2ptn(ptn2nvec(ptn, t))` roundtrips for any t-core ptn
+  3. `ptn2rvec([4,2,2,1], 3)` returns the 3-element r-vector
+  4. `nvec2alphavec(nvec)` works for t=5 and t=7, errors for other t
+  5. Frobenius coordinate reconstruction in nvec2ptn produces correct partitions
+
+### Phase 74: t-core Crank and Display [ ]
+**Goal**: Implement tcrank statistic and visual display functions (tresdiag, makebiw)
+**Depends on**: Phase 71
+**Requirements**: STAT-08, DISP-01, DISP-02
+**Success Criteria** (what must be TRUE):
+  1. `tcrank([4,2,2,1], 5)` returns a value in {0,1,2,3,4}
+  2. `tcrank` uses modular exponentiation for `h(t)=(t-(p-1)/2)^(p-3)` to avoid overflow
+  3. `tresdiag([4,2,2,1], 3)` prints the 3-residue diagram
+  4. `makebiw([1,1,2,4,4,5,6,6,6], 5, 3)` prints bi-infinite words matching Maple output
+  5. Display functions produce output matching the Maple tcore package
+
+### Phase 75: Integration Testing [ ]
+**Goal**: End-to-end verification with Maple tcore examples, full regression
+**Depends on**: Phases 72, 73, 74
+**Requirements**: All (integration)
+**Success Criteria** (what must be TRUE):
+  1. Maple tcore examples from t-core.txt all reproduce correctly
+  2. `phi1`/`invphi1` roundtrip passes for partitions of n=1..20 with t=2,3,5
+  3. Size identity holds for all test cases
+  4. No regressions in maple-checklist.sh or other acceptance tests
+  5. Help entries for all 15+ new functions
 

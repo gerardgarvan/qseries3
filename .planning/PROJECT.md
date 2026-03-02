@@ -8,14 +8,23 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 **Rogers-Ramanujan must work.** Given `Σ q^(n²) / (q;q)_n`, prodmake must recover the product form with denominators only at exponents ≡ ±1 (mod 5). If this test passes, the core math is correct. Everything else builds on it.
 
-## Current Milestone: v4.2 Fix Block Failures
+## Current Milestone: v5.0 t-core Package
 
-**Goal:** Fix the 3 remaining Maple checklist failures (blocks 13-14, 25) and the 3 dependent partial exercises, achieving near-complete Maple tutorial compatibility.
+**Goal:** Implement Garvan's Maple tcore package — partition t-core/t-quotient computations, the Garvan-Kim-Stanton bijection, n-vector/r-vector representations, t-core crank, and residue diagram display. Requires adding a partition (integer list) data type to the parser/REPL.
 
 **Target features:**
-- Half-integer Jacobi exponent support in jacprodmake (blocks 13-14)
-- q-shift addition for mixed fractional shifts in Series arithmetic (block 25)
-- Fix dependent exercises (Ex 4 b(q), Ex 9 N(q), Ex 10 findpoly)
+- Partition data type: list literals `[1,2,3]` in the parser, `partition(n)` enumeration
+- Core t-core: `tcoreofptn`, `istcore`, `tcores`, `tquot`
+- GSK bijection: `PHI1` (partition → [core, quotient]), `invphi1` (inverse)
+- Vectors: `ptn2nvec`, `nvec2ptn`, `ptn2rvec`, `nvec2alphavec`
+- Statistics: `tcrank` (t-core crank)
+- Display: `tresdiag`, `makebiw` (residue diagrams, bi-infinite words)
+
+---
+
+## Previous Milestone: v4.2 Fix Block Failures ✓
+
+**Shipped:** Half-integer Jacobi exponents, q-shift arithmetic fix, fractional power infrastructure, exercise solutions (Ex 4/9/10), 33/41 maple-checklist pass. Also: modular arithmetic (modp, findhommodp, F_p linear algebra), mod-7 worksheet verification, rank/crank generating functions (rankgf, crankgf).
 
 ---
 
