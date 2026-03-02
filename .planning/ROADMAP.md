@@ -515,7 +515,7 @@ Plans:
 | 63. Q-Shift Arithmetic Fix | 0/? | Complete    | 2026-03-01 |
 | 64. Fractional Power Infrastructure | 0/? | Complete    | 2026-03-02 |
 | 65. Jacobi Half-Integer Exponents | 0/? | Complete    | 2026-03-02 |
-| 66. Exercise Solutions & Regression | 0/? | Not started | - |
+| 66. Exercise Solutions & Regression | 0/? | Complete    | 2026-03-02 |
 
 ### Phase 30: Output on next line after input
 
@@ -1018,7 +1018,7 @@ Plans:
 - [x] **Phase 63: Q-Shift Arithmetic Fix** - Absorb integer q_shift differences in Series::operator+, unblocking Block 25 and theta quotient arithmetic (completed 2026-03-01)
 - [x] **Phase 64: Fractional Power Infrastructure** - Series::powFrac(Frac) via generalized binomial series for exact rational fractional powers (completed 2026-03-02)
 - [x] **Phase 65: Jacobi Half-Integer Exponents** - Fix jac2series_impl powFrac dispatch and jac2prod fractional display for Blocks 13-14 (completed 2026-03-02)
-- [ ] **Phase 66: Exercise Solutions & Regression** - Verify exercises 4/9/10 with fixed infrastructure, full regression gate
+- [x] **Phase 66: Exercise Solutions & Regression** - Verify exercises 4/9/10 with fixed infrastructure, full regression gate (completed 2026-03-02)
 
 ### Phase 63: Q-Shift Arithmetic Fix
 **Goal**: Series addition works for operands whose q_shifts differ by an integer
