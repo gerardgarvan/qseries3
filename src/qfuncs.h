@@ -413,4 +413,65 @@ inline Series qdiff(const Series& f) {
     return result;
 }
 
+// ============ Rank and Crank generating functions ============
+
+inline std::vector<Frac> compute_partition_numbers(int T) {
+    std::vector<Frac> p(T, Frac(0));
+    p[0] = Frac(1);
+    for (int n = 1; n < T; ++n) {
+        for (int k = 1; ; ++k) {
+            int e1 = k * (3*k - 1) / 2;
+            int e2 = k * (3*k + 1) / 2;
+            if (e1 > n && e2 > n) break;
+            Frac sign(k % 2 == 1 ? 1 : -1);
+            if (e1 <= n) p[n] = p[n] + sign * p[n - e1];
+            if (e2 <= n) p[n] = p[n] + sign * p[n - e2];
+        }
+    }
+    return p;
+}
+
+inline Series rankgf(int m, int T) {
+    if (T <= 0) return Series::zero(1);
+    int am = (m < 0) ? -m : m;
+    auto p = compute_partition_numbers(T);
+    Series result;
+    result.trunc = T;
+    if (m == 0) result.setCoeff(0, Frac(1));
+    for (int n = 1; n < T; ++n) {
+        Frac val(0);
+        for (int j = 1; ; ++j) {
+            int kk = j * (3*j - 1) / 2 + am * j;
+            if (kk > n) break;
+            Frac sign = (j % 2 == 1) ? Frac(1) : Frac(-1);
+            val = val + sign * p[n - kk];
+            int kk2 = kk + j;
+            if (kk2 <= n) val = val - sign * p[n - kk2];
+        }
+        if (!val.isZero()) result.setCoeff(n, val);
+    }
+    return result;
+}
+
+inline Series crankgf(int m, int T) {
+    if (T <= 0) return Series::zero(1);
+    int am = (m < 0) ? -m : m;
+    auto p = compute_partition_numbers(T);
+    Series result;
+    result.trunc = T;
+    for (int n = 0; n < T; ++n) {
+        Frac val(0);
+        for (int j = 1; ; ++j) {
+            int kk = j * (j - 1) / 2 + am * j;
+            if (kk > n) break;
+            Frac sign = (j % 2 == 1) ? Frac(1) : Frac(-1);
+            val = val + sign * p[n - kk];
+            int kk2 = kk + j;
+            if (kk2 <= n) val = val - sign * p[n - kk2];
+        }
+        if (!val.isZero()) result.setCoeff(n, val);
+    }
+    return result;
+}
+
 #endif

@@ -321,6 +321,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"aqprod", {"aqprod(a,q,n,T)", "rising q-factorial (a;q)_n"}},
         {"coeff", {"coeff(f,n)", "coefficient of q^n in series f"}},
         {"coeffs", {"coeffs(f,from,to)", "list coefficients from exponent from to to"}},
+        {"crankgf", {"crankgf(m,T)", "GF for partitions with crank m: \xCE\xA3 M(m,n) q^n"}},
         {"dissect", {"dissect(f,m,T)", "list all m siftings of f: sift(f,m,k,T) for k=0..m-1"}},
         {"divisors", {"divisors(n)", "sorted list of positive divisors of n"}},
         {"eisenstein", {"eisenstein(k,T)", "normalized Eisenstein series E_{2k}(q)"}},
@@ -351,6 +352,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"qbin", {"qbin(m,n,T) or qbin(q,m,n,T)", "Gaussian polynomial [m;n]_q"}},
         {"qfactor", {"qfactor(f) or qfactor(f,T)", "factorize finite q-product"}},
         {"quinprod", {"quinprod(z,q,T)", "quintuple product"}},
+        {"rankgf", {"rankgf(m,T)", "GF for partitions with rank m: \xCE\xA3 N(m,n) q^n"}},
         {"series", {"series(f) or series(f,T)", "display series coefficients"}},
         {"set_trunc", {"set_trunc(N)", "set default truncation"}},
         {"sigma", {"sigma(n) or sigma(n,k)", "divisor sum σ_k(n)"}},
@@ -938,6 +940,16 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         if (args.size() != 2)
             throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
         return eisenstein(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
+    }
+    if (name == "rankgf") {
+        if (args.size() != 2)
+            throw std::runtime_error(runtimeErr(name, "expects 2 arguments: rankgf(m, T)"));
+        return rankgf(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
+    }
+    if (name == "crankgf") {
+        if (args.size() != 2)
+            throw std::runtime_error(runtimeErr(name, "expects 2 arguments: crankgf(m, T)"));
+        return crankgf(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
     }
     if (name == "partition") {
         if (args.size() != 1)

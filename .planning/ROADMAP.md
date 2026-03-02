@@ -516,6 +516,9 @@ Plans:
 | 64. Fractional Power Infrastructure | 0/? | Complete    | 2026-03-02 |
 | 65. Jacobi Half-Integer Exponents | 0/? | Complete    | 2026-03-02 |
 | 66. Exercise Solutions & Regression | 0/? | Complete    | 2026-03-02 |
+| 67. Modular Series Arithmetic | 1/1 | Complete    | 2026-03-02 |
+| 68. Modular Worksheet Verification | 1/1 | Complete    | 2026-03-02 |
+| 69. Rank and Crank Functions | 1/1 | Complete    | 2026-03-02 |
 
 ### Phase 30: Output on next line after input
 
@@ -1025,6 +1028,10 @@ Plans:
 - [x] **Phase 67: Modular Series Arithmetic** - modp(f,p), nterms(f), Gaussian elimination over F_p, findhommodp for modular relation finding (completed 2026-03-02)
 - [x] **Phase 68: Modular Worksheet Verification** - Reproduce Garvan's mod-7 eta dissection worksheet end-to-end (completed 2026-03-02)
 
+## Milestone v4.4 (Partition Statistics) — phase 69:
+
+- [x] **Phase 69: Rank and Crank Functions** - rankgf(m,T) and crankgf(m,T) generating functions for partition rank and crank statistics (completed 2026-03-02)
+
 ### Phase 67: Modular Series Arithmetic [x] (completed 2026-03-02)
 **Goal**: Series coefficients can be reduced mod p, and linear algebra over F_p finds modular polynomial relations
 **Depends on**: Phase 66
@@ -1053,60 +1060,3 @@ Plans:
 Plans:
 - [x] 68-01-PLAN.md — Worksheet verification test suite (completed 2026-03-02)
 
----
-
-### Phase 63: Q-Shift Arithmetic Fix
-**Goal**: Series addition works for operands whose q_shifts differ by an integer
-**Depends on**: Phase 62
-**Requirements**: QSHIFT-01, QSHIFT-02
-**Success Criteria** (what must be TRUE):
-  1. Adding two series whose q_shifts differ by an integer (e.g., 0 and -1) succeeds — coefficients are index-shifted to align rather than throwing
-  2. `normalize_q_shift()` absorbs integer part of q_shift into coefficient indices, keeping q_shift ∈ [0,1)
-  3. Block 25 in the Maple checklist passes — `findpoly` with `theta2(q)²/theta3(q)²` and `theta2(q³)²/theta3(q³)²` produces the expected cubic relation
-**Plans:** 1/1 plans complete
-
-Plans:
-- [ ] 63-01-PLAN.md — normalize_q_shift() + expanded fractional display + Block 25 fix
-
-### Phase 64: Fractional Power Infrastructure
-**Goal**: Series can be raised to any rational exponent via generalized binomial coefficients
-**Depends on**: Phase 63
-**Requirements**: JAC-02
-**Success Criteria** (what must be TRUE):
-  1. `Series::powFrac(Frac(1,2))` on `(1-q)` produces correct coefficients: 1, -1/2, -1/8, -1/16, -5/128, -7/256, ...
-  2. `f.powFrac(Frac(1,2)).powFrac(Frac(2,1))` equals `f` to truncation (square-root-then-square roundtrip)
-  3. `BigInt::iroot(n,k)` and `Frac::rational_pow(alpha)` correctly compute integer k-th roots and rational powers as validation guards
-  4. `powFrac` handles arbitrary rational exponents (1/2, 3/2, 13/2) with correct truncation propagation
-  5. Multi-term series: `(1+q+q^2)^(1/2)` produces coefficient 3/8 at q^2 (exercises inner loop of recurrence)
-  6. Chained fractional powers with q_shift: `((q-q^2)^(1/2))^(1/3)` produces correct q_shift = 1/6
-
-Plans:
-- [ ] 64-01-PLAN.md — BigInt::iroot + Frac::rational_pow + Series::powFrac + REPL dispatch (plan-checked, 3 critical fixes applied)
-
-### Phase 65: Jacobi Half-Integer Exponents
-**Goal**: jacprodmake produces and jac2series reconstructs half-integer JAC exponents
-**Depends on**: Phase 64
-**Requirements**: JAC-01, JAC-03, JAC-04
-**Success Criteria** (what must be TRUE):
-  1. `jacprodmake` on Slater(46) produces JAC factors with half-integer exponents (e.g., `JAC(0,14,∞)^(13/2)`)
-  2. `jac2series` correctly reconstructs series from half-integer JAC exponents by dispatching through `powFrac`
-  3. Blocks 13 and 14 in the Maple checklist pass — jacprodmake on Slater identities yields correct fractional products
-  4. `jac2prod` displays fractional exponents correctly (e.g., `^(1/2)`, `^(13/2)`)
-**Plans**: 1 plan
-
-Plans:
-- [ ] 65-01-PLAN.md — Fix jac2series_impl powFrac dispatch + jac2prod fractional display + Blocks 13-14 verification
-
-### Phase 66: Exercise Solutions & Regression
-**Goal**: All dependent exercises verified and full regression suite passes
-**Depends on**: Phase 63, Phase 65
-**Requirements**: EX-01, EX-02, EX-03, REG-04
-**Success Criteria** (what must be TRUE):
-  1. Exercise 4: `b(q) = η(τ)³/η(3τ)` computes correctly using `etaq(1,T)^3 / etaq(3,T)` and matches expected coefficients
-  2. Exercise 9: N(q) computation is attempted via `findnonhomcombo` with σ₅(n) coefficients — result documented even if infeasible at practical truncation
-  3. Exercise 10: `findpoly` with q-shift-fixed theta series produces the expected cubic relation `y = 27(m-1)(m+1)⁴/(m²+6m-3)³`
-  4. All existing acceptance tests and all 30 previously-passing maple-checklist blocks still pass (no regressions)
-**Plans**: 1 plan
-
-Plans:
-- [ ] 66-01-PLAN.md — Exercise 4/9/10 verification test script + full regression suite

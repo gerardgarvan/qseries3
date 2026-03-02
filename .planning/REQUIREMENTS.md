@@ -633,5 +633,75 @@ Requirements for milestone v4.2 — fix 3 Maple checklist block failures and 3 d
 
 ---
 
+## v4.3 Requirements (Modular Arithmetic)
+
+Requirements for modular (mod p) series arithmetic and relation finding.
+
+### Modular Series
+
+- [ ] **MOD-01**: `modp(f, p)` reduces all series coefficients modulo prime p, returning a Series with integer coefficients in {0, ..., p-1}
+- [ ] **MOD-02**: `nterms(f)` returns the count of non-zero coefficients in a series
+
+### Modular Linear Algebra
+
+- [ ] **MOD-03**: Gaussian elimination over F_p (modular inverse via extended GCD, kernel computation in Z/pZ)
+- [ ] **MOD-04**: `findhommodp(L, p, n, topshift)` finds homogeneous polynomial relations among series with all arithmetic mod p
+
+### Worksheet Verification
+
+- [ ] **MOD-05**: Garvan's mod-7 eta dissection worksheet reproduces all numbered outputs (1)-(7) in the qseries3 REPL
+
+## Traceability (v4.3)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| MOD-01 | Phase 67 | Pending |
+| MOD-02 | Phase 67 | Pending |
+| MOD-03 | Phase 67 | Pending |
+| MOD-04 | Phase 67 | Pending |
+| MOD-05 | Phase 68 | Pending |
+
+**Coverage:** 5/5 v4.3 requirements mapped ✓
+
+---
+
+---
+
+## v4.4 Requirements (Partition Statistics)
+
+Requirements for partition rank and crank generating functions.
+
+### Rank
+
+- [ ] **STAT-01**: `rankgf(m, T)` returns Σ N(m,n) q^n where N(m,n) is the number of partitions of n with rank m
+- [ ] **STAT-02**: Rank symmetry holds: rankgf(m, T) = rankgf(-m, T)
+
+### Crank
+
+- [ ] **STAT-03**: `crankgf(m, T)` returns Σ M(m,n) q^n where M(m,n) is the number of partitions of n with crank m
+- [ ] **STAT-04**: Crank symmetry holds: crankgf(m, T) = crankgf(-m, T)
+- [ ] **STAT-05**: Andrews-Garvan convention: M(0,1) = -1
+
+### Partition identity
+
+- [ ] **STAT-06**: Σ_m N(m,n) = p(n) for all n (rank partition identity)
+- [ ] **STAT-07**: Σ_m M(m,n) = p(n) for all n (crank partition identity)
+
+## Traceability (v4.4)
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| STAT-01 | Phase 69 | Pending |
+| STAT-02 | Phase 69 | Pending |
+| STAT-03 | Phase 69 | Pending |
+| STAT-04 | Phase 69 | Pending |
+| STAT-05 | Phase 69 | Pending |
+| STAT-06 | Phase 69 | Pending |
+| STAT-07 | Phase 69 | Pending |
+
+**Coverage:** 7/7 v4.4 requirements mapped ✓
+
+---
+
 *Requirements defined: 2025-02-24*
-*Last updated: 2026-03-01 after v4.2 requirements*
+*Last updated: 2026-03-02 after v4.4 requirements*
