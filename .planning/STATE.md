@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 
 ## Current Position
 
-Phase: 63 of 66 (Q-Shift Arithmetic Fix)
+Phase: 64 of 66 (Fractional Power Infrastructure)
 Plan: 01 complete (1 of 1)
-Status: Phase 63 complete — ready for Phase 64
-Last activity: 2026-03-01 — 63-01 executed (normalize_q_shift + Block 25)
+Status: Phase 64 complete — ready for Phase 65
+Last activity: 2026-03-02 — 64-01 executed (powFrac + REPL dispatch)
 
-Progress: [██░░░░░░░░] 25%
+Progress: [███░░░░░░░] 50%
 
 ## Performance Metrics
 
@@ -49,6 +49,7 @@ Progress: [██░░░░░░░░] 25%
 | Phase 51-ansi-color-clear P01 | ~7 | 2 tasks | 1 file |
 | Phase 52-karatsuba P01 | ~4 | 1 task | 1 file |
 | Phase 63-q-shift-arithmetic-fix P01 | ~7 | 2 tasks | 2 files |
+| Phase 64-fractional-power-infrastructure P01 | ~10 | 5 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,7 @@ Progress: [██░░░░░░░░] 25%
 - [Phase 52-karatsuba]: Plan 52-01: Hybrid Karatsuba/schoolbook multiply; KARATSUBA_THRESHOLD=32 limbs; mulSchoolbook/addVec/subVec vector helpers; karatsubaMultiply recursive with 3-multiply decomposition; operator* dispatches automatically
 - [Phase 62-maple-checklist]: Plan 62-02: jacprodmake fixed for general moduli (mod-11, mod-20); jac2prod display fix (num+den); Watson T=ξ+5ξ²+15ξ³+25ξ⁴+25ξ⁵; Slater(46)=parts≢0,±4,±6(mod20); 30/41 blocks pass; 13 exercises documented
 - [Phase 63-q-shift-arithmetic-fix]: Plan 63-01: normalize_q_shift() absorbs integer part into coeff indices; q_shift in [0,1) after operator*/inverse/subs_q; expanded fractional display q^(n/d); Block 25 findpoly theta2/theta3 passes; 31/41 blocks pass
+- [Phase 64-fractional-power-infrastructure]: Plan 64-01: bigpow/iroot in BigInt; Frac::rational_pow exact rational exponentiation; Series::powFrac via generalized binomial recurrence O(T²); REPL ^ fallback to powFrac; acceptance-powfrac.sh 6 tests; all 10 acceptance + 31/41 maple-checklist pass
 
 ### Roadmap Evolution
 
@@ -163,8 +165,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-01
-Stopped at: Completed 63-01-PLAN.md — normalize_q_shift + Block 25 passing; ready for Phase 64
+Last session: 2026-03-02
+Stopped at: Completed 64-01-PLAN.md — powFrac + REPL dispatch; ready for Phase 65
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
