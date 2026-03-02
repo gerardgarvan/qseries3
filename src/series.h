@@ -279,6 +279,71 @@ struct Series {
         return result;
     }
 
+    Series powFrac(Frac alpha) const {
+        // Integer shortcut
+        if (alpha.den == BigInt(1)) {
+            int64_t p64 = 0;
+            if (!alpha.num.d.empty()) p64 = static_cast<int64_t>(alpha.num.d[0]);
+            if (alpha.num.neg) p64 = -p64;
+            return pow(static_cast<int>(p64));
+        }
+
+        // Empty series: 0^alpha
+        if (c.empty()) {
+            if (alpha > Frac(0))
+                return zero(trunc);
+            throw std::runtime_error("powFrac: 0 to non-positive power");
+        }
+
+        // Extract leading q-power
+        int k = minExp();
+        Series f;
+        f.trunc = trunc - k;
+        f.q_shift = Frac(0);
+        for (const auto& [e, v] : c) {
+            int ne = e - k;
+            if (ne >= 0 && ne < f.trunc)
+                f.c[ne] = v;
+        }
+
+        Frac c0 = f.coeff(0);
+        if (c0.isZero())
+            throw std::runtime_error("powFrac: zero constant term after shift");
+
+        // scale = c0^alpha (must be exact rational)
+        Frac scale = c0.rational_pow(alpha);
+
+        // Build normalized g: g[j] = f[j]/c0 for j >= 1
+        int T = f.trunc;
+        std::vector<Frac> g(T);
+        for (int j = 1; j < T; ++j)
+            g[j] = f.coeff(j) / c0;
+
+        // Coefficient recurrence: h = (1 + g)^alpha
+        std::vector<Frac> h(T);
+        h[0] = Frac(1);
+        for (int m = 1; m < T; ++m) {
+            Frac sum(0);
+            for (int j = 1; j < m; ++j) {
+                Frac coef = (alpha + Frac(1)) * Frac(j) - Frac(m);
+                sum = sum + coef * g[j] * h[m - j];
+            }
+            h[m] = alpha * g[m] + sum / Frac(m);
+        }
+
+        // Build result with scale and q_shift
+        Series result;
+        result.trunc = T;
+        for (int m = 0; m < T; ++m) {
+            Frac val = scale * h[m];
+            if (!val.isZero())
+                result.c[m] = val;
+        }
+        result.q_shift = (q_shift + Frac(k)) * alpha;
+        result.normalize_q_shift();
+        return result;
+    }
+
     // Composition: f(q) -> f(q^k)
     Series subs_q(int k) const {
         if (k == 0) {
