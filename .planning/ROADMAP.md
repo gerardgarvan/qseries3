@@ -513,7 +513,7 @@ Plans:
 | 55. Smart Tab Completion | 0/? | Complete    | 2026-02-28 |
 | 56. Session Save/Load + History | 0/? | Not started | - |
 | 63. Q-Shift Arithmetic Fix | 0/? | Complete    | 2026-03-01 |
-| 64. Fractional Power Infrastructure | 0/? | Not started | - |
+| 64. Fractional Power Infrastructure | 0/? | Complete    | 2026-03-02 |
 | 65. Jacobi Half-Integer Exponents | 0/? | Not started | - |
 | 66. Exercise Solutions & Regression | 0/? | Not started | - |
 
@@ -1016,7 +1016,7 @@ Plans:
 ## Milestone v4.2 (Fix Block Failures) — phases 63–66:
 
 - [x] **Phase 63: Q-Shift Arithmetic Fix** - Absorb integer q_shift differences in Series::operator+, unblocking Block 25 and theta quotient arithmetic (completed 2026-03-01)
-- [ ] **Phase 64: Fractional Power Infrastructure** - Series::powFrac(Frac) via generalized binomial series for exact rational fractional powers
+- [x] **Phase 64: Fractional Power Infrastructure** - Series::powFrac(Frac) via generalized binomial series for exact rational fractional powers (completed 2026-03-02)
 - [ ] **Phase 65: Jacobi Half-Integer Exponents** - Fix jacprodmake middle-element decomposition and jac2series fractional dispatch for Blocks 13-14
 - [ ] **Phase 66: Exercise Solutions & Regression** - Verify exercises 4/9/10 with fixed infrastructure, full regression gate
 
@@ -1040,12 +1040,13 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. `Series::powFrac(Frac(1,2))` on `(1-q)` produces correct coefficients: 1, -1/2, -1/8, -1/16, -5/128, -7/256, ...
   2. `f.powFrac(Frac(1,2)).powFrac(Frac(2,1))` equals `f` to truncation (square-root-then-square roundtrip)
-  3. `BigInt::isqrt()` and `Frac::rational_sqrt()` correctly compute integer and rational square roots as validation guards
+  3. `BigInt::iroot(n,k)` and `Frac::rational_pow(alpha)` correctly compute integer k-th roots and rational powers as validation guards
   4. `powFrac` handles arbitrary rational exponents (1/2, 3/2, 13/2) with correct truncation propagation
-**Plans**: TBD
+  5. Multi-term series: `(1+q+q^2)^(1/2)` produces coefficient 3/8 at q^2 (exercises inner loop of recurrence)
+  6. Chained fractional powers with q_shift: `((q-q^2)^(1/2))^(1/3)` produces correct q_shift = 1/6
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 64 to break down)
+- [ ] 64-01-PLAN.md — BigInt::iroot + Frac::rational_pow + Series::powFrac + REPL dispatch (plan-checked, 3 critical fixes applied)
 
 ### Phase 65: Jacobi Half-Integer Exponents
 **Goal**: jacprodmake produces and jac2series reconstructs half-integer JAC exponents
