@@ -1029,7 +1029,7 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
                             throw std::runtime_error("pow: exponent magnitude too large (limit 10000)");
                         return l.pow(static_cast<int>(expVal));
                     } catch (...) {
-                        EnvValue rv = eval(e->right.get(), env, sumIndices);
+                        EvalResult rv = eval(e->right.get(), env, sumIndices);
                         Series rs = toSeries(rv, "pow exponent", env.T);
                         if (rs.c.size() == 1 && rs.c.count(0) && rs.q_shift.isZero()) {
                             return l.powFrac(rs.c.at(0));
