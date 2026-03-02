@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 
 ## Current Position
 
-Phase: 65 of 66 (Jacobi Half-Integer Exponents)
+Phase: 66 of 66 (Exercise Solutions & Regression)
 Plan: 01 complete (1 of 1)
-Status: Phase 65 complete — ready for Phase 66
-Last activity: 2026-03-01 — 65-01 executed (jacprodmake/jac2series/jac2prod fractional exponents)
+Status: Phase 66 complete — Milestone v4.2 (Fix Block Failures) finished
+Last activity: 2026-03-01 — 66-01 executed (exercise verification + full regression)
 
-Progress: [████░░░░░░] 60%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Progress: [████░░░░░░] 60%
 | Phase 63-q-shift-arithmetic-fix P01 | ~7 | 2 tasks | 2 files |
 | Phase 64-fractional-power-infrastructure P01 | ~10 | 5 tasks | 5 files |
 | Phase 65-jacobi-half-integer-exponents P01 | ~12 | 2 tasks | 2 files |
+| Phase 66-exercise-solutions-regression P01 | ~8 | 2 tasks | 1 file |
 
 ## Accumulated Context
 
@@ -103,6 +104,7 @@ Progress: [████░░░░░░] 60%
 - [Phase 63-q-shift-arithmetic-fix]: Plan 63-01: normalize_q_shift() absorbs integer part into coeff indices; q_shift in [0,1) after operator*/inverse/subs_q; expanded fractional display q^(n/d); Block 25 findpoly theta2/theta3 passes; 31/41 blocks pass
 - [Phase 64-fractional-power-infrastructure]: Plan 64-01: bigpow/iroot in BigInt; Frac::rational_pow exact rational exponentiation; Series::powFrac via generalized binomial recurrence O(T²); REPL ^ fallback to powFrac; acceptance-powfrac.sh 6 tests; all 10 acceptance + 31/41 maple-checklist pass
 - [Phase 65-jacobi-half-integer-exponents]: Plan 65-01: jacprodmake b/2 exponent halving for even-period products; jac2series_impl powFrac dispatch for fractional exponents; jac2prod ^(n/d) display; Blocks 13+14 pass; 33/41 maple-checklist pass
+- [Phase 66-exercise-solutions-regression]: Plan 66-01: acceptance-exercises.sh for Exercises 4/9/10; full regression 56 tests pass, 0 fail; Milestone v4.2 complete
 
 ### Roadmap Evolution
 
@@ -168,7 +170,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 65-01-PLAN.md — Jacobi half-integer exponents; ready for Phase 66
+Stopped at: Completed 66-01-PLAN.md — Exercise solutions & regression; Milestone v4.2 complete
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
