@@ -405,4 +405,57 @@ inline BigInt bigGcd(BigInt a, BigInt b) {
     return a;
 }
 
+inline BigInt bigpow(BigInt base, int exp) {
+    if (exp < 0)
+        throw std::invalid_argument("bigpow: negative exponent");
+    BigInt result(1);
+    while (exp > 0) {
+        if (exp & 1)
+            result = result * base;
+        base = base * base;
+        exp >>= 1;
+    }
+    return result;
+}
+
+inline BigInt iroot(BigInt n, int k) {
+    if (k < 1)
+        throw std::invalid_argument("iroot: k must be >= 1");
+    if (k == 1)
+        return n;
+    if (n.neg)
+        throw std::invalid_argument("iroot: negative input");
+    if (n.isZero())
+        return BigInt(0);
+    if (n == BigInt(1))
+        return BigInt(1);
+
+    // Upper bound: 2^(ceil(bitlen(n)/k) + 1)
+    int bitlen = 0;
+    {
+        BigInt tmp = n;
+        while (!tmp.isZero()) {
+            tmp = tmp / BigInt(2);
+            ++bitlen;
+        }
+    }
+    int rootBits = (bitlen + k - 1) / k + 1;
+    BigInt high(1);
+    for (int i = 0; i < rootBits; ++i)
+        high = high * BigInt(2);
+
+    BigInt low(1);
+    while (low <= high) {
+        BigInt mid = (low + high) / BigInt(2);
+        BigInt p = bigpow(mid, k);
+        if (p == n)
+            return mid;
+        if (p < n)
+            low = mid + BigInt(1);
+        else
+            high = mid - BigInt(1);
+    }
+    throw std::invalid_argument("iroot: not a perfect k-th power");
+}
+
 #endif
