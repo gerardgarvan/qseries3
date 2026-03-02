@@ -1071,7 +1071,7 @@ Plans:
   2. Exercise 9: N(q) computation is attempted via `findnonhomcombo` with σ₅(n) coefficients — result documented even if infeasible at practical truncation
   3. Exercise 10: `findpoly` with q-shift-fixed theta series produces the expected cubic relation `y = 27(m-1)(m+1)⁴/(m²+6m-3)³`
   4. All existing acceptance tests and all 30 previously-passing maple-checklist blocks still pass (no regressions)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 66 to break down)
+- [ ] 66-01-PLAN.md — Exercise 4/9/10 verification test script + full regression suite
