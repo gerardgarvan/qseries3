@@ -107,6 +107,52 @@ struct Frac {
         return !(*this < o);
     }
 
+    Frac rational_pow(Frac alpha) const {
+        if (isZero()) {
+            if (alpha > Frac(0)) return Frac(0);
+            throw std::invalid_argument("rational_pow: 0 to non-positive power");
+        }
+
+        // Integer exponent: simple repeated multiply
+        if (alpha.den == BigInt(1)) {
+            int64_t p64 = 0;
+            if (!alpha.num.d.empty()) p64 = static_cast<int64_t>(alpha.num.d[0]);
+            if (alpha.num.neg) p64 = -p64;
+            bool negp = (p64 < 0);
+            int pabs = static_cast<int>(negp ? -p64 : p64);
+            BigInt rn = bigpow(num.abs(), pabs);
+            BigInt rd = bigpow(den, pabs);
+            if (negp) std::swap(rn, rd);
+            bool rneg = num.neg && (pabs % 2 == 1);
+            if (rneg) rn = -rn;
+            return Frac(std::move(rn), std::move(rd));
+        }
+
+        // General case: alpha = p/q
+        int64_t p64 = 0;
+        if (!alpha.num.d.empty()) p64 = static_cast<int64_t>(alpha.num.d[0]);
+        if (alpha.num.neg) p64 = -p64;
+        int64_t q64 = 0;
+        if (!alpha.den.d.empty()) q64 = static_cast<int64_t>(alpha.den.d[0]);
+        int qint = static_cast<int>(q64);
+
+        if (num.neg && (qint % 2 == 0))
+            throw std::invalid_argument("rational_pow: even root of negative");
+
+        bool negp = (p64 < 0);
+        int pabs = static_cast<int>(negp ? -p64 : p64);
+
+        BigInt num_p = bigpow(num.abs(), pabs);
+        BigInt den_p = bigpow(den, pabs);
+        BigInt num_root = iroot(num_p, qint);
+        BigInt den_root = iroot(den_p, qint);
+
+        if (negp) std::swap(num_root, den_root);
+        bool rneg = num.neg && (pabs % 2 == 1);
+        if (rneg) num_root = -num_root;
+        return Frac(std::move(num_root), std::move(den_root));
+    }
+
     std::string str() const {
         if (den == BigInt(1))
             return num.str();
