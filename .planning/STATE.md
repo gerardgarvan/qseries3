@@ -9,9 +9,9 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 
 ## Current Position
 
-Phase: 88 (quinprod prodid/seriesid)
-Plan: —
-Status: Roadmap created; ready for planning
+Phase: 89 (list-indexing)
+Plan: 01 complete
+Status: Plan 89-01 complete; list indexing (EQNS[1]) implemented
 Last activity: 2026-03-03 — v7.0 roadmap: phases 88–90
 
 Progress: [░░░░░░░░░░] 0% — MILESTONE v7.0 IN PROGRESS
