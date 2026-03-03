@@ -1393,7 +1393,10 @@ Plans:
   3. omega * (1 + q) produces SeriesOmega with omega at exponent 0 and omega at exponent 1
   4. mul truncation: product of two SeriesOmega truncated at T has no terms beyond T-1
   5. Omega3 * Series(f) produces SeriesOmega where each coeff is Omega3(scalar) * Frac
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 92-01-PLAN.md — series_omega.h: SeriesOmega (map&lt;int,Omega3&gt;, trunc), add, mul, scalar multiply, truncTo, Omega3*Series; unit tests for 5 success criteria
 
 ### Phase 93: Parser/REPL integration
 **Goal**: omega symbol, RootOf dispatch, sum(omega^expr), variable assignment for omega
@@ -1424,7 +1427,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 91. Omega3 type | 0/1 | Complete    | 2026-03-03 |
-| 92. SeriesOmega | 0/? | Not started | - |
+| 92. SeriesOmega | 0/1 | Not started | - |
 | 93. Parser/REPL integration | 0/? | Not started | - |
 | 94. b(q) and Block 10 | 0/? | Not started | - |
 
