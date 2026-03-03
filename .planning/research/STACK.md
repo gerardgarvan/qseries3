@@ -1,265 +1,172 @@
-# Technology Stack: Half-Integer Jacobi Exponents & q-Shift Arithmetic Fixes
+# Stack Additions: RootOf / Algebraic Numbers (Q(ω))
 
-**Project:** q-series REPL — Milestone: Fix 3 Maple checklist failures + 3 dependent exercises
-**Researched:** 2026-03-01
-**Overall confidence:** HIGH (all changes are internal to existing types; no new dependencies)
+**Project:** q-series REPL — Milestone v8.0 RootOf
+**Researched:** 2026-03-03
+**Scope:** Zero-dependency C++; BigInt and Frac already available. Focus on cyclotomic Q(ω₃) for Block 10 and a(q), b(q), c(q).
 
 ---
 
 ## Executive Summary
 
-All three checklist failures (Blocks 13, 14, 25) and three dependent exercise gaps (Exercises 4/b(q), 9/N(q), 10/findpoly) trace to two missing capabilities in the existing codebase:
-
-1. **Series square root** — needed to reconstruct JAC factors with half-integer exponents
-2. **q-shift normalization** — needed so series with integer-offset q-shifts can be added
-
-No new types, no new files, no external dependencies. All fixes are extensions to `series.h` and `convert.h`, plus a new `Frac::isqrt()`-style helper. The existing `JacFactor = std::tuple<int, int, Frac>` already stores Frac exponents — the limitation is entirely in the reconstruction (`jac2series_impl`) and display (`jac2prod`) code that truncates non-integer exponents to zero.
+For Maple parity (Block 10) and Exercise 4’s b(q) = Σ ω^(n-m) q^(n²+nm+m²), we need exact arithmetic in Q(ω) where ω = exp(2πi/3) = RootOf(z²+z+1=0). **Recommendation: cyclotomic-specific representation (a,b) with ω² = -ω-1.** Avoid general RootOf and full polynomial machinery. No GMP, no Boost.
 
 ---
 
-## Recommended Stack Changes
+## How Symbolic Systems Represent Algebraic Numbers
 
-### Core: series.h Extensions
+### Maple
 
-| Addition | Type | Purpose | Why |
-|----------|------|---------|-----|
-| `Series::sqrt()` | New method | Formal power series square root via coefficient recurrence | Required by `jac2series_impl` to handle JAC exponents with den=2. The recurrence g[n] = (f[n] - Σ g[j]g[n-j]) / (2g[0]) is exact over Q when f[0] is a perfect rational square. |
-| `Series::nthroot(int n)` | New method | Generalized n-th root (optional, sqrt is the urgent case) | Future-proofing for JAC exponents with den=3,4,... Not needed for current failures but trivial to add once sqrt works. |
-| `Series::normalize_q_shift()` | New method | Absorb integer part of q_shift into coefficient map | Fixes Block 25 and Exercise 10. When q_shift has integer part k, shift all indices by k and set q_shift to fractional remainder. |
-| `operator+` update | Modification | Call normalize before shift comparison | After normalization, series with q_shift=-1 and q_shift=0 become both q_shift=0, enabling addition. |
+- **RootOf(expr)** — placeholder for roots of one-variable polynomials
+- **Elements of extension:** polynomials in α reduced modulo the defining polynomial
+- **Canonical form:** primitive polynomial in _Z; eval in `evala` context
+- **Source:** [Maple RootOf help](https://www.maplesoft.com/support/help/Maple/view.aspx?path=RootOf)
 
-### Core: frac.h Extension
+### PARI/GP
 
-| Addition | Type | Purpose | Why |
-|----------|------|---------|-----|
-| `Frac::is_perfect_square()` | New method | Check if num and den are both perfect squares | Guard for Series::sqrt() — the constant term must have a rational square root. |
-| `Frac::rational_sqrt()` | New method | Compute exact sqrt when possible | Returns Frac(sqrt(num), sqrt(den)) after verifying both are perfect squares. |
+- **t_POLMOD** — algebraic number as (representative polynomial) mod (defining polynomial T)
+- **Cyclotomics:** Mod(t, Φₙ(t)), with Mod(t, Φₙ(t)) ↦ exp(2πi/n)
+- **Source:** PARI/GP General number fields docs
 
-### Core: bigint.h Extension
+### SymPy
 
-| Addition | Type | Purpose | Why |
-|----------|------|---------|-----|
-| `BigInt::isqrt()` | New method | Integer square root via Newton's method | Required by Frac::rational_sqrt(). Base-10^9 Newton iteration: x_{k+1} = (x_k + n/x_k) / 2 until convergence. |
-| `BigInt::is_perfect_square()` | New method | Check isqrt(n)^2 == n | Guard for rational sqrt. |
+- **AlgebraicNumber** — minimal polynomial + choice of root (index or approximation)
+- **Field elements:** polynomials in the extension generator
+- **Source:** SymPy `polys.numberfields`
 
-### Convert: convert.h Modifications
+### GAP
 
-| Change | Type | Purpose | Why |
-|--------|------|---------|-----|
-| `jac2series_impl` fractional exponent handling | Modification | Handle exp with den=2 via sqrt | Currently: `int ex = 0; if (exp.den == BigInt(1)) ...` silently drops non-integer exponents. Fix: decompose p/2 as (f^p)^(1/2) or f.sqrt().pow(p). |
-| `jac2prod` fractional display | Modification | Format `^(13/2)`, `√` notation | Currently: `int ex = 0; if (exp.den == BigInt(1)) ...` skips fractional exponents entirely. |
-| `jacprodmake` half-integer allowance | Verification | Confirm decomposition already produces Frac x[a] | The existing logic uses Frac arithmetic throughout — x[a] = e[a] where e[a] = -prodmake_result[a]. If prodmake returns non-integer a[n], the decomposition naturally produces half-integer x[a]. Needs testing, not code change. |
+- **Cyclotomics** — stored in the smallest cyclotomic field (conductor n)
+- **Basis:** Zumbroich base; coefficients are rationals
+- **Arithmetic:** done in Q_lcm(n,m), then reduced to minimal field
+- **Source:** GAP3 Manual 13 Cyclotomics
 
----
+### Regina (C++)
 
-## Detailed Algorithm: Series Square Root
-
-Given f = Σ f[n] q^n with f[0] a perfect rational square, compute g = f^(1/2):
-
-```
-g[0] = rational_sqrt(f[0])
-for n = 1 to T-1:
-    sum = Σ_{j=1}^{n-1} g[j] * g[n-j]
-    g[n] = (f[n] - sum) / (2 * g[0])
-```
-
-**Correctness:** g² = f holds coefficient-by-coefficient. The n-th coefficient of g² is:
-`Σ_{j=0}^{n} g[j]g[n-j] = 2*g[0]*g[n] + Σ_{j=1}^{n-1} g[j]g[n-j]`
-Setting this equal to f[n] and solving for g[n] yields the recurrence.
-
-**Complexity:** O(T²) Frac operations — same as Series multiplication. No issue for T ≤ 500.
-
-**Edge cases:**
-- f[0] = 0: not a valid input (leading coefficient must be nonzero)
-- f[0] = 1: g[0] = 1, simplifies to g[n] = (f[n] - Σ g[j]g[n-j]) / 2
-- f[0] not a perfect square: throw runtime_error (not representable in exact Q arithmetic)
-- q_shift handling: result.q_shift = f.q_shift / Frac(2)
+- **Cyclotomic** class — exact cyclotomic arithmetic; depends on `polynomial.h` and `rational.h`
+- **Operations:** +, -, *, / with Rational scalars
+- **Source:** Regina engine docs (cyclotomic.h)
 
 ---
 
-## Detailed Algorithm: q-Shift Normalization
+## Recommended Stack Additions
 
-Given Series s with q_shift = p/d (a Frac):
+### Core Representation: Cyclotomic Q(ω₃) Only
 
+| Strategy | Data Structure | Purpose | Why |
+|----------|----------------|---------|-----|
+| **Omega3** | `struct { Frac a, b; }` for a + b·ω | Scalar type for Q(ω) | ω²+ω+1=0 → ω² = -ω-1. Multiplication: (a+bω)(c+dω) = (ac-bd) + (ad+bc-bd)ω. No polynomial ring, no reduction step. |
+| **Arithmetic** | `Omega3::operator+`, `*`, `-`, `/` | Exact field operations | Uses only BigInt/Frac; division via conjugate: 1/(a+bω) = (a+bω²)/(a³+b³-3ab(a+b)) when a+bω≠0. |
+| **Parser** | `omega` literal or `RootOf(z^2+z+1=0)` | Maple parity | Block 10 expects `omega := RootOf(z^2+z+1=0)`. |
+| **SeriesAlg** | `std::map<int, Omega3>` + trunc + q_shift | Series with cyclotomic coefficients | Parallel to `Series` (map<int,Frac>). b(q) has coefficients in Q(ω). |
+
+**Multiplication rule for ω²:**
 ```
-int_part = floor(p/d)    // integer part
-frac_part = p/d - int_part
-
-new_coefficients = {}
-for each (exponent e, coefficient c) in s.c:
-    new_coefficients[e + int_part] = c
-
-s.c = new_coefficients
-s.q_shift = frac_part     // always in [0, 1) after normalization
-```
-
-**Floor for Frac:** `floor(p/d) = p / d` using integer division rounding toward -∞:
-- If p ≥ 0: floor = p.num / p.den (integer division)
-- If p < 0: floor = -((-p.num + p.den - 1) / p.den) (ceiling of |p|/d, negated)
-
-**When to normalize:**
-- After multiplication (q_shift = a.q_shift + b.q_shift can exceed 1)
-- After division/inverse (q_shift = a.q_shift - b.q_shift can be negative)
-- After pow (q_shift = a.q_shift * n can grow arbitrarily)
-- Before addition (to make shifts compatible)
-
-**Tradeoff:** Normalize eagerly (in *, /, pow) vs. lazily (only before +). Eager is safer — prevents q_shift from growing and makes addition always work without explicit user action. The cost is negligible: one Frac floor operation + coefficient map rebuild.
-
-**Recommendation: Eager normalization.** Apply in operator*, operator/, inverse(), pow(), subs_q(). This makes q_shift always in [0, 1), and addition between compatible series "just works."
-
----
-
-## Detailed Fix: jac2series_impl Fractional Exponents
-
-Current code (lines 353-361 of convert.h):
-```cpp
-int ex = 0;
-if (exp.den == BigInt(1) && exp.num.d.size() == 1 && exp.num.d[0] <= 1000)
-    ex = exp.num.neg ? -static_cast<int>(exp.num.d[0]) : static_cast<int>(exp.num.d[0]);
-if (ex > 0) { /* pow */ } else if (ex < 0) { /* inv then pow */ }
+(a + bω)(c + dω) = ac + (ad+bc)ω + bd·ω²
+                 = ac + (ad+bc)ω + bd·(-ω-1)
+                 = (ac - bd) + (ad + bc - bd)ω
 ```
 
-This silently ignores non-integer exponents (ex stays 0, factor is skipped).
+**Inverse (a + bω)⁻¹:** Use 1/(a+bω) = (a+bω²) / N(a+bω) where the norm N(a+bω) = (a+bω)(a+bω²) = a² - ab + b² ∈ Q. So (a+bω)⁻¹ = ((a-b) - bω) / (a² - ab + b²).
 
-**Fix approach:**
-1. Check if `exp.den == BigInt(2)` (half-integer case)
-2. Extract integer numerator p from exp = p/2
-3. Compute `fac.sqrt().pow(p)` if p > 0, or `fac.inverse().sqrt().pow(-p)` if p < 0
-4. General case: `fac.nthroot(den).pow(num)` (den extracted as int from exp.den)
+### Supporting Implementation Patterns
 
-For the Slater identity (Block 13), the exponents are 13/2 and -1/2, both with den=2.
+| Pattern | Purpose | When to Use |
+|---------|---------|-------------|
+| **Omega3::fromRational(Frac)** | Embed Q into Q(ω) | Constant terms, rational coefficients |
+| **Omega3::realPart()**, `omegaPart()` | Extract a, b | Debugging, display |
+| **str()** | Display as `a + b*omega` or `RootOf(...)` form | REPL output |
+| **Conjugate** | ω̄ = ω² | Norm, division, simplification |
 
----
+### No New External Dependencies
 
-## Block 25 Trace: Why q-Shift Normalization Fixes It
-
-```
-theta2(q, 100)         → q_shift = 1/4, coeffs at 0, 2, 6, 12, ...
-theta2(q, 100)^2       → q_shift = 1/2 (via multiplication: 1/4 + 1/4)
-theta2(q^3, 40)        → q_shift = 3/4, coeffs at 0, 6, 18, ...
-theta2(q^3, 40)^2      → q_shift = 3/2 (via multiplication: 3/4 + 3/4)
-x1 = t2(q)^2 / t2(q^3)^2  → q_shift = 1/2 - 3/2 = -1  [INTEGER!]
-
-theta3(q, 100)^2       → q_shift = 0
-theta3(q^3, 40)^2      → q_shift = 0
-x2 = t3(q)^2 / t3(q^3)^2  → q_shift = 0
-
-x1 + x2 → FAILS: q_shift -1 ≠ 0
-```
-
-After normalization of x1: q_shift -1 → absorb into coefficients (shift all indices by -1), q_shift becomes 0. Now x1 + x2 works.
-
-Similarly for the `a` computation in Block 25:
-```
-theta2(q)*theta2(q^3)  → q_shift = 1/4 + 3/4 = 1  [INTEGER!]
-theta3(q)*theta3(q^3)  → q_shift = 0
-
-After normalizing the theta2 product: q_shift 1 → absorbed, becomes 0.
-Addition now works.
-```
-
-And for `c^3` where `c = 3*q^(1/3)*etaq(3,T)^3/etaq(1,T)`:
-```
-c has q_shift = 1/3
-c^3 has q_shift = 1  [INTEGER!]
-After normalization: q_shift becomes 0.
-```
-
-**All q-shift issues in Block 25 reduce to integer offsets after arithmetic.** Normalization handles them all.
-
----
-
-## Exercise Fixes Enabled by Stack Changes
-
-| Exercise | Current Status | Fix | Stack Change Used |
-|----------|---------------|-----|-------------------|
-| 4 (b(q)) | Partial — ω unsupported | Define `bq := etaq(1,T)^3 / etaq(3,T)` directly (known eta product result) | None — workaround using known answer |
-| 6 (relations) | Partial — depends on b(q) | Use b(q) workaround from Exercise 4 | None |
-| 9 (N(q)) | Partial — findnonhomcombo infeasible | Use larger truncation; may need to accept partial result | None — performance issue, not missing capability |
-| 10 (findpoly) | Blocked — q-shift addition | After q-shift normalization, compute m = θ₃²/θ₃(q³)² and y = c³/a³, then findpoly(x, y, ...) | q-shift normalization |
+- BigInt: existing arbitrary-precision integers
+- Frac: existing exact rationals
+- Omega3: pair of Frac with custom arithmetic
+- SeriesAlg: same shape as Series, different coefficient type
 
 ---
 
 ## Alternatives Considered
 
-| Decision | Chosen | Alternative | Why Not |
-|----------|--------|-------------|---------|
-| Series sqrt algorithm | Coefficient recurrence | Newton iteration on series | Newton converges quadratically but requires more complex code; recurrence is O(T²) either way and simpler |
-| q-shift normalization timing | Eager (in *, /, pow) | Lazy (only in +) | Eager prevents accumulation of large integer offsets and makes all code paths consistent |
-| Half-integer scope | den=2 only initially | General rational exponents | Only den=2 appears in the reference document; general case can be added later via nthroot |
-| BigInt isqrt algorithm | Newton's method in base 10^9 | Binary search | Newton converges in O(log(digits)) iterations; binary search is O(digits × log(digits)) |
-| b(q) computation | Direct eta product formula | Algebraic number support for ω | Adding algebraic extension fields (Z[ω]) would require a new number type, new arithmetic, new parser support — massive scope for one exercise |
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|--------------------------|
+| **Cyclotomic-specific (a,b)** | General RootOf(minpoly, element) | If we later need √2, √5, or other algebraic numbers |
+| **Omega3 struct** | `std::pair<Frac,Frac>` | Struct gives named `.a`, `.b` and clearer intent |
+| **SeriesAlg parallel type** | Template `Series<Coeff>` | Template refactor touches many call sites; parallel type is lower risk |
+| **Single extension Q(ω)** | Arbitrary cyclotomic Q(ζₙ) | For a(q),b(q),c(q) only ω₃ is required; φ(3)=2 keeps implementation small |
 
 ---
 
-## No New Dependencies
+## What NOT to Use
 
-All changes use existing types:
-- `BigInt` for integer square root
-- `Frac` for rational square root
-- `Series` for formal power series sqrt
-- `std::map<int, Frac>` for coefficient storage (unchanged)
-- `JacFactor = std::tuple<int, int, Frac>` for JAC factors (unchanged — already uses Frac exponent)
-
-**Zero new headers. Zero new structs. Zero external packages.**
-
----
-
-## Implementation Ordering
-
-```
-1. BigInt::isqrt() + is_perfect_square()     [bigint.h, ~20 lines]
-   └─ test: isqrt(1000000000000000000) = 1000000000
-   
-2. Frac::rational_sqrt() + is_perfect_square()  [frac.h, ~15 lines]
-   └─ test: Frac(9,4).rational_sqrt() = Frac(3,2)
-   
-3. Series::sqrt()                            [series.h, ~20 lines]
-   └─ test: (1+q)^2 → sqrt → should give 1+q
-
-4. Series::normalize_q_shift()               [series.h, ~15 lines]
-   └─ test: {q_shift=-1, c[0]=1} → {q_shift=0, c[-1]=1}
-
-5. Eager normalization in *, /, pow, inverse  [series.h, ~8 lines per method]
-   └─ test: theta2(q,20)^2 / theta2(q^3,10)^2 has q_shift=0
-
-6. jac2series_impl half-integer support       [convert.h, ~15 lines]
-   └─ test: JAC(0,14,∞)^(13/2) reconstructs to expected series
-
-7. jac2prod fractional display                [convert.h, ~10 lines]
-   └─ test: exponent 1/2 displays as √, exponent 13/2 displays as ^(13/2)
-
-8. Verify jacprodmake produces half-integer results  [testing only]
-   └─ test: Block 13 Slater series → JAC(0,14)^(13/2) output
-```
-
-Steps 1-3 are the sqrt chain (bottom-up dependency).
-Steps 4-5 are the q-shift chain (independent of sqrt).
-Steps 6-7 require step 3.
-Step 8 requires steps 6-7.
-
-**Steps 1-3 and 4-5 can be developed in parallel.**
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| **GMP, NTL, Flint, PARI** | External dependencies; project is zero-deps | BigInt + Frac + Omega3 |
+| **General polynomial ring Q[x]** | Unnecessary for Q(ω₃); adds complexity | Cyclotomic-specific (a,b) |
+| **Polynomial factorization** | Not needed for fixed Φ₃(z)=z²+z+1 | Hardcode ω² = -ω-1 |
+| **Full RootOf(minpoly)** | Requires polynomial ops and reduction for every extension | Omega3 for Q(ω₃) only |
+| **Floating-point approximations** | Requirement is exact arithmetic | Frac-based Omega3 |
+| **Boost.Multiprecision** | External dependency | BigInt/Frac |
 
 ---
 
-## Risk Assessment
+## Representation Options Comparison
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| prodmake returns exact half-integers for Slater series | LOW risk (algorithm is exact over Q) | HIGH — if a[n] aren't exact half-integers, jacprodmake can't identify the product | Verify with explicit computation: compute prodmake for the Block 13 series and inspect exponents |
-| Coefficient index shift in normalize produces negative indices | MEDIUM — series already supports negative keys in std::map | LOW — map handles negative keys naturally | Test with theta2 products that produce q_shift = -1 |
-| sqrt of non-perfect-square constant term | LOW — JAC(a,b,∞) series always start with 1 | MEDIUM — throws at runtime | Guard with is_perfect_square() check + clear error message |
-| Performance regression from eager normalization | LOW — one map rebuild per operation | LOW — negligible compared to O(T²) multiply | Profile if any test becomes noticeably slower |
+### Option A: Cyclotomic-Indexed (GAP-style)
+
+- **Structure:** conductor n + coefficient vector in Zumbroich (or power) basis
+- **Pros:** Natural for many cyclotomics; embed Q(ζₙ) and Q(ζₘ) in Q(ζ_lcm(n,m))
+- **Cons:** Basis and reduction for general n are nontrivial; overkill for n=3
+
+### Option B: Minimal Polynomial + Element in Q(α)
+
+- **Structure:** (minpoly, polynomial in α) reduced mod minpoly
+- **Pros:** General; matches Maple, PARI, SymPy
+- **Cons:** Needs polynomial ring, reduction; heavier than needed for ω₃
+
+### Option C: Cyclotomic-Specific (a,b) for Q(ω₃) — Recommended
+
+- **Structure:** `{ Frac a, Frac b }` for a + bω
+- **Pros:** Minimal; no polynomial machinery; direct arithmetic; fits existing Frac/BigInt
+- **Cons:** Only Q(ω₃); adding Q(ζ₅) etc. would need more cases or refactor
+
+**Rationale for C:** Block 10 and Exercise 4 need only ω = exp(2πi/3). Cyclotomic-specific representation keeps scope small and integrates cleanly with Series.
+
+---
+
+## Integration with Existing Types
+
+| Existing | Integration |
+|----------|-------------|
+| **Frac** | Omega3(a, 0) = rational embedding; Omega3 uses Frac for a, b |
+| **BigInt** | Via Frac; no direct use in Omega3 |
+| **Series** | Series stays Q-valued. Add SeriesAlg = map<int, Omega3> for b(q) etc. |
+| **qfuncs** | b(q) double-sum uses Omega3 coefficients; a(q), c(q) stay over Q |
+| **prodmake / etamake** | Remain over Q; b(q) as eta product η(τ)³/η(3τ) is Q-valued and already supported |
+| ** relations (findhom, findpoly)** | Kernel over Q; no change. Optional: extend to Q(ω) later if relations with ω appear |
+
+**Design choice:** Keep Series (Q-coefficients) and add SeriesAlg (Q(ω)-coefficients) as a sibling. Avoid templating Series on coefficient type to limit refactoring.
+
+---
+
+## Implementation Outline
+
+1. **omega3.h** (new): `struct Omega3 { Frac a, b; }` with +, -, *, /, str(), fromRational(Frac).
+2. **Parser:** Accept `omega` or `RootOf(z^2+z+1=0)`; bind to Omega3(0,1).
+3. **qfuncs:** Add `bq_direct(int T)` or extend double-sum to accept Omega3 coefficients for ω^(n-m).
+4. **repl.h:** Add Omega3 to EnvValue; SeriesAlg if needed for b(q) as series; display for Omega3.
+5. **No changes** to prodmake, etamake, jacprodmake, relations, convert — they stay over Q.
 
 ---
 
 ## Sources
 
-- **Block 13-14 expected output:** `qseriesdoc.md` lines 526-530 — `JAC(0,14,∞)^(13/2)` with `√JAC(7,14,∞)`
-- **Block 25 Maple commands:** `qseriesdoc.md` lines 916-926 — theta2/theta3 quotients + findpoly
-- **Formal power series square root algorithm:** Standard result in combinatorics/computer algebra — coefficient recurrence from g² = f
-- **q-shift design:** Existing `series.h` q_shift field (line 15) — already Frac-typed, just missing normalization
-- **JacFactor type:** `convert.h` line 329 — `std::tuple<int, int, Frac>` already supports fractional exponents in the type
-- **Phase 62 verification:** `.planning/phases/62-maple-checklist/62-VERIFICATION.md` — documents all three failures as "known limitations"
+- Maple RootOf — [maplesoft.com/support/help/Maple/view.aspx?path=RootOf](https://www.maplesoft.com/support/help/Maple/view.aspx?path=RootOf) — canonical form, polynomial-in-α representation
+- PARI/GP t_POLMOD — General number fields documentation — mod T representation
+- GAP3 Cyclotomics — [webusers.imj-prg.fr/~jean.michel/gap3/htm/chap013.htm](https://webusers.imj-prg.fr/~jean.michel/gap3/htm/chap013.htm) — conductor, Zumbroich base
+- Regina Cyclotomic — regina-normal.github.io/engine-docs/cyclotomic_8h.html — C++ exact cyclotomic arithmetic
+- Wikipedia Cyclotomic field — degree φ(n), minimal polynomial Φₙ
+- Project: qseriesdoc.md, maple_checklist.md, .planning/STATE.md — Block 10, a(q), b(q), c(q) context
 
-**Confidence:** HIGH — all algorithms are well-known, all types already exist, all changes are local to 3 files.
+---
+*Stack research for: RootOf / Q(ω) in zero-dependency C++ q-series REPL*

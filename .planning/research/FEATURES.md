@@ -1,371 +1,234 @@
-# Feature Landscape: Half-Integer Jacobi Exponents & q-Shift Arithmetic Fixes
+# Feature Landscape: RootOf / Algebraic Numbers
 
-**Domain:** q-series REPL — Maple checklist parity fixes (Blocks 13/14/25, Exercises 4/9/10)
-**Researched:** 2026-03-01
-**Sources:** Maple qseries 1.3 documentation (qseries.org), qseriesdoc.md reference tutorial, existing codebase analysis
-
----
-
-## Table Stakes
-
-Features required for Maple tutorial parity. Missing = blocks fail, exercises unsolvable.
-
-| Feature | Why Expected | Complexity | Blocks/Exercises Affected |
-|---------|--------------|------------|---------------------------|
-| Half-integer JAC exponents in `jacprodmake` | Maple produces `JAC(a,b,∞)^(1/2)` for Slater's identity | **Medium** | Block 13, Block 14, Exercise 5 |
-| Half-integer JAC exponents in `jac2series` | Must reconstruct series from `JAC(a,b)^(1/2)` | **Medium** | Block 14 |
-| Integer q-shift absorption | `theta2(q)^2/theta2(q^3)^2` yields q_shift=-1 (integer), must merge into coefficient map | **Low** | Block 25, Exercise 10 |
-| b(q) without omega | Exercise 4 needs b(q) = η(τ)³/η(3τ), computable without RootOf | **Low** | Exercise 4, Exercise 6, Exercise 9 |
-| N(q) Eisenstein E₆ series | N(q) = 1 - 504·Σ σ₅(n)qⁿ — `sigma(n,5)` already exists | **Low** | Exercise 9 |
+**Domain:** q-series REPL — RootOf for cyclotomic fields (primitive cube root ω)
+**Researched:** 2026-03-03
+**Sources:** Maple RootOf docs (maplesoft.com), SymPy numberfields, Mathematica RootReduce, qseriesdoc §3.4, maple-checklist Block 10, project context
 
 ---
 
-## Feature 1: Half-Integer Jacobi Exponents (`jacprodmake` + `jac2series`)
+## Executive Summary
 
-### The Problem
-
-Block 13 computes Slater's identity: `Σ q^(n(n+1)/2)(-q;q)_n / (q;q)_{2n+1}`. Maple's `jacprodmake` outputs:
-
-```
-JAC(0,14,∞)^(13/2) / (JAC(1,14,∞)² JAC(3,14,∞) JAC(4,14,∞)
-  JAC(5,14,∞) JAC(6,14,∞) √JAC(7,14,∞))
-```
-
-Our implementation returns empty (fails) because `jacprodmake` rejects non-integer exponents during the decomposition step.
-
-### How Maple Handles It
-
-From the official documentation (qseries.org/fgarvan/qmaple/qseries/functions/jacprodmake.html):
-
-1. **`prodmake` produces rational `a[n]`:** Andrews' algorithm doesn't require integer outputs. The recurrence `a[n] = (c[n] - Σ d·a[d])/n` can produce rationals like 1/2, 3/2 when the input series is the square root of a Jacobi product. Our `prodmake` already handles this correctly — it stores `a[n]` as `Frac`, and the non-integer warning is just informational.
-
-2. **`jacprodmake` checks periodicity on rationals:** The periodicity test `e[n] == e[n+b]` already works with `Frac` comparisons in our code. The 80% match threshold applies identically.
-
-3. **JAC decomposition allows rational exponents:** When decomposing `e[1..b]` into JAC(a,b) exponents, the symmetry check `e[a] == e[b-a]` and the `x[0] = e[b] - Σ x[a]` computation work the same — they just produce `Frac` values like 13/2 or 1/2 instead of integers.
-
-4. **`jac2series` handles fractional powers:** For `JAC(a,b)^(1/2)`, the series is `((q^a;q^b)_∞ (q^{b-a};q^b)_∞ (q^b;q^b)_∞)^(1/2)`. This requires computing the square root of a series, which is a well-defined operation: given f = 1 + c₁q + c₂q² + ..., g = f^(1/2) satisfies g² = f, solvable by the recurrence g[0]=1, g[n] = (f[n] - Σ_{j=1}^{n-1} g[j]·g[n-j]) / (2·g[0]).
-
-### Expected Maple Output (Block 13)
-
-```
-JAC(0,14,∞)^(13/2) / (JAC(1,14,∞)² JAC(3,14,∞) JAC(4,14,∞)
-  JAC(5,14,∞) JAC(6,14,∞) JAC(7,14,∞)^(1/2))
-```
-
-More precisely from the Maple docs page, a similar example shows:
-
-```
-jacprodmake(Y,q,100);
-                 2 JAC(0, 2, infinity)
-                 ---------------------
-                 /JAC(1, 2, infinity)\1/2
-                 |-------------------|
-                 \JAC(0, 2, infinity)/
-```
-
-This demonstrates that Maple nests JAC quotients inside fractional exponents. Our output should use `^(1/2)` notation for non-integer exponents.
-
-### What Needs to Change
-
-**In `jacprodmake` (convert.h:367-428):**
-- The decomposition logic already stores exponents as `Frac` — no change needed in the data path
-- The symmetry check `e[a] == e[b-a]` already uses `Frac` comparison — works
-- The verification step `jac2series_impl(result, T)` will fail because `jac2series_impl` currently truncates fractional exponents to 0 — this is the actual bug
-- **Fix:** Remove the integer-only truncation in `jac2series_impl`; add fractional power support
-
-**In `jac2series_impl` (convert.h:343-365):**
-- Lines 353-355 extract integer exponent: `if (exp.den == BigInt(1) && exp.num.d.size() == 1 ...)` — this silently drops fractional exponents
-- **Fix:** Add a `Series::rational_pow(Frac p)` method that handles half-integer powers via Newton's recurrence for formal power series
-- For `p = n/2` (the common case): compute `f^n` then take formal square root
-- For general `p = a/b`: compute `f^a` then take b-th root (recurrence: `g[0]=f[0]^(1/b)`, which must be rational)
-
-**In Series (series.h):**
-- Add `Series sqrt()` method: given f with f[0]=1, compute g s.t. g²=f
-- Recurrence: `g[0] = 1`, `g[n] = (f[n] - Σ_{j=1}^{n-1} g[j]·g[n-j]) / 2`
-- Add `Series nth_root(int n)` for generality (b-th root)
-
-**In output formatting (repl.h or convert.h):**
-- Display `JAC(a,b,∞)^(1/2)` or `√JAC(a,b,∞)` for exponent = 1/2
-- Display `JAC(a,b,∞)^(p/q)` for other fractional exponents
-
-### Confidence: HIGH
-
-The algorithm is mathematically straightforward. The data structures already support `Frac` exponents. The gap is only in `jac2series_impl` (truncates to int) and a missing `Series::sqrt()` method.
+RootOf in symbolic systems (Maple, Mathematica, SymPy) represents algebraic numbers as roots of irreducible polynomials. For q-series parity, the critical case is **ω = RootOf(z²+z+1=0)** — the primitive cube root of unity used in a(q), b(q), c(q). Table stakes for v1: represent ω, arithmetic in Q(ω), simplification (ω³=1), and coefficients in Q(ω) for Series. Differentiators (general RootOf, indexed roots, radical conversion) should be deferred. Avoid nested RootOf and general polynomial factorization over Q(ω) for v1.
 
 ---
 
-## Feature 2: Integer q-Shift Absorption
+## How RootOf Works in Symbolic Systems
 
-### The Problem
+### Maple
 
-Block 25 computes:
-```
-x1 := theta2(q,100)^2 / theta2(q^3,40)^2
-x2 := theta3(q,100)^2 / theta3(q^3,40)^2
-x := x1 + x2   ← FAILS: "cannot add series with different q-shifts"
-```
+- **Syntax:** `omega := RootOf(z^2+z+1=0)` or `alias(omega=RootOf(z^2+z+1=0))`
+- **Arithmetic:** `evala(omega^4)` → reduces to `omega` (ω⁴ = ω³·ω = ω)
+- **Canonical form:** Single-argument `RootOf(_Z²+_Z+1)`, primitive polynomial
+- **Indexed roots:** `RootOf(expr, x, index=1)` selects by complex argument (counter-clockwise)
+- **Conversion:** `convert(omega, radical)` → `(-1 + I√3)/2`
 
-`theta2(q)` has `q_shift = 1/4` (from the q^(1/4) factor). After squaring and dividing:
-- `theta2(q)^2` → q_shift = 1/2
-- `theta2(q^3)^2` → q_shift = 3/2
-- `x1 = theta2(q)^2 / theta2(q^3)^2` → q_shift = 1/2 - 3/2 = **-1** (an integer!)
-- `x2 = theta3(q)^2 / theta3(q^3)^2` → q_shift = **0**
+### Mathematica
 
-Adding q_shift=-1 to q_shift=0 fails, but q_shift=-1 is an integer power of q that could be absorbed: `q^(-1) · Σ c[n] q^n = Σ c[n] q^(n-1)`. Simply shift all coefficient indices by -1 and set q_shift=0.
+- **Syntax:** `Root[#^2+#+1&, 1]` or `AlgebraicNumber` with field
+- **Simplification:** `RootReduce` reduces algebraic combinations to canonical form
+- **Operations:** Arithmetic on Root/AlgebraicNumber automatically normalized
 
-### How Maple Handles It
+### SymPy
 
-Maple uses `radsimp` to simplify expressions involving radicals. When theta2(q)^2/theta2(q^3)^2 is computed, the q^(1/2)/q^(3/2) = q^(-1) factor is simplified algebraically, leaving a standard q-series with integer exponents. The `radsimp` call is explicit in the Maple code for Block 25 and Exercise 10.
+- **Syntax:** `RootOf(x**2+x+1, 0)` or `QQ.algebraic_field(...)` for Q(θ)
+- **Representation:** ANP (Algebraic Number Pair) — polynomial in θ mod minimal polynomial
+- **Arithmetic:** Operations reduce modulo defining polynomial
 
-### What Needs to Change
+### Common Patterns
 
-**In Series arithmetic (series.h):**
-- After any arithmetic operation that produces a result, check if `q_shift` has integer value (i.e., `q_shift.den == BigInt(1)`)
-- If so, absorb: shift all coefficient keys by the integer q_shift value, then set q_shift to 0
-- This should be a `normalize_q_shift()` method called at the end of `operator*`, `operator/`, `inverse()`, `pow()`, and `subs_q()`
-
-**Implementation detail:**
-```cpp
-void normalize_q_shift() {
-    if (q_shift.den != BigInt(1) || q_shift.isZero()) return;
-    int shift = /* extract integer from q_shift */;
-    std::map<int, Frac> new_c;
-    for (const auto& [e, v] : c) {
-        int new_e = e + shift;
-        if (new_e >= 0 && new_e < trunc)
-            new_c[new_e] = v;
-    }
-    c = std::move(new_c);
-    q_shift = Frac(0);
-}
-```
-
-- **Negative shift handling:** If q_shift = -1, coefficients shift left (c[n] → c[n-1]), allowing negative indices if needed. The Series already uses `std::map<int, Frac>` which supports negative keys, and `trunc` stays the same.
-- **Positive shift handling:** If q_shift = 3, coefficients shift right (c[n] → c[n+3]), and trunc should be adjusted.
-
-### Expected Output (Block 25)
-
-After the fix, `x = x1 + x2` should produce a valid integer-exponent series (q_shift=0), and then:
-```
-findpoly(x, y, 3, 1, 60)
-```
-should output: `(X + 6)³ Y - 27 (X + 2)²`
-
-### Confidence: HIGH
-
-This is a mechanical fix — absorb integer q_shifts into coefficient maps. No mathematical complexity.
+| Aspect | Maple | Mathematica | SymPy |
+|--------|-------|-------------|-------|
+| Define | `RootOf(z²+z+1=0)` | `Root[#²+#+1&,1]` | `RootOf(x²+x+1,0)` |
+| Simplify | `evala(expr)` | `RootReduce[expr]` | automatic in AlgebraicField |
+| Display | alias / omega | Root or radical | ANP or RootOf |
+| Substitution | symbolic | symbolic | symbolic |
 
 ---
 
-## Feature 3: Exercise 4 — b(q) Without Omega
+## Expected Behavior for RootOf(z²+z+1=0)
 
-### The Problem
+### Mathematical Properties
 
-Exercise 4 defines b(q) = Σ_{n,m} ω^(n-m) q^(n²+nm+m²) where ω = exp(2πi/3). Computing this directly requires algebraic number support (RootOf), which is out of scope.
+- ω = exp(2πi/3), primitive cube root of unity
+- **Minimal polynomial:** z² + z + 1 = 0
+- **Reduction rules:** ω³ = 1, ω² = -ω - 1, ω + ω² = -1
+- **Field:** Q(ω) = Q(√-3), degree 2 over Q
+- **Elements:** a₀ + a₁ω with aᵢ ∈ Q
 
-### The Known Identity
+### Arithmetic in Q(ω)
 
-b(q) = η(τ)³/η(3τ) — an eta product, computable without complex numbers!
+- **Add:** (a₀ + a₁ω) + (b₀ + b₁ω) = (a₀+b₀) + (a₁+b₁)ω
+- **Mul:** Use ω² = -ω - 1 to reduce; e.g. ω·(a₀+a₁ω) = a₀ω + a₁ω² = a₀ω + a₁(-ω-1) = -a₁ + (a₀-a₁)ω
+- **Powers:** ω^k = ω^(k mod 3) — essential simplification for series
 
-**Proof route:** Since ω satisfies ω²+ω+1=0, and ω^k depends only on k mod 3:
-- S₀ = Σ_{(n-m)≡0 mod 3} q^(n²+nm+m²)
-- S₁ = Σ_{(n-m)≡1 mod 3} q^(n²+nm+m²)
-- S₂ = Σ_{(n-m)≡2 mod 3} q^(n²+nm+m²)
+### Substitution into Series
 
-By symmetry (n,m) → (m,n): S₁ = S₂. Then:
-- a(q) = S₀ + S₁ + S₂ = S₀ + 2S₁
-- b(q) = S₀ + ω·S₁ + ω²·S₂ = S₀ - S₁ (since ω+ω²=-1)
+- **b(q) = Σ Σ ω^(n-m) q^(n²+nm+m²):** Coefficients become elements of Q(ω)
+- **Representation:** Each coefficient is (a₀, a₁) ∈ Q² meaning a₀ + a₁ω
+- **Existing Series:** `std::map<int, Frac>` must extend to `std::map<int, Algnum>` where Algnum ∈ Q(ω)
 
-So **b(q) = (3S₀ - a(q))/2**, where S₀ is computable from integer sums only.
+### Display Format
 
-### Implementation in REPL
-
-```
-set_trunc(200)
-aq := sum(sum(q^(n*n+n*m+m*m), m, -20, 20), n, -20, 20)
-S0 := sum(sum(q^(n*n+n*m+m*m), m, -20, 20, 3*n), n, -20, 20)
-```
-
-Wait — S₀ needs the constraint (n-m) ≡ 0 mod 3. The simplest approach:
-
-```
-S0 := sum(sum(q^((3*k+m)*(3*k+m)+(3*k+m)*m+m*m), m, -20, 20), k, -20, 20)
-```
-
-Substituting n = 3k+m to enforce n ≡ m (mod 3), then simplify: (3k+m)²+(3k+m)m+m² = 9k²+6km+m²+3km+m²+m² = 9k²+9km+3m² = 3(3k²+3km+m²).
-
-So S₀ = Σ_{k,m} q^(3(3k²+3km+m²)).
-
-Then b(q) = (3S₀ - a(q)) / 2.
-
-**Alternative (simpler):** Just compute b(q) directly as an eta product:
-```
-bq := etaq(1, 200)^3 / etaq(3, 200)
-etamake(bq, 100)
-```
-This should confirm b(q) = η(τ)³/η(3τ). The exercise asks to **find** which are eta products, and this approach demonstrates b(q) is one.
-
-### What Needs to Change
-
-Nothing in the codebase. The workaround is pure REPL commands. The exercise solution just needs to:
-1. Compute a(q) from the double sum (already working)
-2. Compute c(q) from the shifted double sum (already working, confirmed in exercise solutions)
-3. Compute b(q) as `etaq(1,200)^3/etaq(3,200)` and verify with `etamake`
-4. Alternatively compute b(q) = (3S₀ - a(q))/2 and verify
-
-### Confidence: HIGH
-
-The identity b(q) = η(τ)³/η(3τ) is well-established in the literature [12]. No code changes needed — just correct REPL commands.
+| Format | Example | When to Use |
+|--------|---------|-------------|
+| Polynomial in ω | `1 + 2*omega` | Default for Q(ω) |
+| Maple-style | `omega`, `omega^2` | With alias |
+| Radical | `(-1 + I√3)/2` | Optional, requires sqrt(-3) |
+| Cyclotomic | `ζ₃` or `ω` | Compact notation |
 
 ---
 
-## Feature 4: Exercise 9 — N(q) = E₆ Eisenstein Series
+## Table Stakes (Users Expect These)
 
-### The Problem
+Features required for Maple Block 10 parity and qseriesdoc Exercise 4. Missing = product feels incomplete.
 
-Exercise 9 requires:
-1. Computing N(q) = 1 - 504·Σ_{n≥1} n⁵qⁿ/(1-qⁿ) = 1 - 504·Σ_{n≥1} σ₅(n)qⁿ
-2. Using `findnonhomcombo` to express N(q) in terms of a(q) and x(q) = c(q)³/a(q)³
-
-### What's Already Available
-
-- `sigma(n, 5)` — already implemented in `qfuncs.h:98`
-- `sum(sigma(n,5)*q^n, n, 1, T)` — REPL supports this via `sum`
-- `findnonhomcombo` — already implemented
-
-### Implementation
-
-```
-set_trunc(100)
-aq := sum(sum(q^(n*n+n*m+m*m), m, -15, 15), n, -15, 15)
-cq := 3*q^(1/3)*etaq(3,100)^3/etaq(1,100)
-xq := cq^3 / aq^3
-Nq := 1 - 504*sum(sigma(n,5)*q^n, n, 1, 50)
-```
-
-### Challenges
-
-1. **c(q) = 3q^(1/3)·η(3τ)³/η(τ):** The q^(1/3) factor means c(q)³ = 27q·η(3τ)⁹/η(τ)³ has q_shift = 1 (an integer). This requires Feature 2 (integer q_shift absorption) for the division `c(q)³/a(q)³` to produce a plain series.
-
-2. **Large coefficients:** x(q) = c(q)³/a(q)³ produces very large rational coefficients. With T=100, the σ₅(n) values grow rapidly (σ₅(50) = 98,456,189,057). The `findnonhomcombo` matrix will have entries of this magnitude.
-
-3. **Weight analysis:** N(q) has weight 6, a(q) has weight 1. So the expected relation has a(q)⁶ and x(q) (weight 0) terms, meaning `findnonhomcombo(Nq, [aq, xq], [6, ?], 0)`. Need to determine the correct weight vector.
-
-### Expected Result
-
-From [8] (Borwein-Borwein-Garvan): N(q) = a(q)⁶ · (1 - 540x) where x = c³/a³.
-
-In findnonhomcombo format with weights [6,3] or similar:
-```
-N = a⁶ - 540·a⁶·x = a⁶(1 - 540x)
-```
-
-Equivalently: `N = a⁶ - 540·c³·a³`
-
-### What Needs to Change
-
-- Feature 2 (integer q_shift absorption) must work for c(q)³/a(q)³
-- Performance may be an issue — large truncation needed for σ₅ sums
-- May need to increase `set_trunc` to 150+ for reliable `findnonhomcombo`
-
-### Confidence: MEDIUM
-
-The mathematical approach is clear, but practical feasibility depends on coefficient sizes and computation time. The existing exercise solution notes this is "infeasible within practical truncation limits."
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| `omega := RootOf(z^2+z+1=0)` | Maple Block 10, qseriesdoc §3.4 hint | LOW | Parser + symbol binding; can be built-in constant initially |
+| Arithmetic in Q(ω): add, mul | b(q) = Σ ω^(n-m) q^(…) requires ω^k in coefficients | MEDIUM | New type `Algnum` (a₀, a₁) or FracPair; reduce via ω²=-ω-1 |
+| Simplification: ω^k → ω^(k mod 3) | Coefficients must normalize; ω⁴ = ω | LOW | Part of Algnum mul/pow |
+| Series with coefficients in Q(ω) | b(q) is a series; a(q), c(q) are rational | HIGH | Series needs optional `std::map<int, Algnum>` or unified `Coeff` variant |
+| `sum` / theta with ω in exponent | b(q) = Σ Σ ω^(n-m) q^(n²+nm+m²) | MEDIUM | sum() must evaluate ω^(n-m) → Algnum |
+| Display: `a + b*omega` | Users must see coefficients | LOW | Format Algnum as string |
+| etamake / prodmake on Q(ω) series | Maple can run etamake on b(q) | MEDIUM | May need to restrict to rational-only for v1 (see Anti-Features) |
 
 ---
 
-## Feature 5: Exercise 10 — findpoly with m = θ₃(q)²/θ₃(q³)²
+## Differentiators (Competitive Advantage)
 
-### The Problem
+Valuable but not required for Block 10 / Exercise 4 parity.
 
-Exercise 10 defines m = (θ₃(q)/θ₃(q³))² and asks to find y = c³/a³ as a rational function of m using `findpoly`.
-
-### Key Insight
-
-Exercise 10 is **simpler than Block 25**. While Block 25 defines x = θ₂(q)²/θ₂(q³)² + θ₃(q)²/θ₃(q³)² (requires theta2 with q-shifts), Exercise 10 uses **only** m = θ₃(q)²/θ₃(q³)² which has **no q-shift** (theta3 has q_shift=0).
-
-The challenge is computing y = c³/a³, which requires:
-- c(q) = 3q^(1/3)·η(3τ)³/η(τ), so c³ = 27q·η(3τ)⁹/η(τ)³ → q_shift=1 (integer)
-- a(q) computed from double sum → q_shift=0
-- y = c³/a³ → q_shift=1 (integer, absorbed to 0)
-
-So Exercise 10 needs Feature 2 (integer q_shift absorption) but does **not** need the theta2 addition fix from Block 25.
-
-### Expected Output
-
-From the Maple documentation (findpoly.html):
-```
-findpoly(m, y, 6, 1, 50)
-→ -1/27·(X²+6X-3)³·Y + (X-1)·(X+1)⁴
-```
-
-So y = c³/a³ = 27·(m-1)(m+1)⁴ / (m²+6m-3)³. This is Eq.(12.8) in [8].
-
-### What Needs to Change
-
-- Feature 2 (integer q_shift absorption) — for c³/a³ computation
-- `findpoly` is already implemented and working
-
-### Confidence: HIGH
-
-Straightforward once integer q_shift absorption works.
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| General `RootOf(poly)` | Arbitrary algebraic extensions | HIGH | Requires polynomial ring, gcd, minimal polynomial handling |
+| Indexed root selection | Choose specific root (e.g. ω vs ω²) | MEDIUM | Maple index=1,2; affects display/choice only for z²+z+1 |
+| `convert(expr, radical)` | Explicit (-1+I√3)/2 | LOW | Requires √(-3) as symbolic or display convention |
+| `evala`-style explicit reduce | User-triggered simplification | LOW | Nice for debugging |
+| Cyclotomic ζₙ for n>3 | 5th, 7th roots of unity | MEDIUM | Q(ζ₅) has degree 4; different reduction rules |
 
 ---
 
-## Anti-Features
+## Anti-Features (Commonly Requested, Often Problematic)
 
-Features to explicitly NOT build for this milestone.
-
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|---------------------|
-| Full algebraic number support (RootOf) | Architectural complexity far exceeds benefit | Use identity b(q) = η(τ)³/η(3τ) |
-| Maple's `radsimp` symbolic simplifier | Not a q-series operation; massive scope | Integer q_shift absorption handles the actual need |
-| General n-th root of formal power series | Only need square root for half-integer JAC | Implement `Series::sqrt()` only; generalize later if needed |
-| Maple `proc` definitions in REPL | Already handled via built-in T(r,n) and inline workarounds | Continue using existing approach |
+| Anti-Feature | Why Requested | Why Problematic | Alternative |
+|--------------|---------------|-----------------|-------------|
+| Full algebraic number tower | "Support any RootOf" | Nested extensions (Q(ω)(√2)), field membership, primitive element — major scope | Restrict v1 to Q(ω) only |
+| prodmake/etamake on Q(ω) series | Maple can do it | Andrews' algorithm assumes rational coefficients; exponent recurrence uses division | Use identity b(q)=η(τ)³/η(3τ) for prodmake; or defer Q(ω) prodmake |
+| Floating-point evaluation of ω | "Get numeric value" | Project is exact-only; evalf conflicts with zero-dependency | Omit; keep exact |
+| Maple `alias` in REPL | Compact omega display | Alias is session-global; complicates parser | Use `omega` as built-in name for RootOf(z²+z+1=0) |
+| General polynomial factorization over Q(ω) | factor(t8) in Block 4 | Requires factor over number field; major subsystem | Deferred (per PROJECT.md) |
 
 ---
 
 ## Feature Dependencies
 
 ```
-Feature 2 (q_shift absorption) ← Feature 5 (Exercise 10)
-Feature 2 (q_shift absorption) ← Feature 4 (Exercise 9, for c³/a³)
-Feature 2 (q_shift absorption) ← Block 25 (findpoly with theta2)
-Feature 1 (half-integer JAC)    ← Block 13, Block 14
-Feature 1 (half-integer JAC)    → requires Series::sqrt()
-Feature 3 (b(q) workaround)    ← independent (REPL commands only)
-Feature 4 (Exercise 9)          ← Feature 2 + Feature 3 (for a(q), c(q))
-```
+RootOf(z²+z+1=0) symbol
+    └── requires → Algnum type (a₀ + a₁ω)
+                      └── requires → ω² = -ω - 1 reduction
+    └── requires → Parser: omega, omega^2 as identifiers
 
-**Recommended implementation order:**
-1. Feature 2 (integer q_shift absorption) — Low complexity, unblocks 3 items
-2. Feature 1 (half-integer JAC exponents) — Medium complexity, core gap
-3. Features 3/4/5 (exercises) — Mostly REPL usage, no code changes needed after 1 & 2
+Algnum
+    └── requires → add, mul, pow (ω^k reduction)
+    └── enhances → Series (coefficients)
+
+Series with Q(ω) coefficients
+    └── requires → sum() evaluating ω^exponent → Algnum
+    └── requires → theta / aqprod with Algnum coefficients (if used in sum)
+    └── optionally requires → prodmake/etamake (defer if complex)
+
+b(q) = Σ Σ ω^(n-m) q^(n²+nm+m²)
+    └── requires → sum(sum(omega^(n-m)*q^(n*n+n*m+m*m), ...))
+    └── requires → omega^(n-m) → Algnum
+```
 
 ---
 
-## Complexity Assessment
+## Maple Parity Checklist (Block 10)
 
-| Feature | Lines of Code | Risk | Dependencies on Existing Code |
-|---------|--------------|------|-------------------------------|
-| Integer q_shift absorption | ~20 lines in series.h | Low | Touches Series operator methods |
-| Series::sqrt() method | ~15 lines in series.h | Low | Self-contained; analogous to inverse() |
-| jacprodmake fractional support | ~5 lines changed in convert.h | Low | Already uses Frac throughout |
-| jac2series fractional support | ~20 lines in convert.h | Medium | Needs Series::sqrt() or rational_pow() |
-| JAC output formatting | ~10 lines in convert.h/repl.h | Low | String formatting only |
-| Exercise 4 b(q) | 0 lines (REPL commands) | None | — |
-| Exercise 9 N(q) | 0 lines (REPL commands) | Medium (perf) | Depends on Features 2, 3 |
-| Exercise 10 findpoly | 0 lines (REPL commands) | Low | Depends on Feature 2 |
+| Maple Block 10 Item | Required for Parity | v1 Scope |
+|---------------------|---------------------|----------|
+| `omega := RootOf(z^2+z+1=0)` | Yes | Implement as `omega` built-in or `:= RootOf(...)` |
+| Use omega in b(q) sum | Yes | `sum(sum(omega^(n-m)*q^(n*n+n*m+m*m), m, -N, N), n, -N, N)` |
+| etamake(b(q), q, T) | Optional | Use b(q)=η(τ)³/η(3τ) workaround if prodmake over Q(ω) deferred |
+| Display omega, omega^2 | Yes | Table stakes |
 
-**Total estimated code changes:** ~70 lines across series.h and convert.h
+---
+
+## MVP Definition
+
+### Launch With (v1)
+
+- [ ] **omega** — Built-in symbol for RootOf(z²+z+1=0); no general RootOf(poly) parser yet
+- [ ] **Algnum** — Type (a₀, a₁) with add, mul, pow; ω^k reduces to ω^(k mod 3)
+- [ ] **Series over Q(ω)** — Coefficients `std::map<int, Algnum>` or variant; add/mul for such series
+- [ ] **sum(..., omega^exponent, ...)** — Evaluate ω^exponent to Algnum
+- [ ] **Display** — `a + b*omega` or `a - b - b*omega` (reduced form)
+- [ ] **b(q)** — Compute via sum with omega^(n-m)
+
+### Add After Validation (v1.x)
+
+- [ ] **convert(omega, radical)** — Display (-1+I√3)/2
+- [ ] **Indexed RootOf** — RootOf(z²+z+1=0, index=1) vs index=2 (ω vs ω²)
+- [ ] **etamake(b(q))** — If feasible without major prodmake rewrite
+
+### Future Consideration (v2+)
+
+- [ ] General RootOf(poly) for arbitrary irreducible polynomials
+- [ ] Cyclotomic ζₙ for n > 3
+- [ ] factor over Q(ω)
+
+---
+
+## Feature Prioritization Matrix
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| omega symbol | HIGH | LOW | P1 |
+| Algnum add/mul/pow | HIGH | MEDIUM | P1 |
+| Series with Q(ω) coeffs | HIGH | HIGH | P1 |
+| sum(omega^k) evaluation | HIGH | MEDIUM | P1 |
+| Display a+b*omega | HIGH | LOW | P1 |
+| convert to radical | MEDIUM | LOW | P2 |
+| General RootOf(poly) | LOW | HIGH | P3 |
+| prodmake on Q(ω) | MEDIUM | HIGH | P3 |
+
+**Priority key:** P1 = Must have for Block 10; P2 = Should have; P3 = Nice to have
+
+---
+
+## Competitor Feature Analysis
+
+| Feature | Maple | Mathematica | SymPy | Our v1 Approach |
+|---------|-------|-------------|-------|-----------------|
+| Define ω | RootOf(z²+z+1=0) | Root[#²+#+1&,1] | RootOf(x²+x+1,0) | Built-in omega or RootOf(z²+z+1=0) |
+| Arithmetic | evala | RootReduce | AlgebraicField | Algnum with explicit reduction |
+| Display | omega, omega^2 | Root or radical | ANP | a + b*omega |
+| Series coeffs | Symbolic | Symbolic | Symbolic | std::map<int, Algnum> |
+| General poly | Full | Full | Full | Omit |
+
+---
+
+## Dependencies on Existing Frac/Series
+
+| Existing Component | RootOf Integration |
+|--------------------|--------------------|
+| Frac | Algnum = (Frac, Frac) for Q(ω); Frac embeds as (f, 0) |
+| Series::c | Extend to hold Algnum or use variant; Series over Q needs merge with Series over Q(ω) |
+| sum() | Must recognize omega, evaluate omega^int_expr → Algnum |
+| theta, aqprod | Return Series; if coefficients can be Algnum, series ops need Algnum add/mul |
+| prodmake | Works on std::map<int, Frac>; Q(ω) version would need std::map<int, Algnum> — defer |
+| findhom, findnonhom | Linear algebra over Q; Q(ω) would need linalg over Q(ω) — defer |
 
 ---
 
 ## Sources
 
-- Maple qseries package v1.3, jacprodmake documentation: https://qseries.org/fgarvan/qmaple/qseries/functions/jacprodmake.html (Confidence: HIGH — official authoritative source, includes example with `√JAC` output)
-- Maple qseries package, findpoly documentation: https://qseries.org/fgarvan/qmaple/qseries/functions/findpoly.html (Confidence: HIGH — shows expected Exercise 10 output)
-- qseriesdoc.md reference tutorial §3.4 Output 15 (Confidence: HIGH — the original expected output)
-- maple_checklist.md (Confidence: HIGH — actual test results showing Block 13/14/25 failures)
-- [8] Borwein-Borwein-Garvan: cubic theta identities, Eq.(12.8) for Exercise 10 result
-- [12] Borwein-Borwein: b(q) = η(τ)³/η(3τ) identity
+- Maple RootOf documentation: https://www.maplesoft.com/support/help/Maple/view.aspx?path=RootOf (HIGH — official)
+- Maple evala: algebraic evaluation for RootOf (HIGH)
+- SymPy numberfields: https://docs.sympy.org/latest/modules/polys/numberfields.html (HIGH)
+- Mathematica RootReduce, AlgebraicNumbers guide (MEDIUM — Wolfram docs)
+- qseriesdoc.md §3.4, Exercise 4 (HIGH — project reference)
+- maple_checklist.md Block 10 (HIGH — project parity target)
+- PROJECT.md v8.0 RootOf milestone (HIGH)
+- Cyclotomic field Q(ω): ω²+ω+1=0, ω³=1 (HIGH — standard)
