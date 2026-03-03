@@ -9,10 +9,10 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 
 ## Current Position
 
-Phase: 92 (SeriesOmega)
+Phase: 93 (parser-repl-omega)
 Plan: 01 (complete)
-Status: Plan 92-01 complete; SeriesOmega implemented
-Last activity: 2026-03-03 — Plan 92-01 executed
+Status: Plan 93-01 complete; omega/RootOf REPL integration
+Last activity: 2026-03-03 — Plan 93-01 executed
 
 Progress: [██░░░░░░░░] 20% — MILESTONE v8.0 IN PROGRESS (Phases 91–94)
 
@@ -57,6 +57,7 @@ Progress: [██░░░░░░░░] 20% — MILESTONE v8.0 IN PROGRESS (P
 | Phase 90-symbolic-z-tripleprod-quinprod P02 | 10 | 2 tasks | 2 files |
 | Phase 91-omega3-type P01 | ~15 | 2 tasks | 2 files |
 | Phase 92-series-omega P01 | ~10 | 2 tasks | 2 files |
+| Phase 93-parser-repl-omega P01 | 15 | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -128,6 +129,7 @@ Progress: [██░░░░░░░░] 20% — MILESTONE v8.0 IN PROGRESS (P
 - Milestone v8.0 started: RootOf Function — Phase 91 (Omega3 type), 92 (SeriesOmega), 93 (Parser/REPL), 94 (b(q) and Block 10)
 - [Phase 91-omega3-type] Plan 91-01: Omega3 struct { Frac a, b } for a+bω (ω²=-ω-1); omega(), omega2(), pow, str; 11 unit tests; str() special-case for omega, omega^2
 - [Phase 92-series-omega] Plan 92-01: SeriesOmega (map<int,Omega3>, trunc); add, mul, truncTo, Omega3*Series; 5 Phase 92 unit tests
+- [Phase 93-parser-repl-omega] Plan 93-01: omega, RootOf(3), RootOf([1,1,1]), sum(omega^n)=0, assignment, omega^2; acceptance-omega.sh 6 tests
 - Phases 91–94 derived from ROOT-01..ROOT-14; 14/14 requirements mapped ✓
 - Milestone v4.2 started: Fix Block Failures
 - Phase 63 added: Q-Shift Arithmetic Fix (QSHIFT-01, QSHIFT-02)
@@ -191,7 +193,7 @@ None yet.
 ## Session Continuity
 
 Last session: [now]
-Stopped at: Completed 92-01-PLAN.md; SeriesOmega with 5 unit tests
+Stopped at: Completed 93-01-PLAN.md; omega/RootOf REPL integration
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
