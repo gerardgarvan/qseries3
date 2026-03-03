@@ -131,9 +131,28 @@ struct SeriesOmega {
             s.c[e] = z * v;
         return s;
     }
+
+    std::string str(int maxTerms = 30) const {
+        std::string oTerm = " + O(q" + Series::expToUnicode(trunc) + ")";
+        if (c.empty())
+            return "0" + oTerm;
+        std::string out;
+        int count = 0;
+        for (const auto& [exp, coeff] : c) {
+            if (count >= maxTerms) break;
+            if (!coeff.isZero()) {
+                if (count > 0) out += " + ";
+                out += coeff.str();
+                if (exp != 0)
+                    out += (exp == 1) ? "*q" : ("*q" + Series::expToUnicode(exp));
+                ++count;
+            }
+        }
+        return out + oTerm;
+    }
 };
 
-// Omega3 * Series -> SeriesOmega
+// Omega3 * Series -> SeriesOmega  (and Series * Omega3, commutative)
 inline SeriesOmega operator*(const Omega3& z, const Series& s) {
     SeriesOmega so;
     so.trunc = s.trunc;
@@ -147,5 +166,6 @@ inline SeriesOmega operator*(const Omega3& z, const Series& s) {
     }
     return so;
 }
+inline SeriesOmega operator*(const Series& s, const Omega3& z) { return z * s; }
 
 #endif

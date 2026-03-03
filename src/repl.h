@@ -3,6 +3,8 @@
 
 #include "parser.h"
 #include "series.h"
+#include "omega3.h"
+#include "series_omega.h"
 #include "frac.h"
 #include "convert.h"
 #include "qfuncs.h"
@@ -179,7 +181,7 @@ inline std::string formatPhi1Result(const Phi1Result& r) {
 }
 
 // EnvValue: variable can hold Series, Jacobi product, Partition, Phi1Result, or RelationKernelResult
-using EnvValue = std::variant<Series, std::vector<JacFactor>, Partition, Phi1Result, RelationKernelResult>;
+using EnvValue = std::variant<Series, std::vector<JacFactor>, Partition, Phi1Result, RelationKernelResult, Omega3>;
 
 struct Environment {
     std::map<std::string, EnvValue> env;
@@ -187,6 +189,7 @@ struct Environment {
 
     Environment() {
         env["q"] = Series::q(T);
+        env["omega"] = Omega3::omega();
     }
 };
 
@@ -367,6 +370,8 @@ struct RelationComboResult {
 
 using EvalResult = std::variant<
     Series,
+    Omega3,                                           // omega, RootOf(3)
+    SeriesOmega,                                      // omega * Series
     std::map<int, Frac>,                              // prodmake
     std::vector<int>,                                 // mprodmake
     std::vector<std::pair<int, Frac>>,                // etamake
@@ -452,6 +457,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"Phiq", {"Phiq(j,T)", "divisor sum GF Σ σ_j(n) q^n"}},
         {"polyfind", {"polyfind(n0,n1,n2,T)", "quadratic p(x) with p(T)=n0, p(T+1)=n1, p(T+2)=n2"}},
         {"prodmake", {"prodmake(f,T)", "Andrews' algorithm: series → infinite product"}},
+        {"RootOf", {"RootOf(3) or RootOf([1,1,1])", "primitive cube root of unity omega"}},
         {"RRG", {"RRG(n) or RRG(n,T)", "Rogers-Ramanujan G(n): sum form for n=1, Geta for n>1"}},
         {"RRH", {"RRH(n) or RRH(n,T)", "Rogers-Ramanujan H(n): sum form for n=1, Geta for n>1"}},
         {"RRGstar", {"RRGstar(n) or RRGstar(n,T)", "Göllnitz-Gordon G*(n)"}},
@@ -544,6 +550,8 @@ inline Series getSeriesFromEnv(const EnvValue& v) {
         throw std::runtime_error("variable holds phi1 result, not series");
     if (std::holds_alternative<RelationKernelResult>(v))
         throw std::runtime_error("variable holds findhom/findnonhom result, not series");
+    if (std::holds_alternative<Omega3>(v))
+        throw std::runtime_error("variable holds Omega3, not series");
     throw std::runtime_error("variable holds Jacobi product, not series");
 }
 
@@ -602,6 +610,11 @@ inline bool isQLike(const Expr* e) {
     return e && e->tag == Expr::Tag::Q;
 }
 
+// isOmegaLike: true if expr is Var "omega" (for omega^exp, sum(omega^n))
+inline bool isOmegaLike(const Expr* e) {
+    return e && e->tag == Expr::Tag::Var && e->varName == "omega";
+}
+
 inline EvalResult eval(const Expr* e, Environment& env,
     const std::map<std::string, int64_t>& sumIndices);
 
@@ -655,6 +668,27 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         catch (const std::exception& e) { throw std::runtime_error(runtimeErr(name, e.what())); }
     };
 
+    if (name == "RootOf") {
+        if (args.size() != 1)
+            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
+        const Expr* a = args[0].get();
+        if (a->tag == Expr::Tag::IntLit) {
+            if (a->intVal == 3)
+                return Omega3::omega();
+            throw std::runtime_error(runtimeErr(name, "RootOf(n) only supports n=3 for omega"));
+        }
+        if (a->tag == Expr::Tag::List) {
+            if (a->elements.size() != 3)
+                throw std::runtime_error(runtimeErr(name, "RootOf([a,b,c]) expects 3 coefficients"));
+            int c0 = static_cast<int>(evalToInt(a->elements[0].get(), env, sumIndices));
+            int c1 = static_cast<int>(evalToInt(a->elements[1].get(), env, sumIndices));
+            int c2 = static_cast<int>(evalToInt(a->elements[2].get(), env, sumIndices));
+            if (c0 == 1 && c1 == 1 && c2 == 1)
+                return Omega3::omega();
+            throw std::runtime_error(runtimeErr(name, "RootOf([a,b,c]) only supports [1,1,1] for omega"));
+        }
+        throw std::runtime_error(runtimeErr(name, "expects int or list argument"));
+    }
     if (name == "aqprod") {
         if (args.size() != 4)
             throw std::runtime_error(runtimeErr(name, "expects 4 arguments"));
@@ -2062,8 +2096,13 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
             if (it != sumIndices.end())
                 return Series::constant(Frac(it->second), env.T);
             auto ev = env.env.find(e->varName);
-            if (ev == env.env.end())
+            if (ev == env.env.end()) {
+                if (e->varName == "omega")
+                    return Omega3::omega();
                 throw std::runtime_error("undefined variable: " + e->varName);
+            }
+            if (std::holds_alternative<Omega3>(ev->second))
+                return std::get<Omega3>(ev->second);
             if (std::holds_alternative<Partition>(ev->second))
                 return std::get<Partition>(ev->second);
             if (std::holds_alternative<Phi1Result>(ev->second))
@@ -2073,6 +2112,13 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
             return getSeriesFromEnv(ev->second);
         }
         case Expr::Tag::BinOp: {
+            // omega^int (before q^exp)
+            if (e->binOp == BinOp::Pow && isOmegaLike(e->left.get())) {
+                EvalResult leftRes = eval(e->left.get(), env, sumIndices);
+                Omega3 base = std::holds_alternative<Omega3>(leftRes) ? std::get<Omega3>(leftRes) : Omega3::omega();
+                int k = static_cast<int>(evalToInt(e->right.get(), env, sumIndices));
+                return Omega3::pow(base, k);
+            }
             if (e->binOp == BinOp::Pow && isQLike(e->left.get())) {
                 try {
                     int64_t iv = evalToInt(e->right.get(), env, sumIndices);
@@ -2093,8 +2139,29 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
                 }
                 throw std::runtime_error("q^(expr): exponent must be a constant");
             }
-            Series l = toSeries(eval(e->left.get(), env, sumIndices), "binary op", env.T);
-            Series r = toSeries(eval(e->right.get(), env, sumIndices), "binary op", env.T);
+            EvalResult leftRes = eval(e->left.get(), env, sumIndices);
+            EvalResult rightRes = eval(e->right.get(), env, sumIndices);
+            bool lOmega = std::holds_alternative<Omega3>(leftRes);
+            bool rOmega = std::holds_alternative<Omega3>(rightRes);
+            if (lOmega || rOmega) {
+                if (e->binOp == BinOp::Add && lOmega && rOmega)
+                    return std::get<Omega3>(leftRes) + std::get<Omega3>(rightRes);
+                if (e->binOp == BinOp::Mul) {
+                    if (lOmega && std::holds_alternative<Series>(rightRes))
+                        return std::get<Omega3>(leftRes) * std::get<Series>(rightRes);
+                    if (std::holds_alternative<Series>(leftRes) && rOmega)
+                        return std::get<Series>(leftRes) * std::get<Omega3>(rightRes);
+                    if (lOmega && rOmega)
+                        return std::get<Omega3>(leftRes) * std::get<Omega3>(rightRes);
+                    if (lOmega && std::holds_alternative<int64_t>(rightRes))
+                        return std::get<Omega3>(leftRes) * Omega3::fromRational(Frac(std::get<int64_t>(rightRes)));
+                    if (std::holds_alternative<int64_t>(leftRes) && rOmega)
+                        return Omega3::fromRational(Frac(std::get<int64_t>(leftRes))) * std::get<Omega3>(rightRes);
+                }
+                throw std::runtime_error("omega + series not supported");
+            }
+            Series l = toSeries(leftRes, "binary op", env.T);
+            Series r = toSeries(rightRes, "binary op", env.T);
             switch (e->binOp) {
                 case BinOp::Add: return l + r;
                 case BinOp::Sub: return l - r;
@@ -2135,9 +2202,22 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
         case Expr::Tag::Sum: {
             int64_t lo = evalToInt(e->lo.get(), env, sumIndices);
             int64_t hi = evalToInt(e->hi.get(), env, sumIndices);
-            Series acc = Series::zero(env.T);
             auto idx = sumIndices;
-            for (int64_t n = lo; n <= hi; ++n) {
+            idx[e->sumVar] = lo;
+            EvalResult first = eval(e->body.get(), env, idx);
+            if (std::holds_alternative<Omega3>(first)) {
+                Omega3 acc = std::get<Omega3>(first);
+                for (int64_t n = lo + 1; n <= hi; ++n) {
+                    idx[e->sumVar] = n;
+                    EvalResult term = eval(e->body.get(), env, idx);
+                    if (!std::holds_alternative<Omega3>(term))
+                        throw std::runtime_error("sum: mixed Omega3 and non-Omega3 terms not supported");
+                    acc = acc + std::get<Omega3>(term);
+                }
+                return acc;
+            }
+            Series acc = toSeries(first, "sum body", env.T);
+            for (int64_t n = lo + 1; n <= hi; ++n) {
                 idx[e->sumVar] = n;
                 Series term = toSeries(eval(e->body.get(), env, idx), "sum body", env.T);
                 acc = (acc + term).truncTo(env.T);
@@ -2551,6 +2631,10 @@ inline void display(const EvalResult& res, Environment& env, int /*T*/) {
                 std::cout << formatPartition(p) << std::endl;
         } else if constexpr (std::is_same_v<T, Phi1Result>) {
             std::cout << formatPhi1Result(arg) << std::endl;
+        } else if constexpr (std::is_same_v<T, Omega3>) {
+            std::cout << arg.str() << std::endl;
+        } else if constexpr (std::is_same_v<T, SeriesOmega>) {
+            std::cout << arg.str(30) << std::endl;
         }
     }, res);
 }
@@ -2584,7 +2668,11 @@ inline EvalResult evalStmt(const Stmt* s, Environment& env) {
             env.env[s->assignName] = std::get<RelationKernelResult>(res);
             return res;
         }
-        throw std::runtime_error("assignment requires Series, Jacobi product, Partition, or findhom/findnonhom result");
+        if (std::holds_alternative<Omega3>(res)) {
+            env.env[s->assignName] = std::get<Omega3>(res);
+            return res;
+        }
+        throw std::runtime_error("assignment requires Series, Jacobi product, Partition, Omega3, or findhom/findnonhom result");
     }
     return eval(s->expr.get(), env, {});
 }

@@ -4,7 +4,7 @@ CXX ?= g++
 CXXFLAGS = -std=c++20 -O2 -Wall -Wextra -Wpedantic
 LDFLAGS ?= 
 
-.PHONY: all clean test acceptance acceptance-all acceptance-maple acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history integration-eta-theta-modforms demo test-package wasm bench docker-build docker-run
+.PHONY: all clean test acceptance acceptance-all acceptance-maple acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history acceptance-omega integration-eta-theta-modforms demo test-package wasm bench docker-build docker-run
 
 all: dist/qseries.exe dist-demo
 
@@ -68,6 +68,10 @@ acceptance-modforms: dist/qseries.exe
 # Run Phase 84 Theta IDs Cusp Theory acceptance tests
 acceptance-theta-ids: dist/qseries.exe
 	./tests/acceptance-theta-ids.sh
+
+# Phase 93 omega / RootOf acceptance tests
+acceptance-omega: dist/qseries.exe
+	bash tests/acceptance-omega.sh
 
 # Run Phase 87 cross-package ETA + theta IDs + modforms integration tests
 integration-eta-theta-modforms: dist/qseries.exe
