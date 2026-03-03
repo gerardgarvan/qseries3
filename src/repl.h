@@ -706,6 +706,13 @@ inline EvalResult dispatchBuiltin(const std::string& name,
     if (name == "tripleprod") {
         if (args.size() != 3)
             throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
+        if (args[0]->tag == Expr::Tag::Var && env.env.find(args[0]->varName) == env.env.end()) {
+            Series q = ev(1);
+            int Tr = static_cast<int>(evi(2));
+            auto b = tripleprod_symbolic(q, Tr);
+            std::cout << formatBivariate(b) << std::endl;
+            return DisplayOnly{};
+        }
         return tripleprod(ev(0), ev(1), static_cast<int>(evi(2)));
     }
     if (name == "quinprod") {
@@ -721,6 +728,13 @@ inline EvalResult dispatchBuiltin(const std::string& name,
                 std::cout << "\xCE\xA3 ((-z)^(-3n) - (-z)^(3n+1)) q^(n(3n+1)/2)" << std::endl;
                 return DisplayOnly{};
             }
+        }
+        if (args[0]->tag == Expr::Tag::Var && env.env.find(args[0]->varName) == env.env.end()) {
+            Series q = ev(1);
+            int Tr = static_cast<int>(evi(2));
+            auto b = quinprod_symbolic(q, Tr);
+            std::cout << formatBivariate(b) << std::endl;
+            return DisplayOnly{};
         }
         return quinprod(ev(0), ev(1), static_cast<int>(evi(2)));
     }
