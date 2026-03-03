@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0% — MILESTONE v7.0 IN PROGRESS
 | Phase 65-jacobi-half-integer-exponents P01 | ~12 | 2 tasks | 2 files |
 | Phase 66-exercise-solutions-regression P01 | ~8 | 2 tasks | 1 file |
 | Phase 88 P01 | 12 | 3 tasks | 2 files |
+| Phase 90 P01 | 15 | 3 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,7 @@ Progress: [░░░░░░░░░░] 0% — MILESTONE v7.0 IN PROGRESS
 - [Phase 87]: Plan 87-02: Cross-package integration script (ETA+theta+modforms); theta3(100) not theta3 in etamake
 - [Phase 87-integration-testing]: Plan 87-03: BIN fallback chain in 9 run-all scripts (dist/qseries.exe first)
 - [Phase 88]: prodid/seriesid use Expr::Tag::Var branch before evi(2) to avoid evaluating z,q
+- [Phase 90]: BivariateSeries in series.h; formatBivariate, tripleprod_symbolic, quinprod_symbolic in qfuncs.h; identity formulas for symbolic z path
 
 ### Roadmap Evolution
 
