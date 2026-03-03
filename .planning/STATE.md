@@ -113,6 +113,7 @@ Progress: [█████████░] 75% (9/12 phases) — MILESTONE v6.0 
 - [Phase 87-integration-testing] Plan 87-01: acceptance-all Makefile target (maple-checklist, run-all, modforms, theta-ids); BIN fallback in integration-tcore.sh and acceptance-bailey.sh for dist/qseries.exe
 - [Phase 75-integration-testing]: tests/integration-tcore.sh with 86 tests covering: Maple makebiw example match (5 words), phi1/invphi1 roundtrip for 10 partitions × 3 values of t (=30 roundtrips), size identity for 4 partitions × 3 t values (=12), cross-function integration (istcore∘tcoreofptn, nvec roundtrip, tcoreofptn∘nvec path), tcrank values, tcores, nvec2alphavec, conjpart involution, partitions count, 83 help entries verified, 20 individual help(func) checks; total 200 tests across 8 suites, 0 failures; MILESTONE v5.0 COMPLETE
 - [Phase 87]: Plan 87-02: Cross-package integration script (ETA+theta+modforms); theta3(100) not theta3 in etamake
+- [Phase 87-integration-testing]: Plan 87-03: BIN fallback chain in 9 run-all scripts (dist/qseries.exe first)
 
 ### Roadmap Evolution
 
