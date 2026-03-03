@@ -379,6 +379,7 @@ using EvalResult = std::variant<
     RelationKernelResult,                             // findhom/findnonhom
     RelationComboResult,                              // findhomcombo/findnonhomcombo
     QFactorResult,                                    // qfactor
+    FactorResult,                                     // factor
     CheckprodResult,                                  // checkprod
     CheckmultResult,                                  // checkmult
     FindmaxindResult,                                 // findmaxind
@@ -506,6 +507,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"clear_cache", {"clear_cache()", "clear memoization caches (etaq)"}},
         {"qbin", {"qbin(m,n,T) or qbin(q,m,n,T)", "Gaussian polynomial [m;n]_q"}},
         {"qfactor", {"qfactor(f) or qfactor(f,T)", "factorize finite q-product"}},
+        {"factor", {"factor(f) or factor(f,T)", "factor polynomial in q into cyclotomic form"}},
         {"quinprod", {"quinprod(z,q,T) or quinprod(z,q,prodid) or quinprod(z,q,seriesid)", "quintuple product; T=int returns q-expansion; prodid returns product identity form; seriesid returns series identity form"}},
         {"rankgf", {"rankgf(m,T)", "GF for partitions with rank m: \xCE\xA3 N(m,n) q^n"}},
         {"rvec", {"rvec(ptn,t,k)", "count of nodes colored k in t-residue diagram"}},
@@ -962,6 +964,13 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         if (args.size() == 2)
             return qfactor(ev(0), static_cast<int>(evi(1)));
         throw std::runtime_error(runtimeErr(name, "expected qfactor(f) or qfactor(f,T)"));
+    }
+    if (name == "factor") {
+        if (args.size() == 1)
+            return factor(ev(0), T);
+        if (args.size() == 2)
+            return factor(ev(0), static_cast<int>(evi(1)));
+        throw std::runtime_error(runtimeErr(name, "expected factor(f) or factor(f,T)"));
     }
     if (name == "series") {
         if (args.size() == 1) {
@@ -2351,6 +2360,31 @@ inline std::string formatEtamake(const std::vector<std::pair<int, Frac>>& eta) {
     return prefix + num_str + " / " + denom;
 }
 
+inline std::string formatFactor(const FactorResult& fr) {
+    static auto sub = [](int n) -> std::string {
+        static const char* d[] = {"\xe2\x82\x80","\xe2\x82\x81","\xe2\x82\x82","\xe2\x82\x83","\xe2\x82\x84","\xe2\x82\x85","\xe2\x82\x86","\xe2\x82\x87","\xe2\x82\x88","\xe2\x82\x89"};
+        if (n == 0) return d[0];
+        std::string s;
+        bool neg = (n < 0);
+        if (neg) n = -n;
+        while (n > 0) { s = std::string(d[n % 10]) + s; n /= 10; }
+        return neg ? "\xe2\x81\xbb" + s : s;  // ₋ for minus
+    };
+    std::string out;
+    if (fr.q_power != 0)
+        out += "q" + Series::expToUnicode(fr.q_power);
+    for (const auto& [d, a] : fr.cyclotomic) {
+        if (!out.empty()) out += "\xC2\xB7";  // middle dot
+        out += "\xCE\xA6";  // Φ
+        out += sub(d);
+        if (a != 1 && a != -1)
+            out += Series::expToUnicode(a);
+        else if (a == -1)
+            out += Series::expToUnicode(-1);
+    }
+    return out.empty() ? "1" : out;
+}
+
 inline std::string formatQfactor(const QFactorResult& qf) {
     std::string out;
     if (qf.q_power != 0)
@@ -2625,6 +2659,8 @@ inline void display(const EvalResult& res, Environment& env, int /*T*/) {
             else std::cout << "(no solution)" << std::endl;
         } else if constexpr (std::is_same_v<T, QFactorResult>) {
             std::cout << formatQfactor(arg) << std::endl;
+        } else if constexpr (std::is_same_v<T, FactorResult>) {
+            std::cout << formatFactor(arg) << std::endl;
         } else if constexpr (std::is_same_v<T, CheckprodResult>) {
             std::cout << formatCheckprod(arg) << std::endl;
         } else if constexpr (std::is_same_v<T, CheckmultResult>) {
