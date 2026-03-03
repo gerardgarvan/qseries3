@@ -353,6 +353,33 @@ inline Series tripleprod(const Series& z, const Series& q, int T) {
     return result;
 }
 
+// quinprod_symbolic: Σ ((-z)^(-3n) - (-z)^(3n+1)) q^(n(3n+1)/2), n in Z, q_exp < T
+inline BivariateSeries quinprod_symbolic(const Series& /*q*/, int T) {
+    BivariateSeries b;
+    b.trunc = T;
+    for (int n = 0; ; ++n) {
+        // n >= 0
+        int qp = n * (3 * n + 1) / 2;
+        if (qp < T) {
+            int s = (n % 2 == 0) ? 1 : -1;
+            b.c[{ -3 * n, qp }] = b.c[{ -3 * n, qp }] + Frac(s);
+            b.c[{ 3 * n + 1, qp }] = b.c[{ 3 * n + 1, qp }] + Frac(s);
+        }
+        // n < 0: m = -n
+        if (n > 0) {
+            int qm = (-n) * (3 * (-n) + 1) / 2;  // = n(3n-1)/2
+            if (qm < T) {
+                int s = (n % 2 == 0) ? 1 : -1;  // (-1)^(-n)
+                b.c[{ 3 * n, qm }] = b.c[{ 3 * n, qm }] + Frac(s);        // z^(-3*(-n)) = z^(3n)
+                b.c[{ 1 - 3 * n, qm }] = b.c[{ 1 - 3 * n, qm }] + Frac(s); // z^(3*(-n)+1) = z^(1-3n)
+            }
+        }
+        if (n > 0 && qp >= T && (n * (3 * n - 1) / 2) >= T) break;
+        if (n == 0 && qp >= T) break;
+    }
+    return b;
+}
+
 // tripleprod_symbolic: Σ (-1)^n z^n q^(n(n-1)/2), n(n-1)/2 < T
 inline BivariateSeries tripleprod_symbolic(const Series& /*q*/, int T) {
     BivariateSeries b;
