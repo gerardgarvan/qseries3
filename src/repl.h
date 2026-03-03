@@ -180,8 +180,8 @@ inline std::string formatPhi1Result(const Phi1Result& r) {
     return out;
 }
 
-// EnvValue: variable can hold Series, Jacobi product, Partition, Phi1Result, or RelationKernelResult
-using EnvValue = std::variant<Series, std::vector<JacFactor>, Partition, Phi1Result, RelationKernelResult, Omega3>;
+// EnvValue: variable can hold Series, Jacobi product, Partition, Phi1Result, RelationKernelResult, Omega3, or SeriesOmega
+using EnvValue = std::variant<Series, std::vector<JacFactor>, Partition, Phi1Result, RelationKernelResult, Omega3, SeriesOmega>;
 
 struct Environment {
     std::map<std::string, EnvValue> env;
@@ -2103,6 +2103,8 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
             }
             if (std::holds_alternative<Omega3>(ev->second))
                 return std::get<Omega3>(ev->second);
+            if (std::holds_alternative<SeriesOmega>(ev->second))
+                return std::get<SeriesOmega>(ev->second);
             if (std::holds_alternative<Partition>(ev->second))
                 return std::get<Partition>(ev->second);
             if (std::holds_alternative<Phi1Result>(ev->second))
@@ -2213,6 +2215,17 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
                     if (!std::holds_alternative<Omega3>(term))
                         throw std::runtime_error("sum: mixed Omega3 and non-Omega3 terms not supported");
                     acc = acc + std::get<Omega3>(term);
+                }
+                return acc;
+            }
+            if (std::holds_alternative<SeriesOmega>(first)) {
+                SeriesOmega acc = std::get<SeriesOmega>(first);
+                for (int64_t n = lo + 1; n <= hi; ++n) {
+                    idx[e->sumVar] = n;
+                    EvalResult term = eval(e->body.get(), env, idx);
+                    if (!std::holds_alternative<SeriesOmega>(term))
+                        throw std::runtime_error("sum: mixed SeriesOmega and non-SeriesOmega terms not supported");
+                    acc = (acc + std::get<SeriesOmega>(term)).truncTo(env.T);
                 }
                 return acc;
             }
@@ -2672,7 +2685,11 @@ inline EvalResult evalStmt(const Stmt* s, Environment& env) {
             env.env[s->assignName] = std::get<Omega3>(res);
             return res;
         }
-        throw std::runtime_error("assignment requires Series, Jacobi product, Partition, Omega3, or findhom/findnonhom result");
+        if (std::holds_alternative<SeriesOmega>(res)) {
+            env.env[s->assignName] = std::get<SeriesOmega>(res);
+            return res;
+        }
+        throw std::runtime_error("assignment requires Series, Jacobi product, Partition, Omega3, SeriesOmega, or findhom/findnonhom result");
     }
     return eval(s->expr.get(), env, {});
 }

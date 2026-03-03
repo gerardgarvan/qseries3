@@ -152,6 +152,20 @@ struct SeriesOmega {
     }
 };
 
+// Convert SeriesOmega to Series when all coefficients are rational (b==0).
+// Throws if any coefficient has nonzero b (non-rational).
+inline Series toRationalSeries(const SeriesOmega& s) {
+    Series out;
+    out.trunc = s.trunc;
+    for (const auto& [e, v] : s.c) {
+        if (!v.b.isZero())
+            throw std::runtime_error("SeriesOmega has non-rational coefficients");
+        if (e < s.trunc && !v.a.isZero())
+            out.c[e] = v.a;
+    }
+    return out;
+}
+
 // Omega3 * Series -> SeriesOmega  (and Series * Omega3, commutative)
 inline SeriesOmega operator*(const Omega3& z, const Series& s) {
     SeriesOmega so;

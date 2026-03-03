@@ -1423,7 +1423,10 @@ Plans:
   3. a(q), b(q), c(q) from qseriesdoc Exercise 4 can be computed and are consistent
   4. maple-checklist Block 10 (RootOf) no longer skips
   5. Acceptance test: b(q) coefficients for small exponents match known values
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 94-01-PLAN.md — Sum(SeriesOmega) branch, toRationalSeries, b(q) double-sum match, Block 10 real test, a(q)/c(q) acceptance
 
 ### v8.0 Progress
 
