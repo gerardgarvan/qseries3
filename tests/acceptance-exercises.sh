@@ -36,6 +36,28 @@ else
     fail "EX-04b etamake identifies eta quotient"
 fi
 
+# EX-04c: b(q) double-sum matches eta identity (1 - 3q)
+OUT04c=$(run "set_trunc(60)" "omega := RootOf(3)" "b_sum := sum(sum(omega^(n-m)*q^(n^2+n*m+m^2), m, -12, 12), n, -12, 12)" "b_sum")
+if echo "$OUT04c" | grep -q "1 - 3q"; then
+    pass "EX-04c b(q) double-sum starts 1 - 3q"
+else
+    fail "EX-04c b(q) double-sum starts 1 - 3q"
+fi
+
+# EX-04d: a(q) = sum(sum(q^(n^2+n*m+m^2)), series starts 1 + 6q
+if run "set_trunc(100)" "aq := sum(sum(q^(n^2+n*m+m^2), m, -15, 15), n, -15, 15)" "series(aq, 15)" | grep -qE "1 \+ 6q|1 + 6q"; then
+    pass "EX-04d a(q) series starts 1 + 6q"
+else
+    fail "EX-04d a(q) series starts 1 + 6q"
+fi
+
+# EX-04e: c(q) = 3*etaq(3,T)^3/etaq(1,T), etamake identifies eta quotient
+if run "cq := 3*etaq(3,50)^3/etaq(1,50)" "etamake(cq, 50)" | grep -q $'\xCE\xB7'; then
+    pass "EX-04e c(q) etamake identifies eta quotient"
+else
+    fail "EX-04e c(q) etamake identifies eta quotient"
+fi
+
 # --- Exercise 9: N(q) = a^6(1 - 20x - 8x^2) via findnonhomcombo ---
 
 OUTPUT9=$(run \

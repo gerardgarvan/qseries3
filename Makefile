@@ -4,7 +4,7 @@ CXX ?= g++
 CXXFLAGS = -std=c++20 -O2 -Wall -Wextra -Wpedantic
 LDFLAGS ?= 
 
-.PHONY: all clean test acceptance acceptance-all acceptance-maple acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history acceptance-omega integration-eta-theta-modforms demo test-package wasm bench docker-build docker-run
+.PHONY: all clean test acceptance acceptance-all acceptance-maple acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history acceptance-omega acceptance-exercises integration-eta-theta-modforms demo test-package wasm bench docker-build docker-run
 
 all: dist/qseries.exe dist-demo
 
@@ -73,14 +73,19 @@ acceptance-theta-ids: dist/qseries.exe
 acceptance-omega: dist/qseries.exe
 	bash tests/acceptance-omega.sh
 
+# Phase 66/94 Exercise solutions (Exercises 4, 9, 10; EX-04 a/b/c/d/e)
+acceptance-exercises: dist/qseries.exe
+	bash tests/acceptance-exercises.sh
+
 # Run Phase 87 cross-package ETA + theta IDs + modforms integration tests
 integration-eta-theta-modforms: dist/qseries.exe
 	bash tests/integration-eta-theta-modforms.sh
 
-# Full regression: maple-checklist, run-all, acceptance-modforms, acceptance-theta-ids, integration-eta-theta-modforms
+# Full regression: maple-checklist, run-all, acceptance-exercises, acceptance-modforms, acceptance-theta-ids, integration-eta-theta-modforms
 acceptance-all: dist/qseries.exe
 	$(MAKE) acceptance-maple
 	bash tests/run-all.sh
+	$(MAKE) acceptance-exercises
 	$(MAKE) acceptance-modforms
 	$(MAKE) acceptance-theta-ids
 	$(MAKE) integration-eta-theta-modforms

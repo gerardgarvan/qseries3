@@ -89,8 +89,13 @@ else
     fail "Block 9: etamake(theta4)"
 fi
 
-# Block 10: omega := RootOf(z^2+z+1=0) — N/A (RootOf not supported)
-skip "Block 10: RootOf — not supported"
+# Block 10: omega := RootOf(3); b(q) = eta(τ)³/η(3τ)
+# Expected: b(q) series starts 1 - 3q
+if run "omega := RootOf(3)" "b := etaq(1,50)^3/etaq(3,50)" "series(b, 20)" | grep -q "1 - 3q"; then
+    pass "Block 10: omega, b(q) eta identity"
+else
+    fail "Block 10: omega, b(q) eta identity"
+fi
 
 # Block 11: jacprodmake on Rogers-Ramanujan (§3.4)
 # Expected: JAC(0,5,∞) / JAC(1,5,∞)
