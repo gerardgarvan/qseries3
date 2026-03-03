@@ -887,21 +887,73 @@ Requirements for closing remaining maple-checklist skips (in suggested order).
 | Feature | Reason |
 |---------|--------|
 | factor(t8) — polynomial factorization | Maple's factor() into cyclotomics; requires polynomial factorization over Q. qfactor already handles q-product structure. |
-| RootOf(z²+z+1=0) — algebraic numbers | Requires field extensions Q(ω); substantial symbolic subsystem. |
 
 ### v7.0 Requirements Traceability
 
 | Req ID | Phase | Status |
 |--------|-------|--------|
-| GAP-QP-01 | Phase 88 | Pending |
-| GAP-QP-02 | Phase 88 | Pending |
-| GAP-IDX-01 | Phase 89 | Pending |
-| GAP-SYM-01 | Phase 90 | Pending |
-| GAP-SYM-02 | Phase 90 | Pending |
+| GAP-QP-01 | Phase 88 | Done |
+| GAP-QP-02 | Phase 88 | Done |
+| GAP-IDX-01 | Phase 89 | Done |
+| GAP-SYM-01 | Phase 90 | Done |
+| GAP-SYM-02 | Phase 90 | Done |
 
 **Coverage:** 5/5 v7.0 requirements mapped ✓
 
 ---
 
+## v8.0 RootOf Function
+
+Requirements for RootOf / Q(ω) support — Maple Block 10 parity and qseriesdoc a(q), b(q), c(q).
+
+### Algebraic Type (Omega3 / Q(ω))
+
+- [ ] **ROOT-01**: Omega3 type — struct { Frac a, b } for a + b·ω with ω² = -ω-1
+- [ ] **ROOT-02**: Omega3 arithmetic — +, -, *, / with normalization after each op
+- [ ] **ROOT-03**: Omega3 division — (a+bω)⁻¹ = conjugate / norm; nonzero check
+- [ ] **ROOT-04**: ω^k reduction — powers reduce to ω^(k mod 3)
+- [ ] **ROOT-05**: Omega3 display — str() as `a + b*omega` or `omega`, `omega^2` for canonical forms
+
+### Series with Q(ω) Coefficients
+
+- [ ] **ROOT-06**: SeriesOmega — std::map<int, Omega3> parallel to Series
+- [ ] **ROOT-07**: SeriesOmega arithmetic — add, mul, truncation propagation
+- [ ] **ROOT-08**: Mixed ops — Omega3 * Series → SeriesOmega
+
+### Parser and REPL Integration
+
+- [ ] **ROOT-09**: omega symbol — built-in or RootOf(z²+z+1=0) parses to Omega3(0,1)
+- [ ] **ROOT-10**: RootOf dispatch — RootOf(3) or RootOf(z²+z+1=0) returns Omega3(0,1)
+- [ ] **ROOT-11**: sum(omega^expr) — evaluate ω^exponent → Omega3 in sum/add
+- [ ] **ROOT-12**: EnvValue — omega := RootOf(...) stores Omega3 in variable environment
+
+### Block 10 and b(q)
+
+- [ ] **ROOT-13**: b(q) — compute via sum(omega^(n-m)*q^(n²+nm+m²)) or eta identity η³/η(3τ)
+- [ ] **ROOT-14**: Block 10 parity — maple-checklist Block 10 (RootOf) no longer skips
+
+### v8.0 Out of Scope (Deferred)
+
+| Feature | Reason |
+|---------|--------|
+| General RootOf(poly) | Arbitrary algebraic extensions; polynomial ring and reduction needed |
+| Cyclotomic ζₙ for n > 3 | Q(ζ₅) etc. have different degrees and reduction rules |
+| findhom over Q(ω) | Kernel over Q(ω); linalg stays Q-only |
+| prodmake/etamake on Q(ω) series | Andrews' algorithm assumes Q; use eta identity for b(q) product |
+| convert(omega, radical) | Optional display; v1.x |
+
+### v8.0 Requirements Traceability
+
+| Req ID | Phase | Status |
+|--------|-------|--------|
+| ROOT-01..05 | Phase 91 | Pending |
+| ROOT-06..08 | Phase 92 | Pending |
+| ROOT-09..12 | Phase 93 | Pending |
+| ROOT-13..14 | Phase 94 | Pending |
+
+**Coverage:** 14/14 v8.0 requirements mapped ✓
+
+---
+
 *Requirements defined: 2025-02-24*
-*Last updated: 2026-03-03 after v7.0 milestone start*
+*Last updated: 2026-03-03 after v8.0 milestone start*

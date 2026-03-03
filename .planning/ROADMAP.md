@@ -1161,8 +1161,8 @@ Plans:
 **Milestone v7.0 (Maple Checklist Gaps) — phases 88–90:**
 
 - [x] **Phase 88: quinprod prodid/seriesid** — quinprod(z,q,prodid) and quinprod(z,q,seriesid) return identity formulas (Blocks 30–31) (completed 2026-03-03)
-- [ ] **Phase 89: List indexing** — x[1] returns first element of findhom/findnonhom output (Block 21)
-- [ ] **Phase 90: Symbolic z tripleprod/quinprod** — tripleprod(z,q,T) and quinprod(z,q,T) with symbolic z return bivariate series (Blocks 28, 32)
+- [x] **Phase 89: List indexing** — x[1] returns first element of findhom/findnonhom output (Block 21) (completed 2026-03-03)
+- [x] **Phase 90: Symbolic z tripleprod/quinprod** — tripleprod(z,q,T) and quinprod(z,q,T) with symbolic z return bivariate series (Blocks 28, 32) (completed 2026-03-03)
 
 ### Phase 76: Partition Statistics [ ]
 **Goal**: Implement Dyson rank, Andrews-Garvan crank, partition predicates, overpartitions, counting functions
@@ -1345,13 +1345,83 @@ Plans:
   2. `quinprod(z,q,T)` with symbolic z returns bivariate series (Laurent in z, power series in q)
   3. Display format supports both z and q exponents (e.g., coefficients as polynomials in z^±1)
   4. Maple checklist Blocks 28 and 32 pass
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 90-01-PLAN.md — BivariateSeries type + tripleprod_symbolic + quinprod_symbolic
+- [ ] 90-02-PLAN.md — REPL symbolic z dispatch, display, Blocks 28/32 pass
 
 ### v7.0 Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 88. quinprod prodid/seriesid | 0/? | Complete    | 2026-03-03 |
-| 89. List indexing | 0/1 | Not started | — |
-| 90. Symbolic z tripleprod/quinprod | 0/? | Not started | — |
+| 89. List indexing | 0/1 | Complete    | 2026-03-03 |
+| 90. Symbolic z tripleprod/quinprod | 0/? | Complete    | 2026-03-03 |
+
+---
+
+## Milestone v8.0 (RootOf Function) — phases 91–94
+
+- [ ] **Phase 91: Omega3 type** — omega3.h: struct { Frac a, b }, arithmetic, inverse, str(), ω^k reduction (ROOT-01..05)
+- [ ] **Phase 92: SeriesOmega** — std::map<int, Omega3>, add, mul, truncation; Omega3 * Series → SeriesOmega (ROOT-06..08)
+- [ ] **Phase 93: Parser/REPL integration** — omega, RootOf(3), sum(omega^expr), EnvValue for omega (ROOT-09..12)
+- [ ] **Phase 94: b(q) and Block 10** — b(q) via sum or eta identity; maple-checklist Block 10 parity (ROOT-13..14)
+
+### Phase 91: Omega3 type
+**Goal**: Q(ω) scalar type with ω² = -ω-1 — arithmetic, division, power reduction, display
+**Depends on**: Phase 90
+**Requirements**: ROOT-01, ROOT-02, ROOT-03, ROOT-04, ROOT-05
+**Success Criteria** (what must be TRUE):
+  1. Omega3(1,0) + Omega3(0,1) yields correct a+bω; omega*omega reduces via ω² = -ω-1
+  2. Division of nonzero Omega3 by itself yields 1; division by zero throws
+  3. omega^3 reduces to 1; omega^k reduces to ω^(k mod 3)
+  4. str(Omega3(0,1)) displays "omega"; str(Omega3(-1,-1)) displays "omega^2"; str(Omega3(1,2)) displays "1 + 2*omega"
+  5. omega + omega^2 = -1 (cyclotomic identity)
+**Plans**: TBD
+
+### Phase 92: SeriesOmega
+**Goal**: Series with Q(ω) coefficients — add, mul, truncation; mixed Omega3 * Series
+**Depends on**: Phase 91
+**Requirements**: ROOT-06, ROOT-07, ROOT-08
+**Success Criteria** (what must be TRUE):
+  1. SeriesOmega can be constructed with Omega3 coefficients at various exponents
+  2. Adding two SeriesOmega with same truncation produces correct result; truncation propagates in add/mul
+  3. omega * (1 + q) produces SeriesOmega with omega at exponent 0 and omega at exponent 1
+  4. mul truncation: product of two SeriesOmega truncated at T has no terms beyond T-1
+  5. Omega3 * Series(f) produces SeriesOmega where each coeff is Omega3(scalar) * Frac
+**Plans**: TBD
+
+### Phase 93: Parser/REPL integration
+**Goal**: omega symbol, RootOf dispatch, sum(omega^expr), variable assignment for omega
+**Depends on**: Phase 92
+**Requirements**: ROOT-09, ROOT-10, ROOT-11, ROOT-12
+**Success Criteria** (what must be TRUE):
+  1. Typing `omega` in REPL returns Omega3(0,1) and displays as omega
+  2. RootOf(3) and RootOf(z^2+z+1=0) both return Omega3(0,1)
+  3. sum(omega^n, n, 0, 2) evaluates to 1 + omega + omega^2 = 0
+  4. omega := RootOf(z^2+z+1=0) stores; subsequent `omega` or `omega*2` uses stored value
+  5. omega^2 displays correctly when evaluated
+**Plans**: TBD
+
+### Phase 94: b(q) and Block 10
+**Goal**: b(q) computation and maple-checklist Block 10 parity
+**Depends on**: Phase 93
+**Requirements**: ROOT-13, ROOT-14
+**Success Criteria** (what must be TRUE):
+  1. b(q) via sum(omega^(n-m)*q^(n²+nm+m²)) or eta identity η³/η(3τ) produces correct q-series
+  2. b(q) matches eta identity: etaq(1,T)^3 / etaq(3,T) to truncation
+  3. a(q), b(q), c(q) from qseriesdoc Exercise 4 can be computed and are consistent
+  4. maple-checklist Block 10 (RootOf) no longer skips
+  5. Acceptance test: b(q) coefficients for small exponents match known values
+**Plans**: TBD
+
+### v8.0 Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 91. Omega3 type | 0/? | Not started | - |
+| 92. SeriesOmega | 0/? | Not started | - |
+| 93. Parser/REPL integration | 0/? | Not started | - |
+| 94. b(q) and Block 10 | 0/? | Not started | - |
 

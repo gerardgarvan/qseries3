@@ -8,16 +8,22 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 **Rogers-Ramanujan must work.** Given `Σ q^(n²) / (q;q)_n`, prodmake must recover the product form with denominators only at exponents ≡ ±1 (mod 5). If this test passes, the core math is correct. Everything else builds on it.
 
-## Current Milestone: v7.0 Maple Checklist Gaps
+## Current Milestone: v8.0 RootOf Function
 
-**Goal:** Close remaining maple-checklist skips in suggested order: quinprod prodid/seriesid (Blocks 30–31), list indexing (Block 21), symbolic z in tripleprod/quinprod (Blocks 28, 32).
+**Goal:** Implement RootOf for algebraic number support — primitive roots of unity (e.g. ω = RootOf(z²+z+1=0)) for maple-checklist Block 10 and qseriesdoc a(q), b(q), c(q).
 
 **Target features:**
-- quinprod(z,q,prodid) and quinprod(z,q,seriesid) — return identity formulas
-- List indexing x[1] for findnonhom/findhom results
-- tripleprod(z,q,T) and quinprod(z,q,T) with symbolic z — bivariate series in z and q
+- RootOf(poly) — represent algebraic numbers (cyclotomic / roots of irreducible polynomials)
+- Arithmetic in Q(ω) — add, mul, norm, evaluation in q-series
+- Maple parity: omega := RootOf(z²+z+1=0) for Block 10
 
-**Deferred (hard):** factor(t8), RootOf — polynomial factorization and algebraic numbers.
+**Deferred:** factor(t8) — general polynomial factorization over Q.
+
+---
+
+## Previous Milestone: v7.0 Maple Checklist Gaps ✓
+
+**Shipped:** quinprod prodid/seriesid, list indexing (EQNS[1]), symbolic z in tripleprod/quinprod. maple-checklist 39/41 pass (Blocks 4, 10 skip).
 
 ---
 

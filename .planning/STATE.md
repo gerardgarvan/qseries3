@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v7.0 (Maple Checklist Gaps)
+**Current focus:** Milestone v8.0 (RootOf Function)
 
 ## Current Position
 
-Phase: 89 (list-indexing)
-Plan: 01 complete
-Status: Plan 89-01 complete; list indexing (EQNS[1]) implemented
-Last activity: 2026-03-03 — v7.0 roadmap: phases 88–90
+Phase: 91 (Omega3 type)
+Plan: —
+Status: Roadmap complete; ready to plan Phase 91
+Last activity: 2026-03-03 — Milestone v8.0 RootOf roadmap created
 
-Progress: [░░░░░░░░░░] 0% — MILESTONE v7.0 IN PROGRESS
+Progress: [░░░░░░░░░░] 0% — MILESTONE v8.0 IN PROGRESS (Phases 91–94)
 
 ## Performance Metrics
 
@@ -123,6 +123,8 @@ Progress: [░░░░░░░░░░] 0% — MILESTONE v7.0 IN PROGRESS
 
 ### Roadmap Evolution
 
+- Milestone v8.0 started: RootOf Function — Phase 91 (Omega3 type), 92 (SeriesOmega), 93 (Parser/REPL), 94 (b(q) and Block 10)
+- Phases 91–94 derived from ROOT-01..ROOT-14; 14/14 requirements mapped ✓
 - Milestone v4.2 started: Fix Block Failures
 - Phase 63 added: Q-Shift Arithmetic Fix (QSHIFT-01, QSHIFT-02)
 - Phase 64 added: Fractional Power Infrastructure (JAC-02)
