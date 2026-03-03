@@ -353,6 +353,20 @@ inline Series tripleprod(const Series& z, const Series& q, int T) {
     return result;
 }
 
+// tripleprod_symbolic: Σ (-1)^n z^n q^(n(n-1)/2), n(n-1)/2 < T
+inline BivariateSeries tripleprod_symbolic(const Series& /*q*/, int T) {
+    BivariateSeries b;
+    b.trunc = T;
+    for (int n = 0; ; ++n) {
+        int q_exp = n * (n - 1) / 2;
+        if (q_exp >= T) break;
+        int z_exp = n;
+        int sign = (n % 2 == 0) ? 1 : -1;
+        b.c[{z_exp, q_exp}] = Frac(sign);
+    }
+    return b;
+}
+
 // formatBivariate: groups by q exponent, shows Laurent in z per q^k
 inline std::string formatBivariate(const BivariateSeries& b, int maxTerms = 30) {
     if (b.c.empty())
