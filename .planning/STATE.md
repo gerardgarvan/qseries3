@@ -112,6 +112,7 @@ Progress: [█████████░] 75% (9/12 phases) — MILESTONE v6.0 
 - [Phase 74-tcrank-display]: mod_pow (modular exponentiation) + tcore_tcrank (GKS crank: h(t)=(t-(p-1)/2)^(p-3) mod p) in tcore.h; tresdiag (t-residue diagram: cell residue=(col-row) mod t) and makebiw (bi-infinite words via beta-number runner encoding) in REPL dispatch; makebiw output matches Maple exactly for [6,6,6,5,4,4,2,1,1] t=5 m=3; 12 acceptance tests pass; STAT-08/DISP-01/DISP-02 satisfied
 - [Phase 87-integration-testing] Plan 87-01: acceptance-all Makefile target (maple-checklist, run-all, modforms, theta-ids); BIN fallback in integration-tcore.sh and acceptance-bailey.sh for dist/qseries.exe
 - [Phase 75-integration-testing]: tests/integration-tcore.sh with 86 tests covering: Maple makebiw example match (5 words), phi1/invphi1 roundtrip for 10 partitions × 3 values of t (=30 roundtrips), size identity for 4 partitions × 3 t values (=12), cross-function integration (istcore∘tcoreofptn, nvec roundtrip, tcoreofptn∘nvec path), tcrank values, tcores, nvec2alphavec, conjpart involution, partitions count, 83 help entries verified, 20 individual help(func) checks; total 200 tests across 8 suites, 0 failures; MILESTONE v5.0 COMPLETE
+- [Phase 87]: Plan 87-02: Cross-package integration script (ETA+theta+modforms); theta3(100) not theta3 in etamake
 
 ### Roadmap Evolution
 
