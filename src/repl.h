@@ -156,6 +156,12 @@ inline std::string formatPartition(const Partition& p) {
     return out;
 }
 
+// RelationKernelResult: findhom/findnonhom result (basis + monomial exponents)
+struct RelationKernelResult {
+    std::vector<std::vector<Frac>> basis;
+    std::vector<std::vector<int>> monomialExponents;
+};
+
 // Phi1Result: [t-core, t-quotient] pair from GSK bijection
 struct Phi1Result {
     Partition core;
@@ -172,8 +178,8 @@ inline std::string formatPhi1Result(const Phi1Result& r) {
     return out;
 }
 
-// EnvValue: variable can hold Series, Jacobi product, Partition, or Phi1Result
-using EnvValue = std::variant<Series, std::vector<JacFactor>, Partition, Phi1Result>;
+// EnvValue: variable can hold Series, Jacobi product, Partition, Phi1Result, or RelationKernelResult
+using EnvValue = std::variant<Series, std::vector<JacFactor>, Partition, Phi1Result, RelationKernelResult>;
 
 struct Environment {
     std::map<std::string, EnvValue> env;
@@ -246,6 +252,8 @@ inline void saveSession(const std::string& name, const Environment& env) {
     f << "T " << env.T << "\n";
     for (const auto& [varname, val] : env.env) {
         if (varname == "q") continue;
+        if (std::holds_alternative<RelationKernelResult>(val))
+            continue;  // skip: relations are typically recomputed
         if (std::holds_alternative<Series>(val)) {
             const Series& s = std::get<Series>(val);
             f << "S " << varname << " " << s.trunc;
@@ -352,10 +360,6 @@ inline void loadSession(const std::string& name, Environment& env) {
 // EvalResult: union of all possible evaluation outcomes
 struct DisplayOnly {};  // tag for series/coeffs display-only built-ins
 
-struct RelationKernelResult {
-    std::vector<std::vector<Frac>> basis;
-    std::vector<std::vector<int>> monomialExponents;
-};
 struct RelationComboResult {
     std::optional<std::vector<Frac>> coeffs;
     std::vector<std::vector<int>> monomialExponents;
@@ -538,6 +542,8 @@ inline Series getSeriesFromEnv(const EnvValue& v) {
         throw std::runtime_error("variable holds partition, not series");
     if (std::holds_alternative<Phi1Result>(v))
         throw std::runtime_error("variable holds phi1 result, not series");
+    if (std::holds_alternative<RelationKernelResult>(v))
+        throw std::runtime_error("variable holds findhom/findnonhom result, not series");
     throw std::runtime_error("variable holds Jacobi product, not series");
 }
 
@@ -2048,6 +2054,8 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
                 return std::get<Partition>(ev->second);
             if (std::holds_alternative<Phi1Result>(ev->second))
                 return std::get<Phi1Result>(ev->second);
+            if (std::holds_alternative<RelationKernelResult>(ev->second))
+                return std::get<RelationKernelResult>(ev->second);
             return getSeriesFromEnv(ev->second);
         }
         case Expr::Tag::BinOp: {
@@ -2545,7 +2553,11 @@ inline EvalResult evalStmt(const Stmt* s, Environment& env) {
             env.env[s->assignName] = std::get<Phi1Result>(res);
             return res;
         }
-        throw std::runtime_error("assignment requires Series, Jacobi product, or Partition");
+        if (std::holds_alternative<RelationKernelResult>(res)) {
+            env.env[s->assignName] = std::get<RelationKernelResult>(res);
+            return res;
+        }
+        throw std::runtime_error("assignment requires Series, Jacobi product, Partition, or findhom/findnonhom result");
     }
     return eval(s->expr.get(), env, {});
 }
