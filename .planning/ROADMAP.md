@@ -1378,7 +1378,10 @@ Plans:
   3. omega^3 reduces to 1; omega^k reduces to ω^(k mod 3)
   4. str(Omega3(0,1)) displays "omega"; str(Omega3(-1,-1)) displays "omega^2"; str(Omega3(1,2)) displays "1 + 2*omega"
   5. omega + omega^2 = -1 (cyclotomic identity)
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 91-01-PLAN.md — omega3.h: struct, arithmetic (+, -, *, /), inverse, pow reduction, str(); unit tests in main.cpp
 
 ### Phase 92: SeriesOmega
 **Goal**: Series with Q(ω) coefficients — add, mul, truncation; mixed Omega3 * Series
@@ -1420,7 +1423,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 91. Omega3 type | 0/? | Not started | - |
+| 91. Omega3 type | 0/1 | Not started | - |
 | 92. SeriesOmega | 0/? | Not started | - |
 | 93. Parser/REPL integration | 0/? | Not started | - |
 | 94. b(q) and Block 10 | 0/? | Not started | - |
