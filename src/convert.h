@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <climits>
 
 // sift(f, n, k, T): extract coefficients a_{n*i+k}, return Series Σ_i a_{n*i+k} q^i
 inline Series sift(const Series& f, int n, int k, int T) {
@@ -19,8 +20,84 @@ inline Series sift(const Series& f, int n, int k, int T) {
         result.setCoeff(i, f.coeff(n * i + k));
         ++i;
     }
-    result.trunc = i;  // floor((T-1-k)/n)+1
+    result.trunc = i;
     return result;
+}
+
+// dilly(f, d): substitute q → q^d (q-dilation)
+inline Series dilly(const Series& f, int d) {
+    if (d <= 0) throw std::runtime_error("dilly: d must be positive");
+    Series result;
+    result.trunc = (f.trunc + d - 1) / d;
+    for (const auto& [e, v] : f.c) {
+        if (e % d == 0)
+            result.setCoeff(e / d, v);
+    }
+    return result;
+}
+
+// sieveqcheck(f, p): true iff all nonzero exponents are ≡ same residue mod p
+inline bool sieveqcheck(const Series& f, int p) {
+    if (p <= 0) return false;
+    std::set<int> residues;
+    for (const auto& [e, v] : f.c) {
+        if (!v.isZero())
+            residues.insert(((e % p) + p) % p);
+    }
+    return residues.size() <= 1;
+}
+
+// siftfindrange(f, p, T): [min_count, min_res, avg, max_count] for residue classes mod p
+struct SiftFindResult {
+    int min_count = 0;
+    int min_res = 0;
+    double avg = 0;
+    int max_count = 0;
+};
+
+inline SiftFindResult siftfindrange(const Series& f, int p, int T) {
+    SiftFindResult out;
+    if (p <= 0) return out;
+    int min_count = INT_MAX, max_count = 0;
+    int total = 0;
+    for (int j = 0; j < p; ++j) {
+        Series s = sift(f, p, j, T);
+        int cnt = 0;
+        for (const auto& [e, v] : s.c)
+            if (!v.isZero()) ++cnt;
+        if (cnt < min_count) { min_count = cnt; out.min_res = j; }
+        if (cnt > max_count) max_count = cnt;
+        total += cnt;
+    }
+    out.min_count = min_count;
+    out.max_count = max_count;
+    out.avg = (p > 0) ? static_cast<double>(total) / p : 0;
+    return out;
+}
+
+// polyfind(n0, n1, n2, T): quadratic p(x)=ax^2+bx+c with p(T)=n0, p(T+1)=n1, p(T+2)=n2
+struct PolyfindResult {
+    Frac a, b, c;
+    bool ok = false;
+};
+
+inline PolyfindResult polyfind(int64_t n0, int64_t n1, int64_t n2, int64_t T) {
+    PolyfindResult out;
+    // a*(T+2)^2 + b*(T+2) + c = n2
+    // a*(T+1)^2 + b*(T+1) + c = n1
+    // a*T^2 + b*T + c = n0
+    // Subtracting: a*(2T+3) + b = n2-n1, a*(2T+1) + b = n1-n0
+    // So 2a = (n2-n1) - (n1-n0) = n2 - 2*n1 + n0
+    int64_t two_a = n2 - 2*n1 + n0;
+    if (two_a % 2 != 0) return out;
+    int64_t a_val = two_a / 2;
+    int64_t b_val = (n1 - n0) - a_val * (2*T + 1);
+    int64_t c_val = n0 - a_val*T*T - b_val*T;
+    out.a = Frac(static_cast<int64_t>(a_val));
+    out.b = Frac(static_cast<int64_t>(b_val));
+    out.c = Frac(static_cast<int64_t>(c_val));
+    out.ok = true;
+    return out;
 }
 
 // etamake(f, T): identify f as eta-product; return list of (k, e_k) for η(kτ)^{e_k}
@@ -127,6 +204,58 @@ inline std::map<int, Frac> prodmake(const Series& f, int T) {
         }
     }
     return result;
+}
+
+// newprodmake(f, T): Andrews' algorithm with arbitrary leading term.
+// Extracts lead = c*q^k, normalizes f/lead to constant 1, runs prodmake.
+// Returns (lead_exp, lead_coeff, a_map). Empty a_map on failure.
+struct NewProdmakeResult {
+    int lead_exp = 0;
+    Frac lead_coeff = Frac(1);
+    std::map<int, Frac> a;
+};
+
+inline NewProdmakeResult newprodmake(const Series& f, int T) {
+    NewProdmakeResult out;
+    Series g = f.truncTo(T);
+    int me = g.minExp();
+    Frac lead = g.coeff(me);
+    if (lead.isZero()) {
+        std::cerr << "newprodmake: zero series\n";
+        return out;
+    }
+    out.lead_exp = me;
+    out.lead_coeff = lead;
+    int Teff = std::min(T, g.trunc) - me;
+    if (Teff <= 1) return out;
+
+    std::vector<Frac> b(Teff);
+    Frac scale = Frac(1) / lead;
+    for (int i = 0; i < Teff; ++i)
+        b[i] = g.coeff(me + i) * scale;
+    if (b[0] != Frac(1)) {
+        std::cerr << "newprodmake: normalization failed\n";
+        return out;
+    }
+
+    std::vector<Frac> c(Teff);
+    for (int n = 1; n < Teff; ++n) {
+        Frac sum = Frac(0);
+        for (int j = 1; j < n; ++j)
+            sum = sum + b[n - j] * c[j];
+        c[n] = Frac(n) * b[n] - sum;
+    }
+
+    for (int n = 1; n < Teff; ++n) {
+        Frac div_sum = Frac(0);
+        for (int d : divisors(n)) {
+            if (d < n)
+                div_sum = div_sum + Frac(d) * out.a[d];
+        }
+        Frac a_n = (c[n] - div_sum) / Frac(n);
+        out.a[n] = a_n;
+    }
+    return out;
 }
 
 // mprodmake(f, T): convert q-series to product (1+q^n1)(1+q^n2)... (m-product form)
@@ -302,6 +431,14 @@ struct QFactorResult {
     std::map<int, Frac> num_exponents;
     std::map<int, Frac> den_exponents;
 };
+
+// factor(f, T): cyclotomic expansion q^e · ∏ Φ_d^a_d (for maple-checklist Block 4)
+struct FactorResult {
+    Frac content = Frac(1);
+    int q_power = 0;
+    std::map<int, int> cyclotomic;  // n → exponent of Φ_n(q)
+};
+
 inline QFactorResult qfactor(const Series& f, int T) {
     QFactorResult out;
     Series g = f.truncTo(T);
@@ -323,6 +460,38 @@ inline QFactorResult qfactor(const Series& f, int T) {
             out.den_exponents[n] = an;
     }
     return out;
+}
+
+inline FactorResult factor(const Series& f, int T) {
+    FactorResult result;
+    QFactorResult qf = qfactor(f, T);
+    int nonzero = 0;
+    for (const auto& [e, v] : f.c)
+        if (!v.isZero()) ++nonzero;
+    if (qf.num_exponents.empty() && qf.den_exponents.empty() && nonzero > 1)
+        throw std::runtime_error("factor: cannot factor (not a q-product)");
+    result.q_power = qf.q_power;
+    auto add_cyclo = [&](int n, const Frac& e, int sign) {
+        if (e.den != BigInt(1))
+            throw std::runtime_error("factor: non-integer exponent in q-product");
+        int ex = 0;
+        if (e.num.d.size() == 1 && e.num.d[0] <= static_cast<uint32_t>(INT_MAX))
+            ex = e.num.neg ? -static_cast<int>(e.num.d[0]) : static_cast<int>(e.num.d[0]);
+        else if (!e.num.isZero())
+            throw std::runtime_error("factor: non-integer exponent in q-product");
+        for (int d : divisors(n))
+            result.cyclotomic[d] += sign * ex;
+    };
+    for (const auto& [n, e] : qf.num_exponents)
+        add_cyclo(n, e, 1);
+    for (const auto& [n, e] : qf.den_exponents)
+        add_cyclo(n, e, -1);
+    for (auto it = result.cyclotomic.begin(); it != result.cyclotomic.end(); )
+        if (it->second == 0)
+            it = result.cyclotomic.erase(it);
+        else
+            ++it;
+    return result;
 }
 
 // JAC factor: (a, b, exponent) for JAC(a,b,∞)^exponent

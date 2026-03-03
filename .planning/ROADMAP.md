@@ -1437,3 +1437,46 @@ Plans:
 | 93. Parser/REPL integration | 0/? | Complete    | 2026-03-03 |
 | 94. b(q) and Block 10 | 0/? | Complete    | 2026-03-03 |
 
+---
+
+## Milestone v9.0 (factor(t8) + Close Block 4) — phases 95–96
+
+- [ ] **Phase 95: factor builtin** — polyfactor logic (FactorResult, cyclotomic factorization), REPL dispatch factor(expr)
+- [ ] **Phase 96: Block 4 parity** — replace skip with real test; factor(t8) must produce cyclotomic output
+
+### Phase 95: factor builtin
+**Goal**: User can call factor(expr) when expr→Series; output is cyclotomic factorization
+**Depends on**: Phase 94
+**Requirements**: FACTOR-01, FACTOR-02, FACTOR-03
+**Success Criteria** (what must be TRUE):
+  1. factor(expr) evaluates expr to Series, then factors the univariate polynomial in q into cyclotomic form
+  2. FactorResult struct: map<int,int> cyclotomic (n → exponent of Φ_n), Frac content; display uses Φ_n notation
+  3. Cyclotomic factorization via qfactor→cyclotomic expansion (Approach A) or direct Φ_n extraction — sufficient for T(8,8)
+  4. REPL dispatch: factor(expr) is a built-in; help(factor) documents usage
+  5. qseriesdoc Output (4) style: factor(t8) produces cyclotomic product
+**Plans**: 1 plan
+
+Plans:
+- [ ] 95-01-PLAN.md — FactorResult + factor impl, formatFactor, REPL dispatch + help, acceptance-factor.sh
+
+### Phase 96: Block 4 parity
+**Goal**: maple-checklist Block 4 no longer skips; factor(t8) produces cyclotomic output matching qseriesdoc
+**Depends on**: Phase 95
+**Requirements**: BLOCK4-01
+**Success Criteria** (what must be TRUE):
+  1. Block 4 in tests/maple-checklist.sh replaces skip with real test (t8 := T(8,8); factor(t8))
+  2. factor(t8) returns cyclotomic factorization (Φ_n product form)
+  3. Output matches qseriesdoc Output (4) style
+  4. Block 5 (qfactor(t8,20)) continues to pass — no regression
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 96 to break down)
+
+### v9.0 Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 95. factor builtin | 0/? | Not started | - |
+| 96. Block 4 parity | 0/? | Not started | - |
+
