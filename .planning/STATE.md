@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v8.0 (RootOf Function)
+**Current focus:** Milestone v9.0 (factor(t8) + Close Block 4)
 
 ## Current Position
 
-Phase: 94 (bq-block10)
-Plan: 01 (complete)
-Status: Plan 94-01 complete; b(q) double-sum, Block 10, EX-04c/d/e
-Last activity: 2026-03-03 — Plan 94-01 executed
+Phase: 95 (factor builtin)
+Plan: 01 — completed
+Status: 95-01 complete; factor builtin with cyclotomic form
+Last activity: 2026-03-03 — v9.0 requirements, SUMMARY-factor, phases 95–96 added
 
-Progress: [██████████] 100% — MILESTONE v8.0 COMPLETE (Phases 91–94)
+Progress: [░░░░░░░░░░] 0% — MILESTONE v9.0 IN PROGRESS
 
 ## Performance Metrics
 
@@ -124,6 +124,7 @@ Progress: [██████████] 100% — MILESTONE v8.0 COMPLETE (Pha
 - [Phase 90]: BivariateSeries in series.h; formatBivariate, tripleprod_symbolic, quinprod_symbolic in qfuncs.h; identity formulas for symbolic z path
 - [Phase 90]: Plan 90-02: DisplayOnly for symbolic z path; assignment to BivariateSeries deferred
 - [Phase 94-bq-block10]: bq/aq/cq builtins deferred; Phase 94 success criteria do not require them
+- [Phase 95-factor-builtin]: factor(expr) built-in via qfactor→cyclotomic expansion; FactorResult with Φ_n notation; Block 4 parity ready
 
 ### Roadmap Evolution
 
@@ -133,6 +134,7 @@ Progress: [██████████] 100% — MILESTONE v8.0 COMPLETE (Pha
 - [Phase 93-parser-repl-omega] Plan 93-01: omega, RootOf(3), RootOf([1,1,1]), sum(omega^n)=0, assignment, omega^2; acceptance-omega.sh 6 tests
 - [Phase 94-bq-block10] Plan 94-01: Sum(SeriesOmega), toRationalSeries, b(q) double-sum, Block 10 real test, EX-04c/d/e; MILESTONE v8.0 COMPLETE
 - Phases 91–94 derived from ROOT-01..ROOT-14; 14/14 requirements mapped ✓
+- Milestone v9.0 started: factor(t8) + Close Block 4 — Phase 95 (factor builtin), 96 (Block 4 parity); FACTOR-01..03, BLOCK4-01; research SUMMARY-factor.md
 - Milestone v4.2 started: Fix Block Failures
 - Phase 63 added: Q-Shift Arithmetic Fix (QSHIFT-01, QSHIFT-02)
 - Phase 64 added: Fractional Power Infrastructure (JAC-02)
