@@ -1364,7 +1364,7 @@ Plans:
 ## Milestone v8.0 (RootOf Function) — phases 91–94
 
 - [x] **Phase 91: Omega3 type** — omega3.h: struct { Frac a, b }, arithmetic, inverse, str(), ω^k reduction (ROOT-01..05) (completed 2026-03-03)
-- [ ] **Phase 92: SeriesOmega** — std::map<int, Omega3>, add, mul, truncation; Omega3 * Series → SeriesOmega (ROOT-06..08)
+- [x] **Phase 92: SeriesOmega** — std::map<int, Omega3>, add, mul, truncation; Omega3 * Series → SeriesOmega (ROOT-06..08) (completed 2026-03-03)
 - [ ] **Phase 93: Parser/REPL integration** — omega, RootOf(3), sum(omega^expr), EnvValue for omega (ROOT-09..12)
 - [ ] **Phase 94: b(q) and Block 10** — b(q) via sum or eta identity; maple-checklist Block 10 parity (ROOT-13..14)
 
@@ -1427,7 +1427,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 91. Omega3 type | 0/1 | Complete    | 2026-03-03 |
-| 92. SeriesOmega | 0/1 | Not started | - |
+| 92. SeriesOmega | 0/1 | Complete    | 2026-03-03 |
 | 93. Parser/REPL integration | 0/? | Not started | - |
 | 94. b(q) and Block 10 | 0/? | Not started | - |
 
