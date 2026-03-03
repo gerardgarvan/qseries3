@@ -1160,7 +1160,7 @@ Plans:
 
 **Milestone v7.0 (Maple Checklist Gaps) — phases 88–90:**
 
-- [ ] **Phase 88: quinprod prodid/seriesid** — quinprod(z,q,prodid) and quinprod(z,q,seriesid) return identity formulas (Blocks 30–31)
+- [x] **Phase 88: quinprod prodid/seriesid** — quinprod(z,q,prodid) and quinprod(z,q,seriesid) return identity formulas (Blocks 30–31) (completed 2026-03-03)
 - [ ] **Phase 89: List indexing** — x[1] returns first element of findhom/findnonhom output (Block 21)
 - [ ] **Phase 90: Symbolic z tripleprod/quinprod** — tripleprod(z,q,T) and quinprod(z,q,T) with symbolic z return bivariate series (Blocks 28, 32)
 
@@ -1331,7 +1331,10 @@ Plans:
   2. `x[n]` returns the nth element (1-based indexing); `x[2]`, `x[3]`, etc. work
   3. Out-of-range index throws a clear error (not crash)
   4. Maple checklist Block 21 passes
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 89-01-PLAN.md — RelationKernelResult in EnvValue; parser Subscript; eval subscript; Block 21 real test
 
 ### Phase 90: Symbolic z tripleprod/quinprod
 **Goal**: tripleprod and quinprod accept symbolic z and return bivariate series in z and q
@@ -1348,7 +1351,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 88. quinprod prodid/seriesid | 0/? | Not started | — |
-| 89. List indexing | 0/? | Not started | — |
+| 88. quinprod prodid/seriesid | 0/? | Complete    | 2026-03-03 |
+| 89. List indexing | 0/1 | Not started | — |
 | 90. Symbolic z tripleprod/quinprod | 0/? | Not started | — |
 
