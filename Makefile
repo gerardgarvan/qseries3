@@ -4,7 +4,7 @@ CXX ?= g++
 CXXFLAGS = -std=c++20 -O2 -Wall -Wextra -Wpedantic
 LDFLAGS ?= 
 
-.PHONY: all clean test acceptance acceptance-maple acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history demo test-package wasm bench docker-build docker-run
+.PHONY: all clean test acceptance acceptance-all acceptance-maple acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history demo test-package wasm bench docker-build docker-run
 
 all: dist/qseries.exe dist-demo
 
@@ -56,6 +56,25 @@ acceptance-mprodmake: dist/qseries.exe
 # Run Phase 25 checkprod/checkmult acceptance tests
 acceptance-checkprod-checkmult: dist/qseries.exe
 	./tests/acceptance-checkprod-checkmult.sh
+
+# Run Phase 81/82 ETA cusp + identity prover acceptance tests
+acceptance-eta-cusp: dist/qseries.exe
+	./tests/acceptance-eta-cusp.sh
+
+# Run Phase 83 Modular Forms acceptance tests
+acceptance-modforms: dist/qseries.exe
+	./tests/acceptance-modforms.sh
+
+# Run Phase 84 Theta IDs Cusp Theory acceptance tests
+acceptance-theta-ids: dist/qseries.exe
+	./tests/acceptance-theta-ids.sh
+
+# Full regression: maple-checklist, run-all, acceptance-modforms, acceptance-theta-ids
+acceptance-all: dist/qseries.exe
+	$(MAKE) acceptance-maple
+	bash tests/run-all.sh
+	$(MAKE) acceptance-modforms
+	$(MAKE) acceptance-theta-ids
 
 # Run Phase 27 suppress-output acceptance tests
 acceptance-suppress-output: dist/qseries.exe
