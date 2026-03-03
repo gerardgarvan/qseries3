@@ -732,47 +732,176 @@ Requirements for implementing Garvan's Maple tcore package — partition t-cores
 
 ### Vectors
 
-- [ ] **VEC-01**: `ptn2nvec(ptn, t)` computes the n-vector of a t-core
-- [ ] **VEC-02**: `nvec2ptn(nvec)` reconstructs a t-core from its n-vector
-- [ ] **VEC-03**: `ptn2rvec(ptn, t)` computes the r-vector
-- [ ] **VEC-04**: `nvec2alphavec(nvec)` converts n-vector to alpha-vector (t=5 and t=7)
+- [x] **VEC-01**: `ptn2nvec(ptn, t)` computes the n-vector of a t-core
+- [x] **VEC-02**: `nvec2ptn(nvec)` reconstructs a t-core from its n-vector
+- [x] **VEC-03**: `ptn2rvec(ptn, t)` computes the r-vector
+- [x] **VEC-04**: `nvec2alphavec(nvec)` converts n-vector to alpha-vector (t=5 and t=7)
 
 ### Statistics
 
-- [ ] **STAT-08**: `tcrank(ptn, t)` computes the t-core crank (mod t), handling overflow via modular exponentiation
+- [x] **STAT-08**: `tcrank(ptn, t)` computes the t-core crank (mod t), handling overflow via modular exponentiation
 
 ### Display
 
-- [ ] **DISP-01**: `tresdiag(ptn, t)` prints the t-residue diagram
-- [ ] **DISP-02**: `makebiw(ptn, t, m)` prints the bi-infinite words W₀ through W_{t-1}
+- [x] **DISP-01**: `tresdiag(ptn, t)` prints the t-residue diagram
+- [x] **DISP-02**: `makebiw(ptn, t, m)` prints the bi-infinite words W₀ through W_{t-1}
 
 ## Traceability (v5.0)
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 70 | Pending |
-| INFRA-02 | Phase 70 | Pending |
-| INFRA-03 | Phase 70 | Pending |
-| INFRA-04 | Phase 70 | Pending |
-| TCORE-01 | Phase 71 | Pending |
-| TCORE-02 | Phase 71 | Pending |
-| TCORE-03 | Phase 71 | Pending |
-| TCORE-04 | Phase 72 | Pending |
-| TCORE-05 | Phase 71 | Pending |
-| GSK-01 | Phase 72 | Pending |
-| GSK-02 | Phase 72 | Pending |
-| GSK-03 | Phase 72 | Pending |
-| VEC-01 | Phase 73 | Pending |
-| VEC-02 | Phase 73 | Pending |
-| VEC-03 | Phase 73 | Pending |
-| VEC-04 | Phase 73 | Pending |
-| STAT-08 | Phase 74 | Pending |
-| DISP-01 | Phase 74 | Pending |
-| DISP-02 | Phase 74 | Pending |
+| INFRA-01 | Phase 70 | Done |
+| INFRA-02 | Phase 70 | Done |
+| INFRA-03 | Phase 70 | Done |
+| INFRA-04 | Phase 70 | Done |
+| TCORE-01 | Phase 71 | Done |
+| TCORE-02 | Phase 71 | Done |
+| TCORE-03 | Phase 71 | Done |
+| TCORE-04 | Phase 72 | Done |
+| TCORE-05 | Phase 71 | Done |
+| GSK-01 | Phase 72 | Done |
+| GSK-02 | Phase 72 | Done |
+| GSK-03 | Phase 72 | Done |
+| VEC-01 | Phase 73 | Done |
+| VEC-02 | Phase 73 | Done |
+| VEC-03 | Phase 73 | Done |
+| VEC-04 | Phase 73 | Done |
+| STAT-08 | Phase 74 | Done |
+| DISP-01 | Phase 74 | Done |
+| DISP-02 | Phase 74 | Done |
 
 **Coverage:** 19/19 v5.0 requirements mapped ✓
 
 ---
 
+## Milestone v6.0: Gaps Packages (Phases 76–87)
+
+### Partition Statistics & Overpartitions
+- [x] **PSTAT-01**: `drank(ptn)` — Dyson rank (largest part minus number of parts) — Done
+- [x] **PSTAT-02**: `agcrank(ptn)` — Andrews-Garvan crank (µ(π) or l(π) - µ(π) form) — Done
+- [x] **PSTAT-03**: Partition predicates: `ptnDP`, `ptnOP`, `ptnRR`, `ptnCC`, `ptnSCHUR`, `ptnOE` — Done
+- [x] **PSTAT-04**: `overptns(n)` — enumerate all overpartitions of n as [dptn, ptn] pairs — Done
+- [x] **PSTAT-05**: `overptnrank(optn)`, `overptncrank(optn)` — overpartition rank and crank — Done
+- [x] **PSTAT-06**: Counting functions: `PDP(n)`, `POE(n)`, `PRR(n)`, `PSCHUR(n)` — Done
+- [x] **PSTAT-07**: `kapPD(ptn)`, `lamPD(ptn)`, `numLE(ptn)` — partition statistics helpers — Done
+
+### Mock Theta Functions
+- [x] **MOCK-01**: `mockqs(name, order, T)` — q-series expansion of any mock theta function — Done
+- [x] **MOCK-02**: Registry of all 44 Ramanujan mock theta functions (orders 2,3,5,6,7,8,10) — Done
+- [x] **MOCK-03**: `mockdesorder(m)` — list mock theta function names by order — Done
+
+### Misc Utilities
+- [x] **MISC-01**: `newprodmake(f, T)` — enhanced prodmake handling arbitrary leading terms — Done
+- [x] **MISC-02**: `EISENq(k, T)` — Eisenstein series q-expansion via Bernoulli/sigma — Done
+- [x] **MISC-03**: `Phiq(j, T)` — divisor sum generating function Σ σ_j(n) q^n — Done
+- [x] **MISC-04**: `dilly(f, d)` — q-dilation (substitute q → q^d in series) — Done
+- [x] **MISC-05**: `sieveqcheck(f, p)` — check if all exponents in one residue class mod p — Done
+- [x] **MISC-06**: `siftfindrange(f, p, T)` — find residue class with fewest/most terms — Done
+- [x] **MISC-07**: `polyfind(n0, n1, n2, T)` — fit quadratic through three coefficient values — Done
+
+### Crank/Rank Tables
+- [ ] **CRANK-01**: SPT-crank table: `NS(m,n)`, `sptcrankresnum(k,r,n)`
+- [ ] **CRANK-02**: Overpartition crank table: `MBAR(m,n)`, `ocrankresnum(k,r,n)`
+- [ ] **CRANK-03**: `compute_overpartition_numbers(T)` — pentagonal recurrence variant
+- [ ] **CRANK-04**: M2-rank/crank/orank tables via partition enumeration: `M2N`, `M2M`, `M2NBAR`
+- [ ] **CRANK-05**: Residue GFs: `GFDM2N(k1,k2,t,r)`, `GFDM2M(...)`, `GFDM2NBAR(...)`
+
+### Bailey Chains
+- [ ] **BAILEY-01**: `betafind(alpha, n)` and `alphafind(beta, n)` — Bailey pair computation
+- [ ] **BAILEY-02**: `alphaup`, `alphadown`, `betaup`, `betadown` — Bailey chain operations
+- [ ] **BAILEY-03**: Catalog of known Bailey pairs (unit pair, Rogers-Ramanujan, etc.)
+
+### ETA Cusp Theory (Gamma_0)
+- [ ] **ETA-01**: `cuspmake(N)` — inequivalent cusps for Gamma_0(N)
+- [ ] **ETA-02**: `cuspord(GP, cusp)` — Ligozat's order formula for eta-quotients at cusps
+- [ ] **ETA-03**: `gammacheck(GP, N)` — Newman's 5 conditions for modular functions on Gamma_0(N)
+- [ ] **ETA-04**: `cuspORDS(GP, N)` — orders at all cusps, `mintotGAMMA0ORDS`
+- [ ] **ETA-05**: `etaprodtoqseries(GP, T)` — q-expansion of eta-quotient from GP list
+- [ ] **ETA-06**: `vp(n, p)` — p-adic valuation
+
+### ETA Identity Prover
+- [ ] **ETA-07**: `provemodfuncGAMMA0id(etaid, N)` — prove eta-quotient identity on Gamma_0(N) via Sturm bound
+- [ ] **ETA-08**: U_p operator: `provemodfuncGAMMA0UpETAid` — prove identity involving U_p sifting
+
+### Modular Forms
+- [x] **MF-01**: `makebasisM(k, T)` — basis of M_k(SL_2(Z)) using E4, E6
+- [ ] **MF-02**: `makeALTbasisM(k, T)` — alternative basis using Delta_12 (deferred)
+- [x] **MF-03**: `DELTA12(T)` — the cusp form q·η(τ)^24
+- [x] **MF-04**: `makebasisPX(k, T)` — basis using partition function P and sigma sums
+
+### Theta IDs (Gamma_1 Cusps)
+- [x] **THETA-01**: `cuspmake1(N)` — cusps for Gamma_1(N)
+- [x] **THETA-02**: `getacuspord(n, r, a, c)` — generalized eta cusp order (Biagioli)
+- [x] **THETA-03**: `Gamma1ModFunc(L, N)` — modular function check for Gamma_1(N)
+- [x] **THETA-04**: `QP2(num, den)` — second periodic Bernoulli
+- [x] **THETA-05**: `eta2jac`, `jac2eprod` — notation conversions (jac2getaprod deferred)
+
+### Theta IDs Identity Prover
+- [ ] **THETA-06**: `provemodfuncid(jacid, N)` — prove identity on Gamma_1(N) via Sturm bound
+
+### Ramanujan-Robins Identity Search
+- [ ] **RRID-01**: `RRG(n)`, `RRH(n)`, `RRGstar(n)`, `RRHstar(n)` — Rogers-Ramanujan/Göllnitz-Gordon functions
+- [ ] **RRID-02**: `checkid(expr, T)` — check if expression is an eta/theta product
+- [ ] **RRID-03**: `findids(type, T)` — systematic identity search (types 1-10)
+
+### Integration
+- [ ] **INT-01**: Full regression: all existing tests pass
+- [ ] **INT-02**: Cross-package integration: ETA+thetaids+modforms identity proofs work end-to-end
+
+### v6.0 Requirements Traceability
+
+| Req ID | Phase | Status |
+|--------|-------|--------|
+| PSTAT-01..07 | Phase 76 | Done |
+| MOCK-01..03 | Phase 77 | Done |
+| MISC-01..07 | Phase 78 | Done |
+| CRANK-01..05 | Phase 79 | Done |
+| BAILEY-01..03 | Phase 80 | Done |
+| ETA-01..06 | Phase 81 | Done |
+| ETA-07..08 | Phase 82 | Done |
+| MF-01..04 | Phase 83 | Done (MF-02 makeALTbasisM deferred) |
+| THETA-01..05 | Phase 84 | Done |
+| THETA-06 | Phase 85 | Pending |
+| RRID-01..03 | Phase 86 | Pending |
+| INT-01..02 | Phase 87 | Pending |
+
+**Coverage:** 44 v6.0 requirements across 12 phases
+
+### v7.0 Maple Checklist Gaps
+
+Requirements for closing remaining maple-checklist skips (in suggested order).
+
+#### quinprod Identity Modes (Blocks 30–31)
+- [ ] **GAP-QP-01**: `quinprod(z,q,prodid)` — returns quintuple product identity in product form (string formula)
+- [ ] **GAP-QP-02**: `quinprod(z,q,seriesid)` — returns quintuple product identity in series form (string formula)
+
+#### List Indexing (Block 21)
+- [ ] **GAP-IDX-01**: User can index into list results: `x[1]` returns first element of findhom/findnonhom output
+
+#### Symbolic z in Triple/Quintuple Products (Blocks 28, 32)
+- [ ] **GAP-SYM-01**: `tripleprod(z,q,T)` with symbolic z — returns bivariate series in z and q (Laurent in z)
+- [ ] **GAP-SYM-02**: `quinprod(z,q,T)` with symbolic z — returns bivariate series in z and q
+
+### v7.0 Out of Scope (Deferred)
+
+| Feature | Reason |
+|---------|--------|
+| factor(t8) — polynomial factorization | Maple's factor() into cyclotomics; requires polynomial factorization over Q. qfactor already handles q-product structure. |
+| RootOf(z²+z+1=0) — algebraic numbers | Requires field extensions Q(ω); substantial symbolic subsystem. |
+
+### v7.0 Requirements Traceability
+
+| Req ID | Phase | Status |
+|--------|-------|--------|
+| GAP-QP-01 | Phase 88 | Pending |
+| GAP-QP-02 | Phase 88 | Pending |
+| GAP-IDX-01 | Phase 89 | Pending |
+| GAP-SYM-01 | Phase 90 | Pending |
+| GAP-SYM-02 | Phase 90 | Pending |
+
+**Coverage:** 5/5 v7.0 requirements mapped ✓
+
+---
+
 *Requirements defined: 2025-02-24*
-*Last updated: 2026-03-02 after v5.0 requirements*
+*Last updated: 2026-03-03 after v7.0 milestone start*

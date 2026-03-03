@@ -1038,14 +1038,14 @@ Plans:
 
 - [x] **Phase 69: Rank and Crank Functions** - rankgf(m,T) and crankgf(m,T) generating functions for partition rank and crank statistics (completed 2026-03-02)
 
-## Milestone v5.0 (t-core Package) — phases 70–75:
+## Milestone v5.0 (t-core Package) — phases 70–75 ✓ COMPLETE (2026-03-02):
 
-- [ ] **Phase 70: Partition Type Infrastructure** — Add Partition type to REPL: list literals `[1,2,3]` → Partition, display, variable assignment, `partitions(n)` enumeration, conjugate utility
-- [ ] **Phase 71: Core t-core Algorithms** — `tcore.h` with `rvec`, `istcore`, `tcoreofptn`, `tcores`; REPL dispatch and help entries
-- [ ] **Phase 72: t-Quotient and GSK Bijection** — `tquot`, `phi1`, `invphi1` with rim hook insertion; size identity verification
-- [ ] **Phase 73: Vector Representations** — `ptn2nvec`, `nvec2ptn`, `ptn2rvec`, `nvec2alphavec`; roundtrip tests
-- [ ] **Phase 74: t-core Crank and Display** — `tcrank` with modular exponentiation, `tresdiag`, `makebiw`
-- [ ] **Phase 75: Integration Testing** — End-to-end tests with Maple tcore examples, regression suite
+- [x] **Phase 70: Partition Type Infrastructure** — Add Partition type to REPL: list literals `[1,2,3]` → Partition, display, variable assignment, `partitions(n)` enumeration, conjugate utility
+- [x] **Phase 71: Core t-core Algorithms** — `tcore.h` with `rvec`, `istcore`, `tcoreofptn`, `tcores`; REPL dispatch and help entries
+- [x] **Phase 72: t-Quotient and GSK Bijection** — `tquot`, `phi1`, `invphi1` with rim hook insertion; size identity verification
+- [x] **Phase 73: Vector Representations** — `ptn2nvec`, `nvec2ptn`, `ptn2rvec`, `nvec2alphavec`; roundtrip tests
+- [x] **Phase 74: t-core Crank and Display** — `tcrank` with modular exponentiation, `tresdiag`, `makebiw`
+- [x] **Phase 75: Integration Testing** — End-to-end tests with Maple tcore examples, regression suite
 
 ### Phase 67: Modular Series Arithmetic [x] (completed 2026-03-02)
 **Goal**: Series coefficients can be reduced mod p, and linear algebra over F_p finds modular polynomial relations
@@ -1075,40 +1075,40 @@ Plans:
 Plans:
 - [x] 68-01-PLAN.md — Worksheet verification test suite (completed 2026-03-02)
 
-### Phase 70: Partition Type Infrastructure [ ] 
+### Phase 70: Partition Type Infrastructure [x] (completed 2026-03-01)
 **Goal**: Add partition (integer list) data type to the REPL so partitions can be created, stored, and displayed
 **Depends on**: None (foundational)
 **Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04
 **Success Criteria** (what must be TRUE):
-  1. `[4,2,2,1]` evaluates to a Partition and displays as `[4, 2, 2, 1]`
-  2. `p := [3,3,1]` stores a Partition in variable p; `p` displays it
-  3. `partitions(5)` enumerates all 7 partitions of 5
-  4. `[]` evaluates to the empty partition
-  5. `conjpart([4,2,2,1])` returns the conjugate partition `[4, 3, 1, 1]`
+  1. `[4,2,2,1]` evaluates to a Partition and displays as `[4, 2, 2, 1]` ✓
+  2. `p := [3,3,1]` stores a Partition in variable p; `p` displays it ✓
+  3. `partitions(5)` enumerates all 7 partitions of 5 ✓
+  4. `[]` evaluates to the empty partition ✓
+  5. `conjpart([4,2,2,1])` returns the conjugate partition `[4, 3, 1, 1]` ✓
 
-### Phase 71: Core t-core Algorithms [ ]
+### Phase 71: Core t-core Algorithms [x] (completed 2026-03-02)
 **Goal**: Implement the fundamental t-core building blocks: rvec, istcore, tcoreofptn, tcores
 **Depends on**: Phase 70
 **Requirements**: TCORE-01, TCORE-02, TCORE-03, TCORE-05
 **Success Criteria** (what must be TRUE):
-  1. `rvec([4,2,2,1], 3, 0)` returns the correct count of 0-colored nodes
-  2. `istcore([3,1], 3)` returns true (3-core); `istcore([4,2,2,1], 3)` returns false
-  3. `tcoreofptn([4,2,2,1], 3)` returns the 3-core of the partition
-  4. `tcores(3, 4)` lists all 3-cores of 4 (should be `[3,1]` only)
-  5. All modular arithmetic uses safe `((x % p) + p) % p` pattern
+  1. `rvec([4,2,2,1], 3, 0)` returns 4 ✓
+  2. `istcore([3,1], 3)` returns 1; `istcore([4,2,2,1], 3)` returns 0 ✓
+  3. `tcoreofptn([4,2,2,1], 3)` returns `[4, 2]` ✓
+  4. `tcores(3, 4)` lists 2 three-cores: `[3,1]` and `[2,1,1]` ✓ (note: original criteria said 1 core; both are valid 3-cores)
+  5. All modular arithmetic uses safe `((x % p) + p) % p` pattern ✓
 
-### Phase 72: t-Quotient and GSK Bijection [ ]
+### Phase 72: t-Quotient and GSK Bijection [x] (completed 2026-03-02)
 **Goal**: Implement tquot, phi1, invphi1 — the Garvan-Kim-Stanton bijection between partitions and [core, quotient] pairs
 **Depends on**: Phase 71
 **Requirements**: TCORE-04, GSK-01, GSK-02, GSK-03
 **Success Criteria** (what must be TRUE):
-  1. `tquot([4,2,2,1], 3)` returns a list of 3 partitions
-  2. `phi1([4,2,2,1], 3)` returns `[core, quotient]` pair
-  3. `invphi1(phi1([4,2,2,1], 3), 3)` returns `[4,2,2,1]` (roundtrip)
-  4. Size identity: |λ| = |core| + t × Σ|quotient_i| holds for all test cases
-  5. Works for t=2,3,5,7 with various partition sizes
+  1. `tquot([4,2,2,1], 3)` returns 3 partitions: `[], [], [1]` ✓
+  2. `phi1([4,2,2,1], 3)` returns Core: `[4, 2]`, Quotient: `[[], [], [1]]` ✓
+  3. `invphi1(phi1([4,2,2,1], 3), 3)` returns `[4, 2, 2, 1]` ✓
+  4. Size identity verified: `[5,4,3,2,1]` → core=`[]`, quotient norms 1+3+1=5, 3×5=15=|λ| ✓
+  5. Roundtrips pass for t=2,3,5,7 ✓
 
-### Phase 73: Vector Representations [ ]
+### Phase 73: Vector Representations [x] (2026-03-02)
 **Goal**: Implement n-vector, r-vector, and alpha-vector representations of t-cores
 **Depends on**: Phase 71
 **Requirements**: VEC-01, VEC-02, VEC-03, VEC-04
@@ -1119,7 +1119,7 @@ Plans:
   4. `nvec2alphavec(nvec)` works for t=5 and t=7, errors for other t
   5. Frobenius coordinate reconstruction in nvec2ptn produces correct partitions
 
-### Phase 74: t-core Crank and Display [ ]
+### Phase 74: t-core Crank and Display [x] (2026-03-02)
 **Goal**: Implement tcrank statistic and visual display functions (tresdiag, makebiw)
 **Depends on**: Phase 71
 **Requirements**: STAT-08, DISP-01, DISP-02
@@ -1130,7 +1130,7 @@ Plans:
   4. `makebiw([1,1,2,4,4,5,6,6,6], 5, 3)` prints bi-infinite words matching Maple output
   5. Display functions produce output matching the Maple tcore package
 
-### Phase 75: Integration Testing [ ]
+### Phase 75: Integration Testing [x] (2026-03-02)
 **Goal**: End-to-end verification with Maple tcore examples, full regression
 **Depends on**: Phases 72, 73, 74
 **Requirements**: All (integration)
@@ -1140,4 +1140,212 @@ Plans:
   3. Size identity holds for all test cases
   4. No regressions in maple-checklist.sh or other acceptance tests
   5. Help entries for all 15+ new functions
+
+---
+
+## Milestone v6.0 (Gaps Packages) — phases 76–87:
+
+- [x] **Phase 76: Partition Statistics** — `drank`, `agcrank`, predicates (`ptnDP`/`ptnOP`/`ptnRR`/`ptnCC`/`ptnSCHUR`/`ptnOE`), `overptns`, `overptnrank`/`overptncrank`, counting functions `PDP`/`POE`/`PRR`/`PSCHUR` ✓ (2026-03-02)
+- [x] **Phase 77: Mock Theta Functions** — 44-function registry, `mockqs(name, order, T)`, `mockdesorder(m)` ✓ (2026-03-02)
+- [x] **Phase 78: Misc Utilities** — `newprodmake`, `EISENq`/`Phiq`, `dilly`, `sieveqcheck`, `siftfindrange`, `polyfind` ✓ (2026-03-02)
+- [x] **Phase 79: Crank/Rank Tables** — SPT-crank (`NS`), overpartition crank (`MBAR`), M2 rank/crank/orank tables, overpartition numbers, residue GFs (completed 2026-03-02)
+- [x] **Phase 80: Bailey Chains** — betafind, alphaup, alphadown, bailey_sum, catalog (unit, RR, GG) (completed 2026-03-02)
+- [x] **Phase 81: ETA Cusp Theory** — cuspmake, cuspord, gammacheck, etaprodtoqseries, vp (completed 2026-03-02)
+- [x] **Phase 82: ETA Identity Prover** — `provemodfuncGAMMA0id`, provemodfuncGAMMA0idBATCH, U_p stub ✓ (2026-03-02)
+- [x] **Phase 83: Modular Forms** — DELTA12, makebasisM, makebasisPX ✓ (2026-03-02)
+- [x] **Phase 84: Theta IDs Cusp Theory** — QP2, getacuspord, cuspmake1, Gamma1ModFunc, eta2jac, jac2eprod ✓ (2026-03-02)
+- [ ] **Phase 85: Theta IDs Identity Prover** — `provemodfuncid(jacid, N)` for Gamma_1(N)
+- [ ] **Phase 86: RR Identity Search** — `RRG(n)`/`RRH(n)` functions, `checkid`, `findids(type, T)` search engine
+- [x] **Phase 87: Integration Testing** — Cross-package tests, full regression (completed 2026-03-03)
+
+**Milestone v7.0 (Maple Checklist Gaps) — phases 88–90:**
+
+- [ ] **Phase 88: quinprod prodid/seriesid** — quinprod(z,q,prodid) and quinprod(z,q,seriesid) return identity formulas (Blocks 30–31)
+- [ ] **Phase 89: List indexing** — x[1] returns first element of findhom/findnonhom output (Block 21)
+- [ ] **Phase 90: Symbolic z tripleprod/quinprod** — tripleprod(z,q,T) and quinprod(z,q,T) with symbolic z return bivariate series (Blocks 28, 32)
+
+### Phase 76: Partition Statistics [ ]
+**Goal**: Implement Dyson rank, Andrews-Garvan crank, partition predicates, overpartitions, counting functions
+**Depends on**: Phase 70 (Partition type)
+**Requirements**: PSTAT-01, PSTAT-02, PSTAT-03, PSTAT-04, PSTAT-05, PSTAT-06, PSTAT-07
+**Success Criteria** (what must be TRUE):
+  1. `drank([5,3,2,1])` = 5 - 4 = 1 (largest part minus number of parts)
+  2. `agcrank([5,3,2])` = 5 (no 1s: return largest part)
+  3. `agcrank([3,2,1,1])` = 2 - 2 = 0 (µ=2 ones, parts > µ: {3,2} → 2 - 2)
+  4. `ptnDP([5,3,1])` = true, `ptnDP([3,3,1])` = false
+  5. `overptns(3)` returns all overpartitions of 3 (4 overpartitions)
+  6. `PDP(5)` = 3 (partitions of 5 into distinct parts: [5], [4,1], [3,2])
+
+### Phase 77: Mock Theta Functions [ ]
+**Goal**: Implement all 44 Ramanujan mock theta functions as a registry with q-series expansion
+**Depends on**: None (uses existing aqprod)
+**Requirements**: MOCK-01, MOCK-02, MOCK-03
+**Success Criteria** (what must be TRUE):
+  1. `mockqs(f3, 3, 20)` returns the correct q-series for Ramanujan's 3rd-order f function
+  2. `mockdesorder(3)` lists all 7 third-order mock theta functions
+  3. `mockdesorder(5)` lists all 12 fifth-order functions
+  4. Each mock theta function uses only aqprod — no new math primitives needed
+  5. At least 10 mock theta functions verified against known coefficients
+
+### Phase 78: Misc Utilities [ ]
+**Goal**: Enhanced prodmake, Eisenstein series, q-dilation, sieve checks, sift diagnostics
+**Depends on**: None (builds on existing sift, prodmake, sigma)
+**Requirements**: MISC-01, MISC-02, MISC-03, MISC-04, MISC-05, MISC-06, MISC-07
+**Success Criteria** (what must be TRUE):
+  1. `newprodmake` handles series with arbitrary leading terms (not just 1 + ...)
+  2. `EISENq(4, 30)` matches `eisenstein(4, 30)` (consistency check)
+  3. `dilly(f, 2)` correctly substitutes q → q^2 in a series
+  4. `siftfindrange(f, 5, 100)` identifies the sparsest residue class
+  5. `sieveqcheck(sift(f,5,0,100), 5)` returns true when all exponents are ≡ 0 mod 5
+
+### Phase 79: Crank/Rank Tables [x]
+**Goal**: Build SPT-crank, overpartition crank, and M2-statistic tables from existing rank/crank infrastructure
+**Depends on**: Phase 76 (partition predicates), existing rankgf/crankgf
+**Requirements**: CRANK-01, CRANK-02, CRANK-03, CRANK-04, CRANK-05
+**Success Criteria** (what must be TRUE):
+  1. `NS(0, 5)` returns the correct SPT-crank count for n=5, m=0
+  2. `MBAR(1, 5)` returns the correct overpartition crank count
+  3. `M2N(0, 10)` returns M2-rank zero count for partitions of 10 without repeated odd parts
+  4. Overpartition number computation matches OEIS A015128: pbar(5) = 24
+  5. Residue GF `GFDM2N(0,1,5,30)` produces a valid series
+
+### Phase 80: Bailey Chains [x]
+**Goal**: Implement Bailey pair machinery with a catalog of known pairs
+**Depends on**: None (uses existing aqprod)
+**Requirements**: BAILEY-01, BAILEY-02, BAILEY-03
+**Success Criteria** (what must be TRUE):
+  1. `betafind(unit_alpha, n)` correctly recovers beta for the unit Bailey pair
+  2. `alphaup`/`alphadown` are inverses: `alphadown(alphaup(alpha, n), n)` = alpha(n)
+  3. At least 3 known Bailey pairs in the catalog (unit, Rogers-Ramanujan, Göllnitz-Gordon)
+  4. Bailey chain operations produce correct series when summed
+
+### Phase 81: ETA Cusp Theory [x]
+**Goal**: Cusp computation for Gamma_0(N), Newman's theorem check, order computation at cusps
+**Depends on**: None (pure number theory)
+**Requirements**: ETA-01, ETA-02, ETA-03, ETA-04, ETA-05, ETA-06
+**Success Criteria** (what must be TRUE):
+  1. `cuspmake(12)` returns the correct set of inequivalent cusps for Gamma_0(12)
+  2. `gammacheck([1,-1,2,1], 2)` correctly verifies Newman's conditions for η(τ)^{-1}η(2τ)
+  3. `cuspord([1,24], [1,0])` = 1 for η(τ)^24 at cusp 0 (infinity)
+  4. `etaprodtoqseries([1,24], 30)` matches `q * etaq(1,30)^24` (Delta function)
+  5. `vp(72, 2)` = 3 (p-adic valuation)
+
+### Phase 82: ETA Identity Prover [x]
+**Goal**: Automated proof of eta-quotient identities on Gamma_0(N) via Sturm bound
+**Depends on**: Phase 81 (cusp theory)
+**Requirements**: ETA-07, ETA-08
+**Success Criteria** (what must be TRUE):
+  1. ✓ `provemodfuncGAMMA0id` proves trivial and eta-quotient identities
+  2. ✓ Sturm bound from mintotGAMMA0ORDS; verification to that depth
+  3. ✓ Batch mode: `provemodfuncGAMMA0idBATCH(etaids, N)`
+  4. U_p operator: `provemodfuncGAMMA0UpETAid` stub in place; full proof deferred
+
+### Phase 83: Modular Forms [x]
+**Goal**: Construct bases for spaces of modular forms M_k(SL_2(Z))
+**Depends on**: Phase 78 (EISENq)
+**Requirements**: MF-01, MF-02, MF-03, MF-04
+**Success Criteria** (what must be TRUE):
+  1. ✓ `makebasisM(12, 50)` returns 2 basis elements (E4^3 and E6^2)
+  2. ✓ `DELTA12(T)` = `q * etaq(1,T)^24`
+  3. ✓ `makebasisM(4, 30)` returns 1 basis element (E4)
+  4. ✓ `makebasisPX(k, T)` returns basis using partition P and Phiq(1,3,5)
+
+### Phase 84: Theta IDs Cusp Theory [x]
+**Goal**: Generalized eta-products, Gamma_1(N) cusps, Biagioli cusp order formula
+**Depends on**: Phase 81 (ETA cusp theory as foundation)
+**Requirements**: THETA-01, THETA-02, THETA-03, THETA-04, THETA-05
+**Success Criteria** (what must be TRUE):
+  1. ✓ `cuspmake1(5)` returns cusps for Gamma_1(5)
+  2. ✓ `getacuspord(n, r, a, c)` Biagioli formula
+  3. ✓ `Gamma1ModFunc(L, N)` validates generalized eta-products
+  4. ✓ `QP2(1, 3)` = -1/18
+  5. ✓ `eta2jac` and `jac2eprod` conversions
+
+### Phase 85: Theta IDs Identity Prover [ ]
+**Goal**: Prove Jacobi theta/generalized eta identities on Gamma_1(N)
+**Depends on**: Phase 84 (Gamma_1 cusp theory)
+**Requirements**: THETA-06
+**Success Criteria** (what must be TRUE):
+  1. `provemodfuncid` proves a known Jacobi theta identity
+  2. The Gamma_1(N) Sturm bound is correctly computed
+  3. At least 2 identities from theta_aids examples verified
+
+### Phase 86: RR Identity Search [ ]
+**Goal**: Rogers-Ramanujan/Göllnitz-Gordon functions and systematic identity search
+**Depends on**: Phases 78 (newprodmake), 81 (ETA)
+**Requirements**: RRID-01, RRID-02, RRID-03
+**Success Criteria** (what must be TRUE):
+  1. `RRG(1)` and `RRH(1)` match the standard Rogers-Ramanujan products
+  2. `checkid(RRG(1)*RRH(1), 50)` identifies the product as an eta-quotient
+  3. `findids(1, 20)` discovers at least 3 known type-1 identities
+  4. `findids(2, 20)` discovers at least 2 known type-2 identities
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 86-01-PLAN.md — RRG, RRH (n=1 first), RRGstar, RRHstar (n=1), geta helper, REPL commands
+- [ ] 86-02-PLAN.md — checkid implementation, REPL integration
+- [ ] 86-03-PLAN.md — findids for types 1 and 2 (GE/HE, ABCOND, SYMF), REPL integration
+
+### Phase 87: Integration Testing [ ]
+**Goal**: End-to-end verification of all v6.0 packages, full regression
+**Depends on**: All v6.0 phases
+**Requirements**: INT-01, INT-02
+**Success Criteria** (what must be TRUE):
+  1. All existing tests pass (maple-checklist, acceptance-*, integration-tcore)
+  2. Cross-package: ETA identity prover + modular forms basis used together
+  3. Mock theta + Bailey chain examples verified
+  4. Partition statistics consistent with rank/crank GFs from Phase 69
+
+**Plans:** 3/3 plans complete
+
+Plans:
+- [ ] 87-01-PLAN.md — Full regression: acceptance-all target, BIN fallbacks in integration-tcore.sh and acceptance-bailey.sh
+- [ ] 87-02-PLAN.md — Cross-package: integration-eta-theta-modforms.sh, ETA + theta IDs + modforms chain
+- [ ] 87-03-PLAN.md — Gap closure: BIN fallback in 9 run-all scripts (rank-crank, crank, mock, ptnstats, tcore, gsk, vectors, tcrank-display, partition-type)
+
+---
+
+## Milestone v7.0 (Maple Checklist Gaps) — phases 88–90
+
+### Phase 88: quinprod prodid/seriesid
+**Goal**: quinprod returns identity formulas when called with prodid or seriesid mode
+**Depends on**: Phase 87 (Integration Testing)
+**Requirements**: GAP-QP-01, GAP-QP-02
+**Success Criteria** (what must be TRUE):
+  1. `quinprod(z,q,prodid)` returns the quintuple product identity in product form (string formula)
+  2. `quinprod(z,q,seriesid)` returns the quintuple product identity in series form (string formula)
+  3. Maple checklist Blocks 30 and 31 pass
+  4. help(quinprod) documents the prodid and seriesid modes
+**Plans**: TBD
+
+### Phase 89: List indexing
+**Goal**: User can index into list results from findhom/findnonhom
+**Depends on**: Phase 88
+**Requirements**: GAP-IDX-01
+**Success Criteria** (what must be TRUE):
+  1. `x[1]` returns the first element when x is the result of findhom or findnonhom
+  2. `x[n]` returns the nth element (1-based indexing); `x[2]`, `x[3]`, etc. work
+  3. Out-of-range index throws a clear error (not crash)
+  4. Maple checklist Block 21 passes
+**Plans**: TBD
+
+### Phase 90: Symbolic z tripleprod/quinprod
+**Goal**: tripleprod and quinprod accept symbolic z and return bivariate series in z and q
+**Depends on**: Phase 89
+**Requirements**: GAP-SYM-01, GAP-SYM-02
+**Success Criteria** (what must be TRUE):
+  1. `tripleprod(z,q,T)` with symbolic z returns bivariate series (Laurent in z, power series in q)
+  2. `quinprod(z,q,T)` with symbolic z returns bivariate series (Laurent in z, power series in q)
+  3. Display format supports both z and q exponents (e.g., coefficients as polynomials in z^±1)
+  4. Maple checklist Blocks 28 and 32 pass
+**Plans**: TBD
+
+### v7.0 Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 88. quinprod prodid/seriesid | 0/? | Not started | — |
+| 89. List indexing | 0/? | Not started | — |
+| 90. Symbolic z tripleprod/quinprod | 0/? | Not started | — |
 

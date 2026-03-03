@@ -8,17 +8,28 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 **Rogers-Ramanujan must work.** Given `Σ q^(n²) / (q;q)_n`, prodmake must recover the product form with denominators only at exponents ≡ ±1 (mod 5). If this test passes, the core math is correct. Everything else builds on it.
 
-## Current Milestone: v5.0 t-core Package
+## Current Milestone: v7.0 Maple Checklist Gaps
 
-**Goal:** Implement Garvan's Maple tcore package — partition t-core/t-quotient computations, the Garvan-Kim-Stanton bijection, n-vector/r-vector representations, t-core crank, and residue diagram display. Requires adding a partition (integer list) data type to the parser/REPL.
+**Goal:** Close remaining maple-checklist skips in suggested order: quinprod prodid/seriesid (Blocks 30–31), list indexing (Block 21), symbolic z in tripleprod/quinprod (Blocks 28, 32).
 
 **Target features:**
-- Partition data type: list literals `[1,2,3]` in the parser, `partition(n)` enumeration
-- Core t-core: `tcoreofptn`, `istcore`, `tcores`, `tquot`
-- GSK bijection: `PHI1` (partition → [core, quotient]), `invphi1` (inverse)
-- Vectors: `ptn2nvec`, `nvec2ptn`, `ptn2rvec`, `nvec2alphavec`
-- Statistics: `tcrank` (t-core crank)
-- Display: `tresdiag`, `makebiw` (residue diagrams, bi-infinite words)
+- quinprod(z,q,prodid) and quinprod(z,q,seriesid) — return identity formulas
+- List indexing x[1] for findnonhom/findhom results
+- tripleprod(z,q,T) and quinprod(z,q,T) with symbolic z — bivariate series in z and q
+
+**Deferred (hard):** factor(t8), RootOf — polynomial factorization and algebraic numbers.
+
+---
+
+## Previous Milestone: v6.0 Gaps Packages ✓
+
+**Shipped:** Partition stats, mock theta, Bailey chains, crank tables, ETA cusp/identity prover, modular forms, theta IDs, RR identity search, integration testing. maple-checklist 35/41 pass (6 skips).
+
+---
+
+## Previous Milestone: v5.0 t-core Package ✓
+
+**Shipped:** Partition t-core/t-quotient, GSK bijection, n-vector/r-vector, tcrank, tresdiag, makebiw.
 
 ---
 
