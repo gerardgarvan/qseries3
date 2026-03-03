@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v5.0 (t-core Package)
+**Current focus:** Milestone v6.0 (Gaps Packages)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-02 — Milestone v5.0 (t-core Package) started
+Phase: 84 (Theta IDs Cusp Theory) — COMPLETE
+Plan: Direct execution (no separate plan file)
+Status: Milestone v6.0 in progress (Phases 76–84 complete)
+Last activity: 2026-03-02 — Phase 84 done: QP2, getacuspord, cuspmake1, Gamma1ModFunc, eta2jac, jac2eprod
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████████░] 75% (9/12 phases) — MILESTONE v6.0 IN PROGRESS
 
 ## Performance Metrics
 
@@ -105,6 +105,13 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 64-fractional-power-infrastructure]: Plan 64-01: bigpow/iroot in BigInt; Frac::rational_pow exact rational exponentiation; Series::powFrac via generalized binomial recurrence O(T²); REPL ^ fallback to powFrac; acceptance-powfrac.sh 6 tests; all 10 acceptance + 31/41 maple-checklist pass
 - [Phase 65-jacobi-half-integer-exponents]: Plan 65-01: jacprodmake b/2 exponent halving for even-period products; jac2series_impl powFrac dispatch for fractional exponents; jac2prod ^(n/d) display; Blocks 13+14 pass; 33/41 maple-checklist pass
 - [Phase 66-exercise-solutions-regression]: Plan 66-01: acceptance-exercises.sh for Exercises 4/9/10; full regression 56 tests pass, 0 fail; Milestone v4.2 complete
+- [Phase 70-partition-type-infrastructure]: struct Partition{vector<int64_t>} in EvalResult+EnvValue; list literals preserve user order (no auto-sort); partitions(n) non-increasing; conjpart non-increasing; partitions(n) plural avoids collision with partition(n); session P-tag; empty list [] via parser fix; lp/np_parts/nep/ptnnorm statistics; 12 acceptance tests pass; 33/41 maple-checklist + 11 rank-crank pass
+- [Phase 71-core-tcore-algorithms]: tcore.h with safe_mod, tcore_rvec, tcore_istcore, tcore_ptn2nvec, tcore_ptn2rvec, tcore_nvec2ptn (Frobenius coordinates), tcore_tcoreofptn, tcore_tcores; REPL dispatch for rvec/istcore/tcoreofptn/tcores/ptn2nvec/ptn2rvec; success criteria correction: tcores(3,4) has 2 cores not 1; 22 acceptance tests pass; all regressions pass
+- [Phase 72-gsk-bijection]: tcore_tquot (beta-set decomposition), tcore_findhookinpos (bi-infinite word scan), tcore_addrimthook (rim hook tracing), tcore_invphi1 (inverse bijection via rim hook insertion); floor_div for negative numbers; Phi1Result struct in EvalResult+EnvValue; phi1 display (Core/Quotient); roundtrip passes for t=2,3,5,7; 12 acceptance tests pass; all regressions pass
+- [Phase 73-vector-representations]: nvec2ptn REPL dispatch (was in tcore.h but not exposed); nvec2alphavec implemented in REPL dispatch using Frac (rational linear formulas from Garvan's tcore package); t=5 and t=7 only, error for other t; 12 acceptance tests pass; VEC-01..04 satisfied; ptn2nvec/ptn2rvec were already dispatched in Phase 71
+- [Phase 74-tcrank-display]: mod_pow (modular exponentiation) + tcore_tcrank (GKS crank: h(t)=(t-(p-1)/2)^(p-3) mod p) in tcore.h; tresdiag (t-residue diagram: cell residue=(col-row) mod t) and makebiw (bi-infinite words via beta-number runner encoding) in REPL dispatch; makebiw output matches Maple exactly for [6,6,6,5,4,4,2,1,1] t=5 m=3; 12 acceptance tests pass; STAT-08/DISP-01/DISP-02 satisfied
+- [Phase 87-integration-testing] Plan 87-01: acceptance-all Makefile target (maple-checklist, run-all, modforms, theta-ids); BIN fallback in integration-tcore.sh and acceptance-bailey.sh for dist/qseries.exe
+- [Phase 75-integration-testing]: tests/integration-tcore.sh with 86 tests covering: Maple makebiw example match (5 words), phi1/invphi1 roundtrip for 10 partitions × 3 values of t (=30 roundtrips), size identity for 4 partitions × 3 t values (=12), cross-function integration (istcore∘tcoreofptn, nvec roundtrip, tcoreofptn∘nvec path), tcrank values, tcores, nvec2alphavec, conjpart involution, partitions count, 83 help entries verified, 20 individual help(func) checks; total 200 tests across 8 suites, 0 failures; MILESTONE v5.0 COMPLETE
 
 ### Roadmap Evolution
 
@@ -169,8 +176,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-01
-Stopped at: Completed 66-01-PLAN.md — Exercise solutions & regression; Milestone v4.2 complete
+Last session: [now]
+Stopped at: Session resumed; Phase 85 implemented, awaiting verification and phase complete
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
