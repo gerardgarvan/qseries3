@@ -135,7 +135,7 @@ using StmtPtr = std::unique_ptr<Stmt>;
 enum class BinOp { Add, Sub, Mul, Div, Pow };
 
 struct Expr {
-    enum class Tag { IntLit, Q, Var, BinOp, UnOp, Call, List, Sum };
+    enum class Tag { IntLit, Q, Var, BinOp, UnOp, Call, List, Sum, Subscript };
     Tag tag = Tag::IntLit;
 
     int64_t intVal = 0;
@@ -203,6 +203,13 @@ struct Expr {
         e->sumVar = std::move(var);
         e->lo = std::move(l);
         e->hi = std::move(h);
+        return e;
+    }
+    static ExprPtr makeSubscript(ExprPtr base, ExprPtr index) {
+        auto e = std::make_unique<Expr>();
+        e->tag = Tag::Subscript;
+        e->left = std::move(base);
+        e->right = std::move(index);
         return e;
     }
 };
@@ -337,7 +344,9 @@ class Parser {
         }
         if (peek().kind == Token::Kind::LBRACK) {
             consume();
-            auto elems = parseCommaSeparatedExprs();
+            std::vector<ExprPtr> elems;
+            if (peek().kind != Token::Kind::RBRACK)
+                elems = parseCommaSeparatedExprs();
             expect(Token::Kind::RBRACK);
             return Expr::makeList(std::move(elems));
         }
@@ -349,6 +358,12 @@ class Parser {
 
     ExprPtr parseExpr(int minPrec) {
         ExprPtr left = parsePrimary();
+        while (peek().kind == Token::Kind::LBRACK) {
+            consume();
+            ExprPtr idx = parseExpr(0);
+            expect(Token::Kind::RBRACK);
+            left = Expr::makeSubscript(std::move(left), std::move(idx));
+        }
         for (;;) {
             const Token& op = peek();
             if (op.kind == Token::Kind::END || op.kind == Token::Kind::RPAREN ||
