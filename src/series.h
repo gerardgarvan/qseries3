@@ -4,6 +4,7 @@
 #include "frac.h"
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 #include <stdexcept>
 #include <iostream>
@@ -489,6 +490,12 @@ struct Series {
             list.push_back(coeff(n));
         return list;
     }
+};
+
+// BivariateSeries: map (z_exp, q_exp) -> Frac for Laurent in z, power series in q
+struct BivariateSeries {
+    std::map<std::pair<int,int>, Frac> c;  // (z_exp, q_exp) -> coefficient
+    int trunc;  // q truncation
 };
 
 #endif

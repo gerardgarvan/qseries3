@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdint>
 #include <utility>
+#include <sstream>
 
 // ============ Number theory helpers ============
 
@@ -159,6 +160,26 @@ inline Series eisenstein(int k, int T) {
             s = s + term;
         }
         result.setCoeff(n, multiplier * s);
+    }
+    return result;
+}
+
+// EISENq(d, T): Eisenstein series E_d(q), d even (2,4,6,...). Same as eisenstein(d/2, T).
+inline Series EISENq(int d, int T) {
+    if (d <= 0 || d % 2 != 0)
+        throw std::runtime_error("EISENq: d must be positive even integer");
+    return eisenstein(d / 2, T);
+}
+
+// Phiq(j, T): divisor sum GF Σ_{n>=1} σ_j(n) q^n
+inline Series Phiq(int j, int T) {
+    if (j < 0) throw std::runtime_error("Phiq: j must be non-negative");
+    Series result;
+    result.trunc = T;
+    for (int n = 1; n < T; ++n) {
+        int64_t s = sigma(n, j);
+        if (s != 0)
+            result.setCoeff(n, Frac(s));
     }
     return result;
 }
@@ -332,6 +353,52 @@ inline Series tripleprod(const Series& z, const Series& q, int T) {
     return result;
 }
 
+// formatBivariate: groups by q exponent, shows Laurent in z per q^k
+inline std::string formatBivariate(const BivariateSeries& b, int maxTerms = 30) {
+    if (b.c.empty())
+        return "0 + O(q" + Series::expToUnicode(b.trunc) + ")";
+    // Collect (q_exp -> list of (z_exp, coeff))
+    std::map<int, std::map<int, Frac>> byQ;
+    for (const auto& [p, v] : b.c) {
+        if (!v.isZero() && p.second < b.trunc)
+            byQ[p.second][p.first] = v;
+    }
+    std::string out;
+    int count = 0;
+    for (const auto& [q_exp, zmap] : byQ) {
+        if (count >= maxTerms) break;
+        if (count > 0) out += " + ";
+        // Laurent polynomial in z for this q exponent
+        std::string laurent;
+        for (const auto& [z_exp, coeff] : zmap) {
+            if (!laurent.empty()) {
+                if (coeff < Frac(0)) laurent += " - ";
+                else laurent += " + ";
+            }
+            Frac av = coeff.abs();
+            bool showNeg = (laurent.empty() && coeff < Frac(0));
+            if (showNeg) laurent += "-";
+            if (z_exp == 0) {
+                laurent += av.isOne() ? "1" : av.str();
+            } else {
+                if (!av.isOne()) laurent += av.str();
+                if (z_exp > 0)
+                    laurent += (z_exp == 1) ? "z" : ("z" + Series::expToUnicode(z_exp));
+                else
+                    laurent += (z_exp == -1) ? "z⁻¹" : ("z" + Series::expToUnicode(z_exp));
+            }
+        }
+        if (q_exp == 0) {
+            out += "(" + laurent + ")";
+        } else {
+            out += "(" + laurent + ")·q" + Series::expToUnicode(q_exp);
+        }
+        ++count;
+    }
+    out += " + O(q" + Series::expToUnicode(b.trunc) + ")";
+    return out;
+}
+
 inline Series quinprod(const Series& z, const Series& q, int T) {
     Series result = Series::one(T);
     Series zt = z.withTrunc(T);
@@ -472,6 +539,214 @@ inline Series crankgf(int m, int T) {
         if (!val.isZero()) result.setCoeff(n, val);
     }
     return result;
+}
+
+// ============ Partition enumeration and utilities ============
+
+// Forward declaration — Partition struct is defined in repl.h.
+// These functions use std::vector<int64_t> directly so they can be
+// used from repl.h without circular dependency issues.
+
+inline void enumerate_partitions_helper(int64_t n, int64_t maxPart,
+    std::vector<int64_t>& current, std::vector<std::vector<int64_t>>& result) {
+    if (n == 0) {
+        result.push_back(current);
+        return;
+    }
+    int64_t limit = std::min(n, maxPart);
+    for (int64_t k = limit; k >= 1; --k) {
+        current.push_back(k);
+        enumerate_partitions_helper(n - k, k, current, result);
+        current.pop_back();
+    }
+}
+
+inline std::vector<std::vector<int64_t>> enumerate_partitions(int n) {
+    if (n < 0) return {};
+    if (n == 0) return {{}};
+    std::vector<std::vector<int64_t>> result;
+    std::vector<int64_t> current;
+    enumerate_partitions_helper(n, n, current, result);
+    return result;
+}
+
+inline std::vector<int64_t> conjugate_partition(const std::vector<int64_t>& parts) {
+    if (parts.empty()) return {};
+    int64_t largest = *std::max_element(parts.begin(), parts.end());
+    if (largest <= 0) return {};
+    std::vector<int64_t> conj;
+    for (int64_t i = 1; i <= largest; ++i) {
+        int64_t count = 0;
+        for (int64_t p : parts)
+            if (p >= i) ++count;
+        conj.push_back(count);
+    }
+    std::sort(conj.begin(), conj.end(), std::greater<int64_t>());
+    return conj;
+}
+
+// ============ Partition statistics ============
+
+// Dyson rank: largest part minus number of parts
+inline int64_t ptn_drank(const std::vector<int64_t>& parts) {
+    if (parts.empty()) return 0;
+    int64_t largest = *std::max_element(parts.begin(), parts.end());
+    return largest - static_cast<int64_t>(parts.size());
+}
+
+// Andrews-Garvan crank
+inline int64_t ptn_agcrank(const std::vector<int64_t>& parts) {
+    if (parts.empty()) return 0;
+    int64_t ones = 0;
+    for (int64_t p : parts) if (p == 1) ++ones;
+    int64_t largest = *std::max_element(parts.begin(), parts.end());
+    if (ones == 0) return largest;
+    int64_t parts_gt_ones = 0;
+    for (int64_t p : parts) if (p > ones) ++parts_gt_ones;
+    return parts_gt_ones - ones;
+}
+
+// kapPD: for a partition into distinct parts, sum of parts > largest even part
+inline int64_t ptn_kapPD(const std::vector<int64_t>& parts) {
+    int64_t largest_even = 0;
+    for (int64_t p : parts) if (p % 2 == 0 && p > largest_even) largest_even = p;
+    if (largest_even == 0) return 0;
+    int64_t count = 0;
+    for (int64_t p : parts) if (p > largest_even) ++count;
+    return count;
+}
+
+// lamPD: for a partition into distinct parts, largest part minus smallest
+inline int64_t ptn_lamPD(const std::vector<int64_t>& parts) {
+    if (parts.empty()) return 0;
+    int64_t largest = *std::max_element(parts.begin(), parts.end());
+    int64_t smallest = *std::min_element(parts.begin(), parts.end());
+    return largest - smallest;
+}
+
+// numLE: number of times the largest even part occurs (0 or 1 for distinct parts)
+inline int64_t ptn_numLE(const std::vector<int64_t>& parts) {
+    int64_t largest_even = 0;
+    for (int64_t p : parts) if (p % 2 == 0 && p > largest_even) largest_even = p;
+    if (largest_even == 0) return 0;
+    int64_t count = 0;
+    for (int64_t p : parts) if (p == largest_even) ++count;
+    return count;
+}
+
+// ============ Partition predicates ============
+
+// ptnDP: partition into distinct parts
+inline bool ptn_is_distinct(const std::vector<int64_t>& parts) {
+    for (size_t i = 1; i < parts.size(); ++i)
+        if (parts[i] == parts[i-1]) return false;
+    return true;
+}
+
+// ptnOP: partition into odd parts
+inline bool ptn_is_odd_parts(const std::vector<int64_t>& parts) {
+    for (int64_t p : parts) if (p % 2 == 0) return false;
+    return true;
+}
+
+// ptnRR: Rogers-Ramanujan type — parts differ by at least 2
+inline bool ptn_is_RR(const std::vector<int64_t>& parts) {
+    for (size_t i = 1; i < parts.size(); ++i)
+        if (parts[i-1] - parts[i] < 2) return false;
+    return true;
+}
+
+// ptnCC: parts differ by at least 3
+inline bool ptn_is_CC(const std::vector<int64_t>& parts) {
+    for (size_t i = 1; i < parts.size(); ++i)
+        if (parts[i-1] - parts[i] < 3) return false;
+    return true;
+}
+
+// ptnSCHUR: Schur partition — distinct parts, no two consecutive
+inline bool ptn_is_SCHUR(const std::vector<int64_t>& parts) {
+    if (!ptn_is_distinct(parts)) return false;
+    for (size_t i = 1; i < parts.size(); ++i)
+        if (parts[i-1] - parts[i] == 1) return false;
+    return true;
+}
+
+// ptnOE: even parts are all smaller than all odd parts
+inline bool ptn_is_OE(const std::vector<int64_t>& parts) {
+    int64_t max_even = 0, min_odd = INT64_MAX;
+    bool has_even = false, has_odd = false;
+    for (int64_t p : parts) {
+        if (p % 2 == 0) { has_even = true; if (p > max_even) max_even = p; }
+        else { has_odd = true; if (p < min_odd) min_odd = p; }
+    }
+    if (!has_even || !has_odd) return true;
+    return max_even < min_odd;
+}
+
+// ============ Counting functions using predicates ============
+
+inline int64_t count_PDP(int n) {
+    auto all = enumerate_partitions(n);
+    int64_t count = 0;
+    for (const auto& p : all) if (ptn_is_distinct(p)) ++count;
+    return count;
+}
+
+inline int64_t count_POE(int n) {
+    auto all = enumerate_partitions(n);
+    int64_t count = 0;
+    for (const auto& p : all) if (ptn_is_OE(p)) ++count;
+    return count;
+}
+
+inline int64_t count_PRR(int n) {
+    auto all = enumerate_partitions(n);
+    int64_t count = 0;
+    for (const auto& p : all) if (ptn_is_RR(p)) ++count;
+    return count;
+}
+
+inline int64_t count_PSCHUR(int n) {
+    auto all = enumerate_partitions(n);
+    int64_t count = 0;
+    for (const auto& p : all) if (ptn_is_SCHUR(p)) ++count;
+    return count;
+}
+
+// ============ Overpartitions ============
+// An overpartition of n is a pair [dptn, ptn] where dptn has distinct parts,
+// norm(dptn) + norm(ptn) = n. Represented as a vector of two Partitions.
+
+inline std::vector<std::pair<std::vector<int64_t>, std::vector<int64_t>>>
+enumerate_overpartitions(int n) {
+    std::vector<std::pair<std::vector<int64_t>, std::vector<int64_t>>> result;
+    for (int i = 0; i <= n; ++i) {
+        int j = n - i;
+        auto dptns = enumerate_partitions(i);
+        auto ptns = enumerate_partitions(j);
+        for (const auto& dp : dptns) {
+            if (!ptn_is_distinct(dp)) continue;
+            for (const auto& p : ptns) {
+                result.push_back({dp, p});
+            }
+        }
+    }
+    return result;
+}
+
+// Overpartition rank: max(parts in both components) - total number of parts
+inline int64_t overptn_rank(const std::vector<int64_t>& dptn, const std::vector<int64_t>& ptn) {
+    int64_t maxpart = 0;
+    for (int64_t p : dptn) if (p > maxpart) maxpart = p;
+    for (int64_t p : ptn) if (p > maxpart) maxpart = p;
+    int64_t total_parts = static_cast<int64_t>(dptn.size() + ptn.size());
+    return maxpart - total_parts;
+}
+
+// Overpartition crank: if ptn component is non-empty, return agcrank(ptn); else lamPD(dptn)
+inline int64_t overptn_crank(const std::vector<int64_t>& dptn, const std::vector<int64_t>& ptn) {
+    if (!ptn.empty()) return ptn_agcrank(ptn);
+    return ptn_lamPD(dptn);
 }
 
 #endif
