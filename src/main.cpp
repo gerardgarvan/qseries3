@@ -1,10 +1,12 @@
 /*
  * Phase 1 BigInt + Phase 2 Frac + Phase 3 Series test driver.
+ * Includes repl.h for provemodfuncid and other built-ins.
  * Exercises all SPEC and .cursorrules edge cases.
  * Exits 0 on success, non-zero on failure.
  */
 #include "bigint.h"
 #include "frac.h"
+#include "omega3.h"
 #include "series.h"
 #include "qfuncs.h"
 #include "convert.h"
@@ -668,6 +670,23 @@ int runUnitTests() {
     {
         parse("sum(q^(n^2)/aqprod(q,q,n,50), n, 0, 8)");  // Rogers-Ramanujan pattern — must not throw
     }
+
+    std::cout << "--- Omega3 Phase 91 tests ---\n";
+    CHECK(Omega3(Frac(1), Frac(0)) + Omega3(Frac(0), Frac(1)) == Omega3(Frac(1), Frac(1)));
+    CHECK(Omega3::omega() * Omega3::omega() == Omega3::omega2());
+    CHECK(Omega3(Frac(1), Frac(0)) / Omega3(Frac(1), Frac(0)) == Omega3(Frac(1), Frac(0)));
+    CHECK(Omega3::omega() / Omega3::omega() == Omega3(Frac(1), Frac(0)));
+    CHECK(Omega3::pow(Omega3::omega(), 3) == Omega3(Frac(1), Frac(0)));
+    CHECK(Omega3::pow(Omega3::omega(), 4) == Omega3::omega());
+    CHECK(Omega3::omega() + Omega3::omega2() == Omega3(Frac(-1), Frac(0)));
+    {
+        bool threw = false;
+        try { (void)(Omega3(Frac(1), Frac(0)) / Omega3(Frac(0), Frac(0))); } catch (...) { threw = true; }
+        CHECK(threw);
+    }
+    CHECK(Omega3(Frac(0), Frac(1)).str() == "omega");
+    CHECK(Omega3(Frac(-1), Frac(-1)).str() == "omega^2");
+    CHECK(Omega3(Frac(1), Frac(2)).str() == "1 + 2*omega");
 
     // --- Frac: Long-chain growth test (no exponential BigInt growth) ---
     std::cout << "\n--- Frac long-chain: add chain 1+50*(1/2)=26 ---\n";
