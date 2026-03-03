@@ -454,6 +454,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"RRHstar", {"RRHstar(n) or RRHstar(n,T)", "Göllnitz-Gordon H*(n)"}},
         {"geta", {"geta(g,d,n,T)", "Geta(g,d,n) = q^(n·QP2(g/d)·d/2)·JAC(ng,nd,∞)/JAC(0,nd,∞)"}},
         {"checkid", {"checkid(expr,T) or checkid(expr,T,acc)", "check if expr is eta/theta product (CHECKRAMIDF)"}},
+        {"findids", {"findids(type) or findids(type,T)", "search RR identities: type 1 (G(p)H(a)±G(a)H(p)), type 2 (G(a)G(p)±H(a)H(p))"}},
         {"sieveqcheck", {"sieveqcheck(f,p)", "true if all exponents ≡ same residue mod p"}},
         {"siftfindrange", {"siftfindrange(f,p,T)", "find residue class with fewest terms"}},
         {"sptcrankresnum", {"sptcrankresnum(k,r,n)", "partitions of n with SPT-crank ≡ k mod r"}},
@@ -631,6 +632,7 @@ inline int levenshteinDistance(const std::string& a, const std::string& b) {
 }
 
 inline std::string formatProdmake(const std::map<int, Frac>& a, bool mapleStyle = true);
+inline std::string formatEtamake(const std::vector<std::pair<int, Frac>>& eta);
 
 inline EvalResult dispatchBuiltin(const std::string& name,
     const std::vector<ExprPtr>& args, Environment& env,
@@ -770,6 +772,16 @@ inline EvalResult dispatchBuiltin(const std::string& name,
                 prefix = "";
             std::cout << prefix << formatEtamake(r.eta) << std::endl;
         }
+        return DisplayOnly{};
+    }
+    if (name == "findids") {
+        if (args.size() < 1 || args.size() > 2)
+            throw std::runtime_error(runtimeErr(name, "expects findids(type) or findids(type,T)"));
+        int typeVal = static_cast<int>(evi(0));
+        int Tr = (args.size() == 2) ? static_cast<int>(evi(1)) : T;
+        auto ids = findids(typeVal, Tr);
+        for (const auto& [a, b, c1] : ids)
+            std::cout << "[" << a << ", " << b << ", " << c1 << "]" << std::endl;
         return DisplayOnly{};
     }
     if (name == "newprodmake") {

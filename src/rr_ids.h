@@ -11,6 +11,48 @@
 #include <optional>
 #include <numeric>
 #include <algorithm>
+#include <map>
+
+// Add two series with different q_shifts by collecting terms by exponent
+inline Series addSeriesAligned(const Series& s1, const Series& s2, int c1_sign, int T) {
+    std::map<Frac, Frac> terms;
+    for (const auto& [n, v] : s1.c) {
+        if (!v.isZero())
+            terms[s1.q_shift + Frac(n)] = terms[s1.q_shift + Frac(n)] + v;
+    }
+    for (const auto& [n, v] : s2.c) {
+        if (!v.isZero()) {
+            Frac add = v * Frac(c1_sign);
+            terms[s2.q_shift + Frac(n)] = terms[s2.q_shift + Frac(n)] + add;
+        }
+    }
+    Frac minExp;
+    bool first = true;
+    for (const auto& [e, c] : terms) {
+        if (!c.isZero()) {
+            if (first) { minExp = e; first = false; }
+            else if (e < minExp) minExp = e;
+        }
+    }
+    if (first) return Series::zero(T);
+    Series out;
+    out.trunc = T;
+    out.q_shift = minExp;
+    int idx = 0;
+    for (const auto& [e, c] : terms) {
+        if (c.isZero()) continue;
+        Frac expOffset = e - minExp;
+        if (expOffset.den != BigInt(1)) continue;
+        int n = 0;
+        if (expOffset.num.d.size() == 1 && expOffset.num.d[0] <= 10000)
+            n = expOffset.num.neg ? -static_cast<int>(expOffset.num.d[0]) : static_cast<int>(expOffset.num.d[0]);
+        if (n >= 0 && n < T)
+            out.c[n] = c;
+        ++idx;
+    }
+    out.clean();
+    return out;
+}
 
 // Rogers-Ramanujan G(1) = Σ q^(n²)/(q;q)_n = 1/((q;q⁵)_∞(q⁴;q⁵)_∞)
 inline Series RRG1(int T) {
@@ -102,6 +144,30 @@ inline Series RRHstar(int n, int T) {
     return RRHstar1(T);  // n>1 deferred per plan
 }
 
+// GE(a), HE(a) for Rogers-Ramanujan modulus 5
+inline Frac GE(int a) {
+    return Frac(5 * a * a - 5 * a + 2, 10);
+}
+inline Frac HE(int a) {
+    return Frac(5 * a * a + 5 * a + 2, 10);
+}
+
+inline bool fracIsInteger(const Frac& x) {
+    return x.den == BigInt(1);
+}
+
+// ABCOND type 1: GE(p)+HE(a)-(GE(a)+HE(p)) integer
+inline bool abcond_type1(int p, int a) {
+    Frac t = GE(p) + HE(a) - GE(a) - HE(p);
+    return fracIsInteger(t);
+}
+
+// ABCOND type 2: GE(a)+GE(p)-(HE(a)+HE(p)) integer
+inline bool abcond_type2(int a, int p) {
+    Frac t = GE(a) + GE(p) - HE(a) - HE(p);
+    return fracIsInteger(t);
+}
+
 // checkid: CHECKRAMIDF - normalize, prodmake, check max|a_n|<acc, etamake
 struct CheckidResult {
     bool ok = false;
@@ -137,6 +203,59 @@ inline CheckidResult checkid(const Series& f, int T, int acc = 10) {
     out.ldq = ldq;
     out.eta = std::move(eta_list);
     return out;
+}
+
+// findids_type1: G(p)H(a) ± G(a)H(p). Uses addSeriesAligned for different q_shifts.
+using FindidTuple = std::tuple<int, int, int>;  // (p,a,c1) or (a,p,c1)
+inline std::vector<FindidTuple> findids_type1(int T, int acc = 10) {
+    std::vector<FindidTuple> out;
+    for (int n = 2; n <= T; ++n) {
+        for (int p : divisors(n)) {
+            int a = n / p;
+            if (a == p || a > p || std::gcd(a, p) != 1) continue;
+            for (int c1 : {-1, 1}) {
+                if (!abcond_type1(p, a)) continue;
+                Series t1 = (RRG(p, T) * RRH(a, T)).truncTo(T);
+                Series t2 = (RRG(a, T) * RRH(p, T)).truncTo(T);
+                Series symf;
+                try {
+                    symf = addSeriesAligned(t1, t2, c1, T);
+                } catch (...) { continue; }
+                if (checkid(symf, T, acc).ok)
+                    out.push_back({p, a, c1});
+            }
+        }
+    }
+    return out;
+}
+
+// findids_type2: G(a)G(p) ± H(a)H(p)
+inline std::vector<FindidTuple> findids_type2(int T, int acc = 10) {
+    std::vector<FindidTuple> out;
+    for (int n = 1; n <= T; ++n) {
+        for (int p : divisors(n)) {
+            int a = n / p;
+            if (a > p || std::gcd(a, p) != 1) continue;
+            for (int c1 : {-1, 1}) {
+                if (!abcond_type2(a, p)) continue;
+                Series t1 = (RRG(a, T) * RRG(p, T)).truncTo(T);
+                Series t2 = (RRH(a, T) * RRH(p, T)).truncTo(T);
+                Series symf;
+                try {
+                    symf = addSeriesAligned(t1, t2, c1, T);
+                } catch (...) { continue; }
+                if (checkid(symf, T, acc).ok)
+                    out.push_back({a, p, c1});
+            }
+        }
+    }
+    return out;
+}
+
+inline std::vector<FindidTuple> findids(int type, int T, int acc = 10) {
+    if (type == 1) return findids_type1(T, acc);
+    if (type == 2) return findids_type2(T, acc);
+    return {};
 }
 
 #endif
