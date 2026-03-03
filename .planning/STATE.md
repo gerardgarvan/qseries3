@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2025-02-24)
 
 ## Current Position
 
-Phase: 93 (parser-repl-omega)
+Phase: 94 (bq-block10)
 Plan: 01 (complete)
-Status: Plan 93-01 complete; omega/RootOf REPL integration
-Last activity: 2026-03-03 — Plan 93-01 executed
+Status: Plan 94-01 complete; b(q) double-sum, Block 10, EX-04c/d/e
+Last activity: 2026-03-03 — Plan 94-01 executed
 
-Progress: [██░░░░░░░░] 20% — MILESTONE v8.0 IN PROGRESS (Phases 91–94)
+Progress: [██████████] 100% — MILESTONE v8.0 COMPLETE (Phases 91–94)
 
 ## Performance Metrics
 
@@ -123,6 +123,7 @@ Progress: [██░░░░░░░░] 20% — MILESTONE v8.0 IN PROGRESS (P
 - [Phase 88]: prodid/seriesid use Expr::Tag::Var branch before evi(2) to avoid evaluating z,q
 - [Phase 90]: BivariateSeries in series.h; formatBivariate, tripleprod_symbolic, quinprod_symbolic in qfuncs.h; identity formulas for symbolic z path
 - [Phase 90]: Plan 90-02: DisplayOnly for symbolic z path; assignment to BivariateSeries deferred
+- [Phase 94-bq-block10]: bq/aq/cq builtins deferred; Phase 94 success criteria do not require them
 
 ### Roadmap Evolution
 
@@ -130,6 +131,7 @@ Progress: [██░░░░░░░░] 20% — MILESTONE v8.0 IN PROGRESS (P
 - [Phase 91-omega3-type] Plan 91-01: Omega3 struct { Frac a, b } for a+bω (ω²=-ω-1); omega(), omega2(), pow, str; 11 unit tests; str() special-case for omega, omega^2
 - [Phase 92-series-omega] Plan 92-01: SeriesOmega (map<int,Omega3>, trunc); add, mul, truncTo, Omega3*Series; 5 Phase 92 unit tests
 - [Phase 93-parser-repl-omega] Plan 93-01: omega, RootOf(3), RootOf([1,1,1]), sum(omega^n)=0, assignment, omega^2; acceptance-omega.sh 6 tests
+- [Phase 94-bq-block10] Plan 94-01: Sum(SeriesOmega), toRationalSeries, b(q) double-sum, Block 10 real test, EX-04c/d/e; MILESTONE v8.0 COMPLETE
 - Phases 91–94 derived from ROOT-01..ROOT-14; 14/14 requirements mapped ✓
 - Milestone v4.2 started: Fix Block Failures
 - Phase 63 added: Q-Shift Arithmetic Fix (QSHIFT-01, QSHIFT-02)
@@ -193,7 +195,7 @@ None yet.
 ## Session Continuity
 
 Last session: [now]
-Stopped at: Completed 93-01-PLAN.md; omega/RootOf REPL integration
+Stopped at: Completed 94-01-PLAN.md; omega/RootOf REPL integration
 
 ### Milestone v1.1 Roadmap (2026-02-25)
 
