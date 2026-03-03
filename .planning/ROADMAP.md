@@ -1365,7 +1365,7 @@ Plans:
 
 - [x] **Phase 91: Omega3 type** — omega3.h: struct { Frac a, b }, arithmetic, inverse, str(), ω^k reduction (ROOT-01..05) (completed 2026-03-03)
 - [x] **Phase 92: SeriesOmega** — std::map<int, Omega3>, add, mul, truncation; Omega3 * Series → SeriesOmega (ROOT-06..08) (completed 2026-03-03)
-- [ ] **Phase 93: Parser/REPL integration** — omega, RootOf(3), sum(omega^expr), EnvValue for omega (ROOT-09..12)
+- [x] **Phase 93: Parser/REPL integration** — omega, RootOf(3), sum(omega^expr), EnvValue for omega (ROOT-09..12) (completed 2026-03-03)
 - [ ] **Phase 94: b(q) and Block 10** — b(q) via sum or eta identity; maple-checklist Block 10 parity (ROOT-13..14)
 
 ### Phase 91: Omega3 type
@@ -1404,7 +1404,7 @@ Plans:
 **Requirements**: ROOT-09, ROOT-10, ROOT-11, ROOT-12
 **Success Criteria** (what must be TRUE):
   1. Typing `omega` in REPL returns Omega3(0,1) and displays as omega
-  2. RootOf(3) and RootOf(z^2+z+1=0) both return Omega3(0,1)
+  2. RootOf(3) and RootOf([1,1,1]) both return Omega3(0,1) ([1,1,1] = coeffs of z²+z+1)
   3. sum(omega^n, n, 0, 2) evaluates to 1 + omega + omega^2 = 0
   4. omega := RootOf(z^2+z+1=0) stores; subsequent `omega` or `omega*2` uses stored value
   5. omega^2 displays correctly when evaluated
@@ -1431,6 +1431,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 91. Omega3 type | 0/1 | Complete    | 2026-03-03 |
 | 92. SeriesOmega | 0/1 | Complete    | 2026-03-03 |
-| 93. Parser/REPL integration | 0/? | Not started | - |
+| 93. Parser/REPL integration | 0/? | Complete    | 2026-03-03 |
 | 94. b(q) and Block 10 | 0/? | Not started | - |
 
