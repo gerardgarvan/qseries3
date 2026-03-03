@@ -1317,7 +1317,10 @@ Plans:
   2. `quinprod(z,q,seriesid)` returns the quintuple product identity in series form (string formula)
   3. Maple checklist Blocks 30 and 31 pass
   4. help(quinprod) documents the prodid and seriesid modes
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 88-01-PLAN.md — Add prodid/seriesid handling in quinprod, update Blocks 30–31, help(quinprod)
 
 ### Phase 89: List indexing
 **Goal**: User can index into list results from findhom/findnonhom
