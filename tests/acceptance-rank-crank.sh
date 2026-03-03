@@ -1,10 +1,15 @@
 #!/bin/bash
 # acceptance-rank-crank.sh — Phase 69: Rank and Crank generating functions
 PASS=0; FAIL=0
+BIN="./dist/qseries.exe"
+[ -f "$BIN" ] || BIN="./dist/qseries"
+[ -f "$BIN" ] || BIN="./qseries.exe"
+[ -f "$BIN" ] || BIN="./qseries"
+[ -f "$BIN" ] || { echo "error: qseries binary not found (run make first)"; exit 1; }
 check() {
     local desc="$1" input="$2" pattern="$3"
     local out
-    out=$(echo "$input" | ./qseries.exe 2>&1)
+    out=$(echo "$input" | "$BIN" 2>&1)
     if echo "$out" | grep -qE "$pattern"; then
         echo "PASS: $desc"; ((PASS++))
     else
