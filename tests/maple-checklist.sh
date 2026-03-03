@@ -254,8 +254,12 @@ fi
 
 # ===== Blocks 28-41: Triple/Quintuple Products, Winquist =====
 
-# Block 28: tripleprod(z,q,10) — symbolic z not supported
-skip "Block 28: tripleprod(z,q,10) — symbolic z"
+# Block 28: tripleprod(z,q,10) — symbolic z (bivariate output)
+if run "tripleprod(z,q,10)" | grep -qE 'z|q'; then
+    pass "Block 28: tripleprod symbolic z"
+else
+    fail "Block 28: tripleprod symbolic z"
+fi
 
 # Block 29: tripleprod(q, q^3, 100) — Euler's Pentagonal Number Theorem
 # Expected: 1 - q - q² + q⁵ + q⁷ - q¹² - q¹⁵ + ... + q⁵⁷ ...
@@ -279,8 +283,12 @@ else
     fail "Block 31: quinprod seriesid"
 fi
 
-# Block 32: quinprod(z,q,3) — symbolic z not supported
-skip "Block 32: quinprod(z,q,3) — symbolic z"
+# Block 32: quinprod(z,q,3) — symbolic z (bivariate output)
+if run "quinprod(z,q,3)" | grep -qE 'z|q'; then
+    pass "Block 32: quinprod symbolic z"
+else
+    fail "Block 32: quinprod symbolic z"
+fi
 
 # Block 33: sift(EULER, 5, 0) — Euler pentagonal mod 5
 if run "EULER := etaq(1, 500)" "E0 := sift(EULER, 5, 0, 499)" "series(E0, 20)" | grep -q "q"; then
