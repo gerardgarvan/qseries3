@@ -1408,7 +1408,10 @@ Plans:
   3. sum(omega^n, n, 0, 2) evaluates to 1 + omega + omega^2 = 0
   4. omega := RootOf(z^2+z+1=0) stores; subsequent `omega` or `omega*2` uses stored value
   5. omega^2 displays correctly when evaluated
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 93-01-PLAN.md — EnvValue/EvalResult Omega3+SeriesOmega, Var lookup, RootOf(3), BinOp omega^int and Omega3*Series, Sum Omega3 body, Assign, display, acceptance-omega.sh
 
 ### Phase 94: b(q) and Block 10
 **Goal**: b(q) computation and maple-checklist Block 10 parity
