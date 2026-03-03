@@ -8,6 +8,7 @@
 #include "frac.h"
 #include "omega3.h"
 #include "series.h"
+#include "series_omega.h"
 #include "qfuncs.h"
 #include "convert.h"
 #include "linalg.h"
@@ -687,6 +688,58 @@ int runUnitTests() {
     CHECK(Omega3(Frac(0), Frac(1)).str() == "omega");
     CHECK(Omega3(Frac(-1), Frac(-1)).str() == "omega^2");
     CHECK(Omega3(Frac(1), Frac(2)).str() == "1 + 2*omega");
+
+    std::cout << "--- SeriesOmega Phase 92 tests ---\n";
+    // 1. Construction: coeffs at 0, 1, 2
+    {
+        SeriesOmega so = SeriesOmega::constant(Omega3(Frac(1), Frac(0)), 10) + SeriesOmega::q(10);
+        so.setCoeff(2, Omega3::omega());
+        CHECK(so.coeff(0) == Omega3(Frac(1), Frac(0)));
+        CHECK(so.coeff(1) == Omega3(Frac(1), Frac(0)));
+        CHECK(so.coeff(2) == Omega3::omega());
+    }
+    // 2. Add truncation propagation
+    {
+        SeriesOmega a = SeriesOmega::one(10) + SeriesOmega::constant(Omega3::omega(), 10);
+        SeriesOmega b = SeriesOmega::constant(Omega3::omega2(), 10);
+        SeriesOmega sum = a + b;
+        CHECK(sum.coeff(0) == Omega3(Frac(1), Frac(0)) + Omega3::omega2());
+        CHECK(sum.trunc == 10);
+        SeriesOmega x8 = SeriesOmega::one(8) + SeriesOmega::constant(Omega3::omega(), 8);
+        SeriesOmega x10 = SeriesOmega::one(10) + SeriesOmega::constant(Omega3::omega2(), 10);
+        SeriesOmega sum2 = x8 + x10;
+        CHECK(sum2.trunc == 8);
+    }
+    // 3. omega * (1 + q)
+    {
+        Series s = Series::one(10) + Series::q(10);
+        SeriesOmega so = Omega3::omega() * s;
+        CHECK(so.coeff(0) == Omega3::omega());
+        CHECK(so.coeff(1) == Omega3::omega());
+        CHECK(so.trunc == 10);
+    }
+    // 4. Mul truncation: (1+q)^2 = 1 + 2q + q^2, no term at exp >= 5
+    {
+        SeriesOmega u = SeriesOmega::one(5) + SeriesOmega::q(5);
+        SeriesOmega p = u * u;
+        bool noBeyond = true;
+        for (const auto& [e, v] : p.c) {
+            if (e >= 5) { noBeyond = false; break; }
+        }
+        CHECK(noBeyond);
+        CHECK(p.coeff(0) == Omega3(Frac(1), Frac(0)));
+        CHECK(p.coeff(1) == Omega3(Frac(2), Frac(0)));
+        CHECK(p.coeff(2) == Omega3(Frac(1), Frac(0)));
+    }
+    // 5. Omega3 * Series: omega * (1/2 + q)
+    {
+        Series f = Series::constant(Frac(1, 2), 10) + Series::q(10);
+        SeriesOmega zf = Omega3::omega() * f;
+        Omega3 expected0 = Omega3::omega() * Omega3::fromRational(Frac(1, 2));
+        Omega3 expected1 = Omega3::omega() * Omega3::fromRational(Frac(1, 1));
+        CHECK(zf.coeff(0) == expected0);
+        CHECK(zf.coeff(1) == expected1);
+    }
 
     // --- Frac: Long-chain growth test (no exponential BigInt growth) ---
     std::cout << "\n--- Frac long-chain: add chain 1+50*(1/2)=26 ---\n";
