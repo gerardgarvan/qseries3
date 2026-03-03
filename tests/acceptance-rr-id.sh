@@ -73,4 +73,28 @@ else
     exit 1
 fi
 
-echo "=== All Phase 86-01 RR function tests PASS ==="
+# === Plan 86-02: checkid ===
+
+# 6. checkid(RRG(1)*RRH(1), 50) identifies eta-quotient
+echo "--- checkid(RRG(1)*RRH(1), 50) ---"
+out7=$(echo 'set_trunc(50); checkid(RRG(1)*RRH(1), 50)' | "$BIN" 2>/dev/null)
+echo "$out7"
+if echo "$out7" | grep -qE 'eta|η|q\^'; then
+    echo "PASS: checkid(RRG(1)*RRH(1), 50) identified eta-quotient"
+else
+    echo "FAIL: checkid(RRG(1)*RRH(1), 50) did not identify eta-quotient"
+    exit 1
+fi
+
+# 7. checkid on non-eta series returns "not an eta product"
+echo "--- checkid(1+q+q^2, 50) ---"
+out8=$(echo 'set_trunc(50); checkid(1+q+q^2, 50)' | "$BIN" 2>/dev/null)
+echo "$out8"
+if echo "$out8" | grep -q 'not an eta product'; then
+    echo "PASS: checkid rejects non-eta series"
+else
+    echo "FAIL: checkid should reject 1+q+q^2"
+    exit 1
+fi
+
+echo "=== All Phase 86-01 and 86-02 tests PASS ==="

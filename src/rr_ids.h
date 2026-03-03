@@ -102,4 +102,41 @@ inline Series RRHstar(int n, int T) {
     return RRHstar1(T);  // n>1 deferred per plan
 }
 
+// checkid: CHECKRAMIDF - normalize, prodmake, check max|a_n|<acc, etamake
+struct CheckidResult {
+    bool ok = false;
+    int ldq = 0;
+    std::vector<std::pair<int, Frac>> eta;
+};
+
+inline CheckidResult checkid(const Series& f, int T, int acc = 10) {
+    CheckidResult out;
+    int ldq = f.minExp();
+    if (ldq < 0) return out;
+    Series g = f.truncTo(T);
+    Frac c0 = g.coeff(ldq);
+    if (c0.isZero()) return out;
+    Series q_var = Series::q(T);
+    Series h = (g / (Series::constant(c0, T) * q_var.pow(ldq))).truncTo(T);
+    if (h.coeff(0) != Frac(1) || h.minExp() > 0) return out;
+    auto a_map = prodmake(h, T);
+    if (a_map.empty()) return out;
+    int plx = 0;
+    for (const auto& [n, an] : a_map) {
+        if (an.den != BigInt(1)) return out;
+        int v = 0;
+        if (an.num.d.size() == 1 && an.num.d[0] <= static_cast<uint32_t>(10000))
+            v = an.num.neg ? -static_cast<int>(an.num.d[0]) : static_cast<int>(an.num.d[0]);
+        if (v < 0) v = -v;
+        if (v > plx) plx = v;
+    }
+    if (plx >= acc) return out;
+    auto eta_list = etamake(h, T);
+    if (eta_list.empty()) return out;
+    out.ok = true;
+    out.ldq = ldq;
+    out.eta = std::move(eta_list);
+    return out;
+}
+
 #endif

@@ -453,6 +453,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"RRGstar", {"RRGstar(n) or RRGstar(n,T)", "Göllnitz-Gordon G*(n)"}},
         {"RRHstar", {"RRHstar(n) or RRHstar(n,T)", "Göllnitz-Gordon H*(n)"}},
         {"geta", {"geta(g,d,n,T)", "Geta(g,d,n) = q^(n·QP2(g/d)·d/2)·JAC(ng,nd,∞)/JAC(0,nd,∞)"}},
+        {"checkid", {"checkid(expr,T) or checkid(expr,T,acc)", "check if expr is eta/theta product (CHECKRAMIDF)"}},
         {"sieveqcheck", {"sieveqcheck(f,p)", "true if all exponents ≡ same residue mod p"}},
         {"siftfindrange", {"siftfindrange(f,p,T)", "find residue class with fewest terms"}},
         {"sptcrankresnum", {"sptcrankresnum(k,r,n)", "partitions of n with SPT-crank ≡ k mod r"}},
@@ -751,6 +752,25 @@ inline EvalResult dispatchBuiltin(const std::string& name,
             throw std::runtime_error(runtimeErr(name, "expects geta(g,d,n,T)"));
         return geta(static_cast<int>(evi(0)), static_cast<int>(evi(1)),
                    static_cast<int>(evi(2)), static_cast<int>(evi(3)));
+    }
+    if (name == "checkid") {
+        if (args.size() < 2 || args.size() > 3)
+            throw std::runtime_error(runtimeErr(name, "expects checkid(expr,T) or checkid(expr,T,acc)"));
+        Series f = ev(0);
+        int Tr = static_cast<int>(evi(1));
+        int acc = (args.size() == 3) ? static_cast<int>(evi(2)) : 10;
+        auto r = checkid(f, Tr, acc);
+        if (!r.ok) {
+            std::cout << "not an eta product" << std::endl;
+        } else {
+            std::string prefix;
+            if (r.ldq != 0)
+                prefix = "q^" + std::to_string(r.ldq) + " * ";
+            else
+                prefix = "";
+            std::cout << prefix << formatEtamake(r.eta) << std::endl;
+        }
+        return DisplayOnly{};
     }
     if (name == "newprodmake") {
         if (args.size() != 2)
