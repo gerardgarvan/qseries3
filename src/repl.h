@@ -496,7 +496,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"clear_cache", {"clear_cache()", "clear memoization caches (etaq)"}},
         {"qbin", {"qbin(m,n,T) or qbin(q,m,n,T)", "Gaussian polynomial [m;n]_q"}},
         {"qfactor", {"qfactor(f) or qfactor(f,T)", "factorize finite q-product"}},
-        {"quinprod", {"quinprod(z,q,T)", "quintuple product"}},
+        {"quinprod", {"quinprod(z,q,T) or quinprod(z,q,prodid) or quinprod(z,q,seriesid)", "quintuple product; T=int returns q-expansion; prodid returns product identity form; seriesid returns series identity form"}},
         {"rankgf", {"rankgf(m,T)", "GF for partitions with rank m: \xCE\xA3 N(m,n) q^n"}},
         {"rvec", {"rvec(ptn,t,k)", "count of nodes colored k in t-residue diagram"}},
         {"series", {"series(f) or series(f,T)", "display series coefficients"}},
@@ -705,6 +705,17 @@ inline EvalResult dispatchBuiltin(const std::string& name,
     if (name == "quinprod") {
         if (args.size() != 3)
             throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
+        if (args[2]->tag == Expr::Tag::Var) {
+            const std::string& v = args[2]->varName;
+            if (v == "prodid") {
+                std::cout << "(-z;q)_\xE2\x88\x9E (-q/z;q)_\xE2\x88\x9E (z\xC2\xB2q;q\xC2\xB2)_\xE2\x88\x9E (q/z\xC2\xB2;q\xC2\xB2)_\xE2\x88\x9E (q;q)_\xE2\x88\x9E" << std::endl;
+                return DisplayOnly{};
+            }
+            if (v == "seriesid") {
+                std::cout << "\xCE\xA3 ((-z)^(-3n) - (-z)^(3n+1)) q^(n(3n+1)/2)" << std::endl;
+                return DisplayOnly{};
+            }
+        }
         return quinprod(ev(0), ev(1), static_cast<int>(evi(2)));
     }
     if (name == "winquist") {
