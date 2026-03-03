@@ -256,11 +256,19 @@ else
     fail "Block 29: tripleprod pentagonal"
 fi
 
-# Block 30: quinprod(z,q,prodid) — symbolic prodid mode not supported
-skip "Block 30: quinprod prodid — symbolic mode"
+# Block 30: quinprod(z,q,prodid) — product identity formula
+if run "quinprod(z,q,prodid)" | grep -qF '(q;q)_'; then
+    pass "Block 30: quinprod prodid"
+else
+    fail "Block 30: quinprod prodid"
+fi
 
-# Block 31: quinprod(z,q,seriesid) — symbolic seriesid mode not supported
-skip "Block 31: quinprod seriesid — symbolic mode"
+# Block 31: quinprod(z,q,seriesid) — series identity formula
+if run "quinprod(z,q,seriesid)" | grep -q "n(3n+1)/2"; then
+    pass "Block 31: quinprod seriesid"
+else
+    fail "Block 31: quinprod seriesid"
+fi
 
 # Block 32: quinprod(z,q,3) — symbolic z not supported
 skip "Block 32: quinprod(z,q,3) — symbolic z"
