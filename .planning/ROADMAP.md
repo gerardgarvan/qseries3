@@ -1468,10 +1468,10 @@ Plans:
   2. factor(t8) returns cyclotomic factorization (Φ_n product form)
   3. Output matches qseriesdoc Output (4) style
   4. Block 5 (qfactor(t8,20)) continues to pass — no regression
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 96 to break down)
+- [ ] 96-01-PLAN.md — Replace Block 4 skip with factor(t8) cyclotomic test
 
 ### v9.0 Progress
 

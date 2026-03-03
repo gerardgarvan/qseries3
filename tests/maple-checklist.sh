@@ -46,8 +46,14 @@ else
     fail "Block 3: T(8,8) computation"
 fi
 
-# Block 4: factor(t8) — N/A (Maple's factor() not available; qfactor subsumes)
-skip "Block 4: factor(t8) — Maple-only feature"
+# Block 4: factor(t8) (§3.2)
+# Expected: cyclotomic product (q⁶·Φ₁²·Φ₂·Φ₃²·...) per qseriesdoc Output (4)
+OUT4=$(run "set_trunc(64)" "t8 := T(8,8)" "factor(t8)")
+if echo "$OUT4" | grep -qE 'Φ|Cyclotomic' && echo "$OUT4" | grep -qE 'q⁶|q\^6'; then
+    pass "Block 4: factor(t8) cyclotomic"
+else
+    fail "Block 4: factor(t8) cyclotomic"
+fi
 
 # Block 5: qfactor(t8, 20) (§3.2)
 # Expected: q^6 * product of (1-q^k) terms
