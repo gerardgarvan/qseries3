@@ -186,8 +186,17 @@ else
     fail "Block 20: findnonhom theta relation"
 fi
 
-# Block 21: ANS:=EQNS[1] — N/A (result indexing not supported)
-skip "Block 21: result indexing — not applicable"
+# Block 21: EQNS[1] — 1-based indexing on findnonhom result
+OUT21=$(run "Fq := theta3(q,100)/theta3(q^5,100)" \
+            "Fq5 := theta3(q^5,100)/theta3(q^25,100)" \
+            "U := 2*q*theta(q^10,q^25,100)/theta3(q^25,100)" \
+            "EQNS := findnonhom([Fq, Fq5, U], 3, 20)" \
+            "EQNS[1]")
+if echo "$OUT21" | grep -q "X"; then
+    pass "Block 21: EQNS[1] result indexing"
+else
+    fail "Block 21: EQNS[1] result indexing"
+fi
 
 # Block 22: Verify the relation from Block 20 (§4.3)
 # The known correct relation is: -X₁X₂X₃ + X₂² + X₃² + X₃ - 1 = 0

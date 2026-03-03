@@ -2130,6 +2130,19 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
             }
             return acc;
         }
+        case Expr::Tag::Subscript: {
+            EvalResult baseRes = eval(e->left.get(), env, sumIndices);
+            if (!std::holds_alternative<RelationKernelResult>(baseRes))
+                throw std::runtime_error("subscript only supported for findhom/findnonhom results");
+            const auto& arg = std::get<RelationKernelResult>(baseRes);
+            int64_t i = evalToInt(e->right.get(), env, sumIndices);
+            if (i < 1 || i > static_cast<int64_t>(arg.basis.size()))
+                throw std::runtime_error("index out of range");
+            RelationKernelResult single;
+            single.basis = {arg.basis[static_cast<size_t>(i - 1)]};
+            single.monomialExponents = arg.monomialExponents;
+            return single;
+        }
     }
     throw std::runtime_error("eval: unhandled expression");
 }
