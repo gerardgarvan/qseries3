@@ -368,6 +368,12 @@ struct RelationComboResult {
     std::vector<std::vector<int>> monomialExponents;
 };
 
+struct FindlincombomodpResult {
+    std::optional<std::vector<int64_t>> coeffs;
+    int p;
+    size_t k;
+};
+
 using EvalResult = std::variant<
     Series,
     Omega3,                                           // omega, RootOf(3)
@@ -378,6 +384,7 @@ using EvalResult = std::variant<
     std::vector<JacFactor>,                           // jacprodmake
     RelationKernelResult,                             // findhom/findnonhom
     RelationComboResult,                              // findhomcombo/findnonhomcombo
+    FindlincombomodpResult,                           // findlincombomodp
     QFactorResult,                                    // qfactor
     FactorResult,                                     // factor
     CheckprodResult,                                  // checkprod
@@ -419,6 +426,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"euler_phi", {"euler_phi(n)", "Euler's totient φ(n)"}},
         {"findhom", {"findhom(L,n,topshift)", "homogeneous polynomial relations between series in L"}},
         {"findhommodp", {"findhommodp(L,p,n,topshift)", "homogeneous polynomial relations mod p"}},
+        {"findlincombomodp", {"findlincombomodp(f,L,p[,topshift])", "express f as linear combination of L mod p"}},
         {"findhomcombo", {"findhomcombo(f,L,n,topshift[,etaopt])", "express f as polynomial in L"}},
         {"agcrank", {"agcrank(ptn)", "Andrews-Garvan crank of a partition"}},
         {"drank", {"drank(ptn)", "Dyson rank: largest part minus number of parts"}},
@@ -1158,6 +1166,16 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         std::vector<std::vector<int>> exps;
         enumerate_hom_exponents(static_cast<int>(L.size()), 1, {}, exps);
         return RelationComboResult{std::move(coeffs), std::move(exps)};
+    }
+    if (name == "findlincombomodp") {
+        if (args.size() != 3 && args.size() != 4)
+            throw std::runtime_error(runtimeErr(name, "expects 3 or 4 arguments: findlincombomodp(f,L,p[,topshift])"));
+        Series f = ev(0);
+        auto L = evalListToSeries(args[1].get());
+        int p = static_cast<int>(evi(2));
+        int topshift = (args.size() == 4) ? static_cast<int>(evi(3)) : 0;
+        auto coeffs = findlincombomodp(f, L, p, topshift);
+        return FindlincombomodpResult{std::move(coeffs), p, L.size()};
     }
     if (name == "findnonhomcombo") {
         if (args.size() < 4 || args.size() > 5)
@@ -2474,6 +2492,16 @@ inline std::string formatFindmaxind(const FindmaxindResult& r) {
     return out;
 }
 
+inline std::string formatFindlincombomodp(const FindlincombomodpResult& r) {
+    if (!r.coeffs) return "no linear combination mod " + std::to_string(r.p);
+    std::string out;
+    for (size_t i = 0; i < r.coeffs->size(); ++i) {
+        if (i) out += " + ";
+        out += std::to_string((*r.coeffs)[i]) + " L" + std::to_string(i + 1);
+    }
+    return out + " (mod " + std::to_string(r.p) + ")";
+}
+
 inline std::string formatCheckmult(const CheckmultResult& r) {
     if (r.multiplicative) return "MULTIPLICATIVE";
     std::string s = "NOT MULTIPLICATIVE";
@@ -2667,6 +2695,8 @@ inline void display(const EvalResult& res, Environment& env, int /*T*/) {
             std::cout << formatCheckmult(arg) << std::endl;
         } else if constexpr (std::is_same_v<T, FindmaxindResult>) {
             std::cout << formatFindmaxind(arg) << std::endl;
+        } else if constexpr (std::is_same_v<T, FindlincombomodpResult>) {
+            std::cout << formatFindlincombomodp(arg) << std::endl;
         } else if constexpr (std::is_same_v<T, int64_t>) {
             std::cout << arg << std::endl;
         } else if constexpr (std::is_same_v<T, DisplayOnly>) {
