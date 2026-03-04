@@ -1441,8 +1441,16 @@ Plans:
 
 ## Milestone v9.0 (factor(t8) + Close Block 4) — phases 95–96
 
-- [ ] **Phase 95: factor builtin** — polyfactor logic (FactorResult, cyclotomic factorization), REPL dispatch factor(expr)
-- [ ] **Phase 96: Block 4 parity** — replace skip with real test; factor(t8) must produce cyclotomic output
+- [x] **Phase 95: factor builtin** — polyfactor logic (FactorResult, cyclotomic factorization), REPL dispatch factor(expr) (completed)
+- [x] **Phase 96: Block 4 parity** — replace skip with real test; factor(t8) must produce cyclotomic output (completed)
+
+---
+
+## Milestone v10.0 (Close Remaining Gaps) — phases 97–99
+
+- [ ] **Phase 97: Block 25 fix** — q-shift normalization for series addition before findpoly; Block 25 passes
+- [ ] **Phase 98: Block 24** — collect-style formatter or N/A documentation; Block 24 test/rationale
+- [ ] **Phase 99: findlincombomodp** — linear combo mod p; REPL dispatch; help entry
 
 ### Phase 95: factor builtin
 **Goal**: User can call factor(expr) when expr→Series; output is cyclotomic factorization
@@ -1477,6 +1485,46 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 95. factor builtin | 0/? | Not started | - |
-| 96. Block 4 parity | 0/? | Not started | - |
+| 95. factor builtin | 1/1 | Complete | 2026-03-03 |
+| 96. Block 4 parity | 1/1 | Complete | 2026-03-03 |
+
+### Phase 97: Block 25 fix
+**Goal**: findpoly works on theta2/theta3 quotients; series with different q-shifts are normalized before polynomial relation finding
+**Depends on**: Phase 96
+**Requirements**: BLOCK25-01, BLOCK25-02
+**Success Criteria** (what must be TRUE):
+  1. Series addition normalizes q_shift differences (using normalize_q_shift or equivalent) so findpoly receives aligned series
+  2. findpoly(x, y, q, 3, 1, 60) on theta quotients produces polynomial relation
+  3. maple-checklist Block 25 passes (no skip)
+  4. No regressions in existing findpoly or Block tests
+**Plans**: TBD
+
+### Phase 98: Block 24
+**Goal**: Block 24 either implements collect-style grouping for relation terms OR documents N/A and keeps explicit skip rationale
+**Depends on**: Phase 97
+**Requirements**: BLOCK24-01, BLOCK24-02
+**Success Criteria** (what must be TRUE):
+  1. User can group relation terms by variable (collect-style formatter) — OR — Block 24 is documented as N/A with clear rationale
+  2. maple-checklist Block 24 has either a real test or an explicit N/A rationale in the test file
+  3. No regressions in related relation-finding or Block tests
+**Plans**: TBD
+
+### Phase 99: findlincombomodp
+**Goal**: User can express a series as linear combination of others mod p; complements findhommodp for degree-1 relations
+**Depends on**: Phase 98
+**Requirements**: MODP-01, MODP-02
+**Success Criteria** (what must be TRUE):
+  1. findlincombomodp(f, L, p, T) returns coefficients in F_p such that f ≡ Σ c_i * L_i (mod p)
+  2. Uses existing modp, F_p linalg (Gaussian elimination over F_p) and findhommodp infrastructure
+  3. REPL dispatch: findlincombomodp is a built-in; help(findlincombomodp) documents usage
+  4. Acceptance test or worksheet example demonstrates correct linear combo mod p
+**Plans**: TBD
+
+### v10.0 Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 97. Block 25 fix | 0/? | Not started | - |
+| 98. Block 24 | 0/? | Not started | - |
+| 99. findlincombomodp | 0/? | Not started | - |
 

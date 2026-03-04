@@ -8,20 +8,28 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 **Rogers-Ramanujan must work.** Given `Σ q^(n²) / (q;q)_n`, prodmake must recover the product form with denominators only at exponents ≡ ±1 (mod 5). If this test passes, the core math is correct. Everything else builds on it.
 
-## Current Milestone: v8.0 RootOf Function
+## Current Milestone: v10.0 Close Remaining Gaps
 
-**Goal:** Implement RootOf for algebraic number support — primitive roots of unity (e.g. ω = RootOf(z²+z+1=0)) for maple-checklist Block 10 and qseriesdoc a(q), b(q), c(q).
+**Goal:** Fix Block 25 (findpoly q-shift), address Block 24 (collect), add mod-p relation finders (findlincombomodp).
 
 **Target features:**
-- RootOf(poly) — represent algebraic numbers (cyclotomic / roots of irreducible polynomials)
-- Arithmetic in Q(ω) — add, mul, norm, evaluation in q-series
-- Maple parity: omega := RootOf(z²+z+1=0) for Block 10
+- Block 25 fix — findpoly on theta2/theta3 quotients; normalize q-shift when adding series
+- Block 24 — collect-style formatting or document as N/A
+- Mod-p family — findlincombomodp (findhommodp exists from v4.2)
 
-**Deferred:** factor(t8) — general polynomial factorization over Q.
+**Deferred:** General algebraic extensions; zqfactor; LaTeX output.
 
 ---
 
-## Previous Milestone: v7.0 Maple Checklist Gaps ✓
+## Previous Milestone: v9.0 factor(t8) + Close Block 4 ✓
+
+**Shipped:** factor(poly) built-in, cyclotomic factorization, Block 4 parity. maple-checklist 40/41 pass (Block 24 skip).
+
+---
+
+## Previous Milestone: v8.0 RootOf Function ✓
+
+**Shipped:** Omega3, SeriesOmega, omega/RootOf(3) in REPL, b(q)/a(q)/c(q), Block 10 parity.
 
 **Shipped:** quinprod prodid/seriesid, list indexing (EQNS[1]), symbolic z in tripleprod/quinprod. maple-checklist 39/41 pass (Blocks 4, 10 skip).
 

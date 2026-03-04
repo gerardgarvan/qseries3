@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-24)
 
 **Core value:** Rogers-Ramanujan must work — prodmake recovers product form with denominators at ±1 mod 5
-**Current focus:** Milestone v9.0 (factor(t8) + Close Block 4)
+**Current focus:** Milestone v10.0 (Close Remaining Gaps)
 
 ## Current Position
 
-Phase: 95 (factor builtin)
-Plan: 01 — completed
-Status: 95-01 complete; factor builtin with cyclotomic form
-Last activity: 2026-03-03 — v9.0 requirements, SUMMARY-factor, phases 95–96 added
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for milestone v10.0
+Last activity: 2026-03-03 — v10.0 started: Block 25, Block 24, mod-p
 
-Progress: [░░░░░░░░░░] 0% — MILESTONE v9.0 IN PROGRESS
+Progress: [░░░░░░░░░░] 0% — MILESTONE v10.0 IN PROGRESS
 
 ## Performance Metrics
 

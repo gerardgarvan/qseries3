@@ -955,5 +955,76 @@ Requirements for RootOf / Q(ω) support — Maple Block 10 parity and qseriesdoc
 
 ---
 
+## v9.0 factor(t8) + Close Block 4
+
+Requirements for polynomial factorization (factor builtin) and maple-checklist Block 4 parity.
+
+### factor Builtin
+
+- [ ] **FACTOR-01**: factor(expr) — expr evaluates to Series; factor univariate polynomial in q into cyclotomic form
+- [ ] **FACTOR-02**: FactorResult — struct with map<int,int> cyclotomic (n → exponent of Φ_n), Frac content; display string (Φ_n notation)
+- [ ] **FACTOR-03**: Cyclotomic factorization — sufficient for T(8,8); via qfactor→cyclotomic expansion or direct Φ_n extraction
+
+### Block 4 Parity
+
+- [ ] **BLOCK4-01**: Block 4 no longer skips — factor(t8) where t8 = T(8,8) returns cyclotomic product matching qseriesdoc Output (4)
+
+### v9.0 Out of Scope (Deferred)
+
+| Feature | Reason |
+|---------|--------|
+| Berlekamp–Zassenhaus for non-cyclotomics | Block 4 only needs cyclotomics; general irreducibles deferred |
+| factor over Q(ω) | Algebraic extension; out of scope for v9 |
+
+### v9.0 Requirements Traceability
+
+| Req ID | Phase | Status |
+|--------|-------|--------|
+| FACTOR-01..03 | Phase 95 | Pending |
+| BLOCK4-01 | Phase 96 | Pending |
+
+**Coverage:** 4/4 v9.0 requirements mapped ✓
+
+---
+
+## v10.0 Close Remaining Gaps
+
+Requirements for Block 25 fix, Block 24, and mod-p relation finders.
+
+### Block 25 Fix (findpoly q-shift)
+
+- [ ] **BLOCK25-01**: User can run findpoly on theta2/theta3 quotients — series with different q-shifts are normalized before addition
+- [ ] **BLOCK25-02**: maple-checklist Block 25 passes — findpoly(x, y, q, 3, 1, 60) for theta quotients produces polynomial relation
+
+### Block 24 (collect)
+
+- [ ] **BLOCK24-01**: User can group relation terms by variable (collect-style) — OR Block 24 documented as N/A and remains skip
+- [ ] **BLOCK24-02**: maple-checklist Block 24 — either real test or explicit N/A rationale
+
+### Mod-p Relations
+
+- [ ] **MODP-01**: User can call findlincombomodp(f, L, p, T) — express f as linear combination of L mod p
+- [ ] **MODP-02**: findhommodp exists (v4.2); findlincombomodp complements it for linear (degree 1) mod-p relations
+
+### v10.0 Out of Scope (Deferred)
+
+| Feature | Reason |
+|---------|--------|
+| findcong, findprod | Lower priority; mod-p family sufficient for v10 |
+| LaTeX output | Deferred |
+| zqfactor | Bivariate; high effort |
+
+### v10.0 Requirements Traceability
+
+| Req ID | Phase | Status |
+|--------|-------|--------|
+| BLOCK25-01..02 | Phase 97 | Pending |
+| BLOCK24-01..02 | Phase 98 | Pending |
+| MODP-01..02 | Phase 99 | Pending |
+
+**Coverage:** 6/6 v10.0 requirements mapped ✓
+
+---
+
 *Requirements defined: 2025-02-24*
-*Last updated: 2026-03-03 after v8.0 milestone start*
+*Last updated: 2026-03-03 — v10.0 Close Remaining Gaps requirements added*
