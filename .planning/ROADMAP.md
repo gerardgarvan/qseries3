@@ -1497,7 +1497,10 @@ Plans:
   2. findpoly(x, y, q, 3, 1, 60) on theta quotients produces polynomial relation
   3. maple-checklist Block 25 passes (no skip)
   4. No regressions in existing findpoly or Block tests
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 97-01-PLAN.md — Modify Series operator+ for q-shift alignment; Block 25 passes; no regressions
 
 ### Phase 98: Block 24
 **Goal**: Block 24 either implements collect-style grouping for relation terms OR documents N/A and keeps explicit skip rationale
