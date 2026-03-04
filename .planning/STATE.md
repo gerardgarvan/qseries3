@@ -125,6 +125,7 @@ Progress: [░░░░░░░░░░] 0% — MILESTONE v10.0 IN PROGRESS
 - [Phase 90]: Plan 90-02: DisplayOnly for symbolic z path; assignment to BivariateSeries deferred
 - [Phase 94-bq-block10]: bq/aq/cq builtins deferred; Phase 94 success criteria do not require them
 - [Phase 95-factor-builtin]: factor(expr) built-in via qfactor→cyclotomic expansion; FactorResult with Φ_n notation; Block 4 parity ready
+- [Phase 97]: addAligned in series.h centralizes q-shift alignment; operator+ uses it when q_shifts differ; rr_ids.h delegates to it
 
 ### Roadmap Evolution
 
