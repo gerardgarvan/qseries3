@@ -234,8 +234,9 @@ else
     fail "Block 23: findnonhomcombo Watson"
 fi
 
-# Block 24: collect(%[1],[X[1]]) — N/A (formatting function)
-skip "Block 24: collect — formatting only"
+# Block 24: collect(%[1],[X[1]]) — N/A
+# Rationale: collect is Maple formatting-only; relation output is mathematically equivalent; no computational need.
+skip "Block 24: collect — N/A (Maple formatting-only; output equivalent)"
 
 # Block 25: findpoly on theta2/theta3 quotients (§4.5)
 if run "x1 := theta2(q,100)^2/theta2(q^3,40)^2" \

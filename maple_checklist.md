@@ -245,7 +245,7 @@
 > collect(%[1],[X[1]]);
 ```
 *Expected output: see line 821*
-- N/A — `collect()` is a formatting function
+- N/A — `collect()` is Maple formatting-only; relation output is mathematically equivalent; no computational need (see Phase 98 rationale).
 
 ### 4.5 findpoly
 
