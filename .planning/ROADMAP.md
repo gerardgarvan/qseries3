@@ -1510,7 +1510,10 @@ Plans:
   1. User can group relation terms by variable (collect-style formatter) — OR — Block 24 is documented as N/A with clear rationale
   2. maple-checklist Block 24 has either a real test or an explicit N/A rationale in the test file
   3. No regressions in related relation-finding or Block tests
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 98-01-PLAN.md — Document Block 24 as N/A with explicit rationale; verify no regressions
 
 ### Phase 99: findlincombomodp
 **Goal**: User can express a series as linear combination of others mod p; complements findhommodp for degree-1 relations
