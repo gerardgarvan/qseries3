@@ -123,13 +123,14 @@ inline int64_t mod_inverse(int64_t a, int64_t p) {
     return ((x % p) + p) % p;
 }
 
-inline std::vector<int> gauss_to_rref_modp(std::vector<std::vector<int64_t>>& A, int64_t p) {
+inline std::vector<int> gauss_to_rref_modp(std::vector<std::vector<int64_t>>& A, int64_t p, int maxCols = -1) {
     std::vector<int> pivot_cols;
     if (A.empty() || A[0].empty()) return pivot_cols;
     int rows = static_cast<int>(A.size());
     int cols = static_cast<int>(A[0].size());
+    int pivotLimit = (maxCols >= 0 && maxCols < cols) ? maxCols : cols;
     int pivot_row = 0;
-    for (int c = 0; c < cols; ++c) {
+    for (int c = 0; c < pivotLimit; ++c) {
         int r = pivot_row;
         while (r < rows && A[r][c] == 0) ++r;
         if (r >= rows) continue;
@@ -173,6 +174,47 @@ inline std::vector<std::vector<int64_t>> kernel_modp(std::vector<std::vector<int
         basis.push_back(std::move(v));
     }
     return basis;
+}
+
+// Solve M·x = b over F_p. M is rows×cols, b has length rows.
+// Returns solution x (length cols) if consistent; std::nullopt if inconsistent.
+inline std::optional<std::vector<int64_t>> solve_modp(
+    std::vector<std::vector<int64_t>> M, const std::vector<int64_t>& b, int64_t p) {
+    if (M.empty() || M[0].empty() || static_cast<int>(b.size()) != static_cast<int>(M.size()))
+        return std::nullopt;
+    int rows = static_cast<int>(M.size());
+    int cols = static_cast<int>(M[0].size());
+    std::vector<std::vector<int64_t>> A(rows);
+    for (int i = 0; i < rows; ++i) {
+        A[i].reserve(cols + 1);
+        for (int j = 0; j < cols; ++j)
+            A[i].push_back(((M[i][j] % p) + p) % p);
+        A[i].push_back(((b[i] % p) + p) % p);
+    }
+    auto pivot_cols = gauss_to_rref_modp(A, p, cols);  // only pivot on M cols
+    for (int i = 0; i < rows; ++i) {
+        bool all_zero = true;
+        for (int j = 0; j < cols; ++j) {
+            if (A[i][j] != 0) { all_zero = false; break; }
+        }
+        if (all_zero && A[i][cols] != 0) return std::nullopt;
+    }
+    std::vector<int64_t> x(cols, 0);
+    std::vector<int> free_cols;
+    for (int j = 0; j < cols; ++j) {
+        if (std::find(pivot_cols.begin(), pivot_cols.end(), j) == pivot_cols.end())
+            free_cols.push_back(j);
+    }
+    int pi = 0;
+    for (int pc : pivot_cols) {
+        if (pi >= rows) break;
+        int64_t sum = 0;
+        for (int fc : free_cols)
+            sum = (sum + A[pi][fc] * x[fc]) % p;
+        x[pc] = ((A[pi][cols] - sum) % p + p) % p;
+        ++pi;
+    }
+    return x;
 }
 
 #endif

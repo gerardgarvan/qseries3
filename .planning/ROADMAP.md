@@ -1524,7 +1524,10 @@ Plans:
   2. Uses existing modp, F_p linalg (Gaussian elimination over F_p) and findhommodp infrastructure
   3. REPL dispatch: findlincombomodp is a built-in; help(findlincombomodp) documents usage
   4. Acceptance test or worksheet example demonstrates correct linear combo mod p
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 99-01-PLAN.md — solve_modp, findlincombomodp, REPL dispatch, formatFindlincombomodp, acceptance-modp.sh
 
 ### v10.0 Progress
 
