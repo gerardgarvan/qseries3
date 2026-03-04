@@ -60,6 +60,15 @@ check "modp handles negative coefficients" \
     "modp(etaq(1,20) - 2*etaq(2,20), 3)" \
     "q"
 
+# Test 7: findlincombomodp f=L1+L2
+check "findlincombomodp f=L1+L2" \
+    "findlincombomodp(etaq(1,30)+etaq(2,30), [etaq(1,30), etaq(2,30)], 7)" \
+    "1 L1.*1 L2.*mod 7"
+
+# Test 8: findlincombomodp runs
+check_no_error "findlincombomodp runs" \
+    "findlincombomodp(etaq(1,20), [etaq(1,20)], 5)"
+
 echo ""
 echo "Total: $PASS passed, $FAIL failed"
 exit $FAIL
