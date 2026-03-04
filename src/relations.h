@@ -149,6 +149,39 @@ inline std::vector<std::vector<int64_t>> findhommodp(
     return kernel_modp(MT, static_cast<int64_t>(p));
 }
 
+// findlincombomodp(f, L, p, topshift): express f as linear combination of L mod p.
+// Returns coefficients c_1..c_k in F_p such that f ≡ Σ c_i * L_i (mod p), or nullopt.
+inline std::optional<std::vector<int64_t>> findlincombomodp(
+    const Series& f, const std::vector<Series>& L, int p, int topshift = 0) {
+    if (L.empty()) return std::nullopt;
+    int T = f.trunc;
+    for (const auto& s : L) T = std::min(T, s.trunc);
+    int numCols = T + topshift;
+    if (numCols <= 0) return std::nullopt;
+    auto f_mod = f.truncTo(T).modp(p);
+    std::vector<Series> L_mod;
+    for (const auto& s : L) L_mod.push_back(s.truncTo(T).modp(p));
+    auto M_frac = build_matrix(L_mod, numCols);
+    int rows_m = static_cast<int>(M_frac.size());
+    int cols_m = rows_m > 0 ? static_cast<int>(M_frac[0].size()) : 0;
+    std::vector<std::vector<int64_t>> MT(cols_m, std::vector<int64_t>(rows_m));
+    for (int i = 0; i < rows_m; ++i)
+        for (int j = 0; j < cols_m; ++j) {
+            int64_t val = M_frac[i][j].num.d.empty() ? 0 : static_cast<int64_t>(M_frac[i][j].num.d[0]);
+            if (M_frac[i][j].num.neg) val = -val;
+            MT[j][i] = ((val % p) + p) % p;
+        }
+    std::vector<Frac> fc = f_mod.coeffList(0, numCols - 1);
+    if (static_cast<int>(fc.size()) < numCols) fc.resize(numCols, Frac(0));
+    std::vector<int64_t> b(cols_m);
+    for (int j = 0; j < cols_m; ++j) {
+        int64_t val = fc[j].num.d.empty() ? 0 : static_cast<int64_t>(fc[j].num.d[0]);
+        if (fc[j].num.neg) val = -val;
+        b[j] = ((val % p) + p) % p;
+    }
+    return solve_modp(MT, b, static_cast<int64_t>(p));
+}
+
 // findnonhom(L, n, topshift): nonhomogeneous relations degree <= n.
 inline std::vector<std::vector<Frac>> findnonhom(
     const std::vector<Series>& L, int n, int topshift) {
