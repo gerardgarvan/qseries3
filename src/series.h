@@ -148,6 +148,43 @@ struct Series {
         return s;
     }
 
+    // Add two series with possibly different q_shifts by aligning on actual exponents
+    static Series addAligned(const Series& a, const Series& b, int sign_b, int T) {
+        std::map<Frac, Frac> terms;
+        for (const auto& [n, v] : a.c) {
+            if (!v.isZero())
+                terms[a.q_shift + Frac(n)] = terms[a.q_shift + Frac(n)] + v;
+        }
+        for (const auto& [n, v] : b.c) {
+            if (!v.isZero())
+                terms[b.q_shift + Frac(n)] = terms[b.q_shift + Frac(n)] + (v * Frac(sign_b));
+        }
+        Frac minExp(0);
+        bool first = true;
+        for (const auto& [e, c] : terms) {
+            if (!c.isZero()) {
+                if (first) { minExp = e; first = false; }
+                else if (e < minExp) minExp = e;
+            }
+        }
+        if (first) return Series::zero(T);
+        Series out;
+        out.trunc = T;
+        out.q_shift = minExp;
+        for (const auto& [e, c] : terms) {
+            if (c.isZero()) continue;
+            Frac expOffset = e - minExp;
+            if (expOffset.den != BigInt(1)) continue;
+            int n = 0;
+            if (expOffset.num.d.size() == 1 && expOffset.num.d[0] <= static_cast<uint32_t>(10000))
+                n = expOffset.num.neg ? -static_cast<int>(expOffset.num.d[0]) : static_cast<int>(expOffset.num.d[0]);
+            if (n >= 0 && n < T)
+                out.c[n] = c;
+        }
+        out.clean();
+        return out;
+    }
+
     // Arithmetic
     Series operator-() const {
         Series s;
@@ -160,7 +197,7 @@ struct Series {
 
     Series operator+(const Series& o) const {
         if (!(q_shift == o.q_shift) && !c.empty() && !o.c.empty())
-            throw std::runtime_error("cannot add series with different q-shifts");
+            return addAligned(*this, o, 1, std::min(trunc, o.trunc));
         Series s;
         s.trunc = std::min(trunc, o.trunc);
         s.q_shift = c.empty() ? o.q_shift : q_shift;

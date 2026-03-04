@@ -13,45 +13,9 @@
 #include <algorithm>
 #include <map>
 
-// Add two series with different q_shifts by collecting terms by exponent
+// Add two series with different q_shifts (delegates to Series::addAligned)
 inline Series addSeriesAligned(const Series& s1, const Series& s2, int c1_sign, int T) {
-    std::map<Frac, Frac> terms;
-    for (const auto& [n, v] : s1.c) {
-        if (!v.isZero())
-            terms[s1.q_shift + Frac(n)] = terms[s1.q_shift + Frac(n)] + v;
-    }
-    for (const auto& [n, v] : s2.c) {
-        if (!v.isZero()) {
-            Frac add = v * Frac(c1_sign);
-            terms[s2.q_shift + Frac(n)] = terms[s2.q_shift + Frac(n)] + add;
-        }
-    }
-    Frac minExp;
-    bool first = true;
-    for (const auto& [e, c] : terms) {
-        if (!c.isZero()) {
-            if (first) { minExp = e; first = false; }
-            else if (e < minExp) minExp = e;
-        }
-    }
-    if (first) return Series::zero(T);
-    Series out;
-    out.trunc = T;
-    out.q_shift = minExp;
-    int idx = 0;
-    for (const auto& [e, c] : terms) {
-        if (c.isZero()) continue;
-        Frac expOffset = e - minExp;
-        if (expOffset.den != BigInt(1)) continue;
-        int n = 0;
-        if (expOffset.num.d.size() == 1 && expOffset.num.d[0] <= 10000)
-            n = expOffset.num.neg ? -static_cast<int>(expOffset.num.d[0]) : static_cast<int>(expOffset.num.d[0]);
-        if (n >= 0 && n < T)
-            out.c[n] = c;
-        ++idx;
-    }
-    out.clean();
-    return out;
+    return Series::addAligned(s1, s2, c1_sign, T);
 }
 
 // Rogers-Ramanujan G(1) = Σ q^(n²)/(q;q)_n = 1/((q;q⁵)_∞(q⁴;q⁵)_∞)
