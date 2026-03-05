@@ -1529,6 +1529,20 @@ Plans:
 Plans:
 - [ ] 99-01-PLAN.md — solve_modp, findlincombomodp, REPL dispatch, formatFindlincombomodp, acceptance-modp.sh
 
+### Phase 100: v10.0 Phase Verification Documentation (Gap Closure)
+**Goal:** Add VERIFICATION.md to phases 97, 98, 99 to close audit blocker (unverified phases)
+**Depends on:** Phases 97, 98, 99 (implemented)
+**Gap Closure:** Phases 97, 98, 99 lack VERIFICATION.md — blocks milestone audit pass
+**Success Criteria** (what must be TRUE):
+  1. `.planning/phases/97-block-25-fix/97-VERIFICATION.md` exists; status passed; Block 25 and addAligned verified
+  2. `.planning/phases/98-block-24/98-VERIFICATION.md` exists; status passed; Block 24 N/A rationale verified
+  3. `.planning/phases/99-findlincombomodp/99-VERIFICATION.md` exists; status passed; findlincombomodp verified
+  4. Re-running `/gsd:audit-milestone` yields status `passed` or `tech_debt` (no phases gap)
+**Plans:** 0/1 plans complete
+
+Plans:
+- [ ] 100-01-PLAN.md — Add 97-VERIFICATION.md, 98-VERIFICATION.md, 99-VERIFICATION.md from summaries + integration check
+
 ### v10.0 Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -1536,4 +1550,43 @@ Plans:
 | 97. Block 25 fix | 0/? | Not started | - |
 | 98. Block 24 | 0/? | Not started | - |
 | 99. findlincombomodp | 0/? | Not started | - |
+| 100. v10.0 Phase Verification (gap closure) | 0/? | Complete    | 2026-03-05 |
+
+---
+
+## Milestone v11.0 (Modular Forms) — phases 101–102
+
+- [ ] **Phase 101: makeALTbasisM** — Alternative basis of M_k(SL_2(Z)) using Delta_12
+- [ ] **Phase 102: Cross-Package Integration** — ETA + theta IDs + modforms identity proofs; integration-eta-theta-modforms.sh
+
+### Phase 101: makeALTbasisM
+**Goal:** User can call makeALTbasisM(k, T) — returns basis of M_k(SL_2(Z)) using Delta_12 instead of E4/E6
+**Depends on:** Phase 83 (existing makebasisM, DELTA12)
+**Requirements:** MF-02
+**Success Criteria** (what must be TRUE):
+  1. makeALTbasisM(k, T) returns a basis of M_k(SL_2(Z)) for k ≥ 0 even (k=2 → empty)
+  2. Basis uses Delta_12 and complementary Eisenstein/monomials (Es * E6^(2r-2i) * DELTA12^i)
+  3. Output spans same space as makebasisM(k, T) (verified by dimension match)
+  4. REPL dispatch and help(makeALTbasisM) document usage
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 101-01-PLAN.md — Implement makeALTbasisM in modforms.h, REPL dispatch + help, acceptance tests
+
+### Phase 102: Cross-Package Integration
+**Goal:** ETA identity prover + theta IDs + modforms work together; integration test passes
+**Depends on:** Phase 101 (optional), Phases 81–84 (ETA, theta IDs, modforms)
+**Requirements:** INT-02
+**Success Criteria** (what must be TRUE):
+  1. integration-eta-theta-modforms.sh exists and passes
+  2. At least one end-to-end flow: eta identity + theta ID + modular form basis used in a single proof chain
+  3. No regressions in maple-checklist or existing acceptance tests
+
+### v11.0 Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 101. makeALTbasisM | 0/1 | Not started | - |
+| 102. Cross-Package Integration | 0/? | Not started | - |
 

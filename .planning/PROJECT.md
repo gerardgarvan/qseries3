@@ -8,16 +8,15 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 **Rogers-Ramanujan must work.** Given `Σ q^(n²) / (q;q)_n`, prodmake must recover the product form with denominators only at exponents ≡ ±1 (mod 5). If this test passes, the core math is correct. Everything else builds on it.
 
-## Current Milestone: v10.0 Close Remaining Gaps
+## Current Milestone: (Planning next)
 
-**Goal:** Fix Block 25 (findpoly q-shift), address Block 24 (collect), add mod-p relation finders (findlincombomodp).
+v10.0 shipped. Planning next milestone.
 
-**Target features:**
-- Block 25 fix — findpoly on theta2/theta3 quotients; normalize q-shift when adding series
-- Block 24 — collect-style formatting or document as N/A
-- Mod-p family — findlincombomodp (findhommodp exists from v4.2)
+---
 
-**Deferred:** General algebraic extensions; zqfactor; LaTeX output.
+## Previous Milestone: v10.0 Close Remaining Gaps ✓
+
+**Shipped:** Block 25 fix (addAligned, q-shift alignment), Block 24 N/A rationale, findlincombomodp. maple-checklist 40/41 pass (Block 24 skip).
 
 ---
 
@@ -187,4 +186,4 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 | jacprodmake 80% periodicity threshold | Don't demand exact match; verify reconstruction | — Pending |
 
 ---
-*Last updated: 2026-02-28 after v4.1 milestone start*
+*Last updated: 2026-03-05 after v10.0 milestone*
