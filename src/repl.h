@@ -1035,7 +1035,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
             throw std::runtime_error(runtimeErr(name, "expects variable name"));
         auto it = env.env.find(args[0]->varName);
         if (it == env.env.end())
-            throw std::runtime_error(runtimeErr(name, "undefined variable: " + args[0]->varName));
+            throw std::runtime_error(runtimeErr(name, formatUndefinedVariableMsg(env, args[0]->varName)));
         if (std::holds_alternative<std::vector<JacFactor>>(it->second)) {
             std::cout << jac2prod(std::get<std::vector<JacFactor>>(it->second)) << std::endl;
             return DisplayOnly{};
@@ -1049,7 +1049,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
             throw std::runtime_error(runtimeErr(name, "expects variable name"));
         auto it = env.env.find(args[0]->varName);
         if (it == env.env.end())
-            throw std::runtime_error(runtimeErr(name, "undefined variable: " + args[0]->varName));
+            throw std::runtime_error(runtimeErr(name, formatUndefinedVariableMsg(env, args[0]->varName)));
         if (!std::holds_alternative<std::vector<JacFactor>>(it->second))
             throw std::runtime_error(runtimeErr(name, "expects jacprodmake result"));
         int Tr = (args.size() == 2) ? static_cast<int>(evi(1)) : T;
@@ -1503,7 +1503,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         std::string vname = args[0]->tag == Expr::Tag::Var ? args[0]->varName : "";
         if (vname.empty()) throw std::runtime_error(runtimeErr(name, "argument must be variable name"));
         auto it = env.env.find(vname);
-        if (it == env.env.end()) throw std::runtime_error("undefined variable: " + vname);
+        if (it == env.env.end()) throw std::runtime_error(formatUndefinedVariableMsg(env, vname));
         if (!std::holds_alternative<std::vector<JacFactor>>(it->second))
             throw std::runtime_error(vname + " must hold Jacobi product (from jacprodmake)");
         auto geta = jac2eprod(std::get<std::vector<JacFactor>>(it->second));
@@ -2263,7 +2263,7 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
             if (ev == env.env.end()) {
                 if (e->varName == "omega")
                     return Omega3::omega();
-                throw std::runtime_error("undefined variable: " + e->varName);
+                throw std::runtime_error(formatUndefinedVariableMsg(env, e->varName));
             }
             if (std::holds_alternative<Omega3>(ev->second))
                 return std::get<Omega3>(ev->second);
@@ -2683,6 +2683,25 @@ inline std::set<std::string> getCompletionCandidates(const Environment& env) {
     for (const auto& [k, _] : env.env)
         out.insert(k);
     return out;
+}
+
+inline std::string formatUndefinedVariableMsg(const Environment& env, const std::string& name) {
+    auto candidates = getCompletionCandidates(env);
+    std::vector<std::pair<int, std::string>> suggestions;
+    for (const auto& key : candidates) {
+        int d = levenshteinDistance(name, key);
+        if (d <= 3)
+            suggestions.push_back({d, key});
+    }
+    std::sort(suggestions.begin(), suggestions.end());
+    std::string msg = "undefined variable: " + name;
+    if (!suggestions.empty()) {
+        msg += ". Did you mean:";
+        for (size_t i = 0; i < std::min(suggestions.size(), size_t(2)); ++i)
+            msg += " " + suggestions[i].second;
+        msg += "?";
+    }
+    return msg;
 }
 
 inline void handleTabCompletion(std::string& line, size_t& pos, const Environment& env) {
