@@ -1,148 +1,209 @@
-# Project Research Summary
+# Project Research Summary — v11.1 Gap Closure & Improvements
 
-**Project:** q-series REPL — RootOf / Q(ω) (Milestone v8.0)
-**Domain:** Exact q-series arithmetic with algebraic number support
-**Researched:** 2026-03-03
-**Confidence:** HIGH
+**Project:** qseries3 (q-series REPL)  
+**Domain:** Maple qseries parity, eta/theta identity proving, modular forms  
+**Milestone:** v11.1 — Gap Closure & Improvements  
+**Researched:** 2026-03-06  
+**Confidence:** HIGH (mature codebase, zero-deps constraint, clear gaps)
+
+---
 
 ## Executive Summary
 
-RootOf and Q(ω) support are needed for Maple Block 10 parity and Exercise 4’s b(q) = Σ ω^(n-m) q^(n²+nm+m²). Experts build this by using a cyclotomic-specific representation (a,b) for a+bω with ω² = -ω-1 — no polynomial ring, no external libraries. BigInt and Frac are reused; Omega3 is added as a pair of Frac with custom arithmetic; SeriesOmega parallels Series for coefficients in Q(ω).
+qseries3 is a zero-dependency C++20 REPL for exact q-series arithmetic and Andrews-style series-to-product conversion. The codebase achieves 40/41 maple-checklist blocks. Remaining gaps are **algorithmic and integrative**—no stack additions required. For v11.1, close maple-checklist failures (Blocks 25, 10, 13–14), RR identity search (RRID-01..03), THETA-06 provemodfuncid extensions, Block 24 rationale, and findlincombomodp.
 
-**Recommendation:** Use Omega3 (a+bω) with ω² = -ω-1 reduction. No GMP, no Boost, no general RootOf. Parser/REPL add `omega` and RootOf(3); sum(omega^expr) evaluates ω^k → Omega3. prodmake/etamake stay Q-only; for b(q) product form, use the eta identity b(q) = η(τ)³/η(3τ).
+**Recommendation:** Keep C++20, single-file Makefile, in-house BigInt/Frac/Series. Address gaps by extending existing headers (theta_ids.h, rr_ids.h, linalg.h, relations.h). Phases 97–99 (Block 25, Block 24, findlincombomodp) form Tier 1; Theta IDs (Phase 85) and RR identity (Phase 86) form Tiers 2–3.
 
-**Risks:** Coefficient growth in Q(ω) without normalization; normal-form ambiguity (ω vs ω²); findhom assumes Q. Mitigations: normalize after every Q(ω) op; document canonical root choice; keep findhom Q-only initially; use eta identity for b(q) in etamake.
+**Key risks:** (1) q-shift/truncation misalignment in series arithmetic—Block 25 and findpoly; (2) Sturm-bound precision and mintot→int overflow in provers; (3) Maple semantic drift (optional args, output format). Mitigation: align q_shifts before findpoly, document Sturm cap, audit optional args per new built-in.
 
 ---
 
 ## Key Findings
 
-### Recommended Stack
+### Stack Additions: None
 
-Cyclotomic-specific representation: `struct Omega3 { Frac a, b; }` for a + b·ω. Multiplication uses (a+bω)(c+dω) = (ac−bd) + (ad+bc−bd)ω; division via conjugate: (a+bω)⁻¹ = (a+bω²)/N where N = a²−ab+b². No polynomial machinery, no external deps.
+| Verdict | Rationale |
+|---------|-----------|
+| **No stack changes** | Gaps (provemodfuncid, findids, findlincombomodp, Block 25/24) reduce to existing Series, Frac, BigInt, and headers |
+| Stay C++20 | Portability; C++23 not required |
+| Keep Makefile, single TU | Zero deps; no CMake, Conan, vcpkg |
+| No external libs | GMP, Boost, fmt, spdlog explicitly excluded |
 
-**Core technologies:**
-- **Omega3** — scalar type for Q(ω) — ω²+ω+1=0, reduces via ω² = -ω-1
-- **SeriesOmega** — `std::map<int, Omega3>` — parallel to Series; no templating
-- **Parser** — `omega` literal or `RootOf(z^2+z+1=0)` / `RootOf(3)` — Maple parity
-- **No GMP, Boost, NTL** — BigInt + Frac + Omega3 only
+**Optional low-priority tweaks:** `[[nodiscard]]` on critical returns; cppcheck in CI if zero install cost.
 
-### Expected Features
+---
 
-**Must have (table stakes):**
-- `omega` / RootOf(z²+z+1=0) — symbol for ζ₃
-- Algnum/Omega3 — Q(ω) arithmetic (add, mul, pow with ω^k → ω^(k mod 3))
-- Series with Q(ω) coefficients — SeriesOmega
-- `sum(omega^expr, ...)` — evaluate ω^exponent → Omega3
-- Display `a + b*omega` — user visibility
+### Feature Table Stakes vs Differentiators
 
-**Should have (differentiators):**
-- convert(omega, radical) — optional display
-- Indexed RootOf — ω vs ω² selection
+#### Table Stakes (users expect for Maple/Garvan parity)
 
-**Defer (v2+):**
-- General RootOf(poly)
-- Cyclotomic ζₙ for n > 3
-- findhom over Q(ω); prodmake/etamake on Q(ω) series
+| Feature | Source | Complexity |
+|---------|--------|------------|
+| Block 25 fix (findpoly q-shift) | maple-checklist, EX-10 | Medium |
+| Block 10 / RootOf(ω) for b(q) | maple-checklist, EX-04c | High |
+| Block 13–14 (Jacobi half-integer) | maple-checklist, Garvan §3.4 | Medium |
+| THETA-06 provemodfuncid | REQUIREMENTS | High |
+| RRID-01..03 (RRG, RRH, checkid, findids) | REQUIREMENTS | Medium–High |
+| jac2series(f,T) user API | FEATURE-GAPS | Trivial |
 
-### Architecture Approach
+#### Differentiators (advanced users)
 
-Add Omega3 (or algebraic.h) for cyclotomic Q(ω); add SeriesOmega with same layout as Series; treat RootOf as builtin call; extend EnvValue and EvalResult. Build order: **algebraic type** → **SeriesOmega** → **parser/REPL wiring**.
+| Feature | Value | Complexity |
+|---------|-------|------------|
+| factor(t8) cyclotomic (Block 4) | Polynomial factor into Φ_n | High |
+| EISENqmake / Eisenstein memoization | Speed for repeated modform calls | Low |
+| BAILEY-01..03 | Bailey pair/chain manipulation | Medium |
+| ETA-01..08 full cusp prover | Gamma_0 eta-quotient proofs | High |
+| findlincombomodp, findhommodp | Mod-p relation finding | Medium |
 
-**Major components:**
-1. **omega3.h** (or algebraic.h) — Omega3 struct, arithmetic, str(), fromRational(Frac), conjugate
-2. **series_omega.h** — SeriesOmega (map<int, Omega3>), mirror Series arithmetic
-3. **repl.h** — RootOf dispatch, EnvValue+Algebraic, evalStmt/Var, BinOp (Algebraic * Series → SeriesOmega), display
+#### Defer to v2+
 
-### Critical Pitfalls
+- Block 4 (factor cyclotomic); qfactor sufficient
+- ETA-01..08 full cusp prover
+- CRANK-01..05
+- makeEISENbasisPX, symbolic bases
 
-1. **Coefficient growth** — Q(ω) has no built-in reduction; normalize after every op; gcd-reduce numerators
-2. **Normal form (ω vs ω²)** — Document canonical choice; never equate ω and ω²
-3. **Q(ω) division** — Implement (a+bω)⁻¹ = conjugate / norm; ensure nonzero check
-4. **findhom stays Q-only** — No kernel over Q(ω) in v1; restrict to rational series
-5. **b(q) product** — Use eta identity b(q)=η³/η(3τ); do not pass algebraic series to etamake
+---
+
+### Architecture: Integration Points and Build Order
+
+#### Data Flow Pipeline
+
+```
+REPL/Parser → Built-ins (provemodfuncid, checkid, findids, findpoly, …)
+                    ↓
+eta_cusp | theta_ids | rr_ids | modforms | convert | relations | linalg
+                    ↓
+Series (map<int,Frac>) → Frac → BigInt
+```
+
+#### Integration Points for Gap Closure
+
+| Gap | Integrates With | Type | Action |
+|-----|-----------------|------|--------|
+| Block 25 (q-shift) | Series::addAligned, findpoly | **Modified** | Use addAligned before findpoly |
+| provemodfuncidBATCH | theta_ids.h | **New function** | Batch jacid list |
+| findids types 3–10 | rr_ids.h | **Extension** | Implement remaining types |
+| findlincombomodp | linalg.h, relations.h | **New function** | modp + F_p solve |
+| Block 24 | repl.h | **Docs** | N/A rationale; no collect impl |
+
+#### Recommended Build Order (Phase Tiers)
+
+| Tier | Phases | Rationale |
+|------|--------|-----------|
+| **Tier 1** | 97, 98, 99 | Block 25 fix unblocks findpoly; Block 24 N/A rationale; findlincombomodp completes mod-p story. No new headers. |
+| **Tier 2** | 85 | provemodfuncidBATCH, theta_aids regression. Depends on theta_ids (already integrated). |
+| **Tier 3** | 86 | findids types 3–10, acceptance-rr-id. RRG/RRH/checkid exist. |
+| **Deferred** | provemodfuncGAMMA0UpETAid | U_p operator; stub only; complex. |
+
+#### Component Dependency Order
+
+```
+BigInt → Frac → Series → qfuncs → convert → linalg → relations
+                    ↓
+    eta_cusp | theta_ids | modforms | rr_ids
+                    ↓
+                  repl.h (dispatch)
+```
+
+---
+
+### Pitfalls to Avoid
+
+#### Critical (must address)
+
+1. **Series inverse and truncation** — Wrong recurrence or q-shift causes prodmake/etamake to fail. Detection: Rogers-Ramanujan yields denominators at exponents ≠ ±1 (mod 5).
+
+2. **q-shift alignment** — findpoly on theta quotients fails without addAligned. Prevention: align q_shift before addition; propagate min truncation. Phase: 63, 97.
+
+3. **Maple semantic drift** — Optional-arg order, 1-based vs 0-based, output format. Prevention: run exact Maple command, document output, add real test in maple-checklist.sh.
+
+4. **Double-sum truncation (EX-04c)** — b(q) double-sum needs sufficient T and range. Prevention: increase T (80–100), range (±15); verify SeriesOmega semantics.
+
+5. **Sturm-bound precision** — mintot→int overflow or fractional mintot. Prevention: BigInt-based Sturm when needed; document 500 cap; explicit depth in output.
+
+#### Phase-specific warnings
+
+| Phase | Pitfall | Mitigation |
+|-------|---------|------------|
+| Block 25 | q-shift misalignment | addAligned before findpoly |
+| Block 24 | Implementing collect | Document N/A; do not implement |
+| provemodfuncid | mintot overflow | BigInt Sturm; document cap |
+| findlincombomodp | F_p solve | Use existing modp, linalg kernel |
+| New built-ins | Optional-arg drift | Audit 1/2/3-arg; add optional-arg test |
 
 ---
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+### Phase 1: Block 25 Fix (Phase 97)
+**Rationale:** Unblocks findpoly on theta quotients; EX-10; no new components.  
+**Delivers:** Block 25 passes; findpoly works on theta2/theta3 quotients.  
+**Addresses:** maple-checklist, EX-10.  
+**Avoids:** Pitfall 2 (q-shift alignment).
 
-### Phase 1: Omega3 Type (omega3.h)
-**Rationale:** Foundation; no Series/REPL deps; arithmetic must be correct before Series.
-**Delivers:** Omega3 struct, +/−/*, inverse, str(), fromRational, conjugate; normalization after ops.
-**Addresses:** omega representation, Q(ω) arithmetic.
-**Avoids:** Coefficient growth; wrong root choice.
+### Phase 2: Block 24 Rationale (Phase 98)
+**Rationale:** Clarify scope; avoid collect implementation.  
+**Delivers:** N/A rationale documented; no implementation.  
+**Avoids:** Pitfall 6 (Block 24 scope creep).
 
-### Phase 2: SeriesOmega
-**Rationale:** Depends on Omega3; needed before any omega-involving series.
-**Delivers:** SeriesOmega (map<int, Omega3>), add, mul, truncTo; Algebraic * Series → SeriesOmega.
-**Uses:** Omega3 from Phase 1.
-**Avoids:** Series inverse with wrong Q(ω) division; mixed Q/Q(ω) confusion.
+### Phase 3: findlincombomodp (Phase 99)
+**Rationale:** Completes mod-p linear algebra story.  
+**Delivers:** `findlincombomodp(f, L, p, T)` built-in.  
+**Uses:** linalg.h F_p kernel, modp, relations.h.  
+**Avoids:** Optional-arg drift.
 
-### Phase 3: Parser/REPL Integration
-**Rationale:** Depends on Omega3 and SeriesOmega; wires omega into user-facing flow.
-**Delivers:** RootOf(3) dispatch; omega in env; Var lookup; BinOp handling; sum(omega^expr); display.
-**Implements:** parser/REPL wiring, omega binding.
-**Avoids:** Type inconsistency; findhom on algebraic (keep Q-only).
+### Phase 4: provemodfuncid Extensions (Phase 85)
+**Rationale:** provemodfuncid exists; add BATCH and theta_aids regression.  
+**Delivers:** provemodfuncidBATCH; 2+ theta_aids verified.  
+**Avoids:** Pitfall 5 (Sturm-bound precision).
 
-### Phase 4: b(q) and Block 10
-**Rationale:** End-to-end validation; uses eta identity for prodmake path.
-**Delivers:** b(q) via sum or eta identity; a(q), c(q); Block 10 parity.
-**Avoids:** etamake on algebraic series — use b(q)=η³/η(3τ) workaround.
-
-### Phase Ordering Rationale
-
-- Omega3 first: all other phases depend on it; normalization prevents growth.
-- SeriesOmega before REPL: REPL needs SeriesOmega for omega * q and sum(omega^expr).
-- findhom stays Q-only: defer Q(ω) kernel; Block 10 does not require findhom on a,b,c.
+### Phase 5: RR Identity Search (Phase 86)
+**Rationale:** RRG, RRH, checkid, findids types 1–2 exist.  
+**Delivers:** findids types 3–10; acceptance-rr-id passes.  
+**Avoids:** Maple semantic drift; output format mismatch.
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
-- **Phase 4:** b(q) double-sum performance vs eta identity; acceptance tests.
-
-Phases with standard patterns (skip research-phase):
-- **Phase 1:** Well-documented cyclotomic arithmetic; Regina/SymPy references.
-- **Phase 2:** Mirrors existing Series; straightforward.
-- **Phase 3:** Builtin dispatch and EnvValue extension; established patterns.
+| Phase | Flag | Reason |
+|-------|------|--------|
+| 85 | Needs research if theta_aids grow | cusp formulas differ Gamma_0 vs Gamma_1 |
+| 94 (Block 10 / RootOf) | Needs research | omega/SeriesOmega, b(q) double-sum semantics |
+| 97, 98, 99 | Standard patterns | addAligned exists; linalg F_p exists; Block 24 is docs-only |
 
 ---
 
 ## Confidence Assessment
 
-| Area      | Confidence | Notes                                            |
-|-----------|------------|--------------------------------------------------|
-| Stack     | HIGH       | Maple, PARI, GAP, Regina sources; formula verified |
-| Features  | HIGH       | Maple Block 10, qseriesdoc, PROJECT.md alignment |
-| Architecture | HIGH    | Matches existing Series/Frac patterns; clear deps |
-| Pitfalls  | HIGH       | Verified against relations.h, convert.h, linalg  |
+| Area | Confidence | Notes |
+|------|------------|-------|
+| Stack | HIGH | SPEC, .cursorrules, zero-deps explicit; no stack change needed |
+| Features | HIGH | maple-checklist, REQUIREMENTS, FEATURE-GAPS well documented |
+| Architecture | HIGH | Integration test passes; data flow documented in headers |
+| Pitfalls | HIGH | SPEC §576+, known failure modes (Block 25, EX-04c, inverse) |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- Maple index convention for z²+z+1 roots — verify during implementation.
-- Performance threshold for coefficient growth (T≈100+) — validate in Phase 1 tests.
+- **EX-04c / Block 10:** RootOf(ω) and b(q) double-sum—Phases 91–94; may need phase research.
+- **Sturm cap 500:** Document in output; consider BigInt path for large mintot.
+- **maple-checklist Blocks 28–32:** Quinprod symbolic z; verify against current script.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Maple RootOf — maplesoft.com/support/help/Maple/view.aspx?path=RootOf
-- Regina Cyclotomic — regina-normal.github.io/engine-docs/cyclotomic_8h.html
-- GAP3 Cyclotomics — Zumbroich basis, conductor
-- qseriesdoc.md, maple_checklist Block 10, .planning/STATE.md
+- `SPEC.md` — Zero-deps, single static binary
+- `src/eta_cusp.h`, `src/theta_ids.h`, `src/rr_ids.h`, `src/convert.h`
+- `tests/integration-eta-theta-modforms.sh`
+- `maple_checklist.md`, `REQUIREMENTS.md`, `FEATURE-GAPS.md`
 
-### Secondary (MEDIUM confidence)
-- SymPy numberfields — AlgebraicNumber representation
-- PARI/GP t_POLMOD — mod T representation
-- src/relations.h, src/linalg.h, src/convert.h — codebase verification
-
-### Tertiary (LOW confidence)
-- Coefficient growth thresholds — infer from tests; document if observed
+### Secondary
+- `.planning/ROADMAP.md`, `.planning/PROJECT.md`
+- `gaps/wprogmodforms.txt`, `gaps/BAILEY.txt`
 
 ---
-*Research completed: 2026-03-03*
+*Research completed: 2026-03-06*  
 *Ready for roadmap: yes*

@@ -1,234 +1,237 @@
-# Feature Landscape: RootOf / Algebraic Numbers
+# Feature Landscape: qseries3 Gap Closure
 
-**Domain:** q-series REPL — RootOf for cyclotomic fields (primitive cube root ω)
-**Researched:** 2026-03-03
-**Sources:** Maple RootOf docs (maplesoft.com), SymPy numberfields, Mathematica RootReduce, qseriesdoc §3.4, maple-checklist Block 10, project context
+**Domain:** q-series REPL — Maple qseries parity, Garvan tutorial coverage, gap closure  
+**Researched:** 2026-03-06  
+**Sources:** REQUIREMENTS.md, maple_checklist.md, maple-checklist.sh, acceptance-exercises.sh, gaps/wprogmodforms.txt, gaps/BAILEY.txt, FEATURE-GAPS.md
 
 ---
 
 ## Executive Summary
 
-RootOf in symbolic systems (Maple, Mathematica, SymPy) represents algebraic numbers as roots of irreducible polynomials. For q-series parity, the critical case is **ω = RootOf(z²+z+1=0)** — the primitive cube root of unity used in a(q), b(q), c(q). Table stakes for v1: represent ω, arithmetic in Q(ω), simplification (ω³=1), and coefficients in Q(ω) for Series. Differentiators (general RootOf, indexed roots, radical conversion) should be deferred. Avoid nested RootOf and general polynomial factorization over Q(ω) for v1.
+qseries3 implements most core Maple qseries functionality. Remaining gaps fall into: (1) **maple-checklist failures** — Block 4 (factor), Block 10 (RootOf), Blocks 13–14 (Jacobi half-integer exponents), Block 25 (findpoly q-shift), plus symbolic triple/quinprod; (2) **REQUIREMENTS.md pending** — THETA-06, RRID-01..03, GAP-01..04, ETA-01..08, CRANK-01..05, BAILEY-01..03; (3) **acceptance-exercises failures** — EX-04c (b(q) double-sum with RootOf); (4) **modforms extensions** — EISENqmake, makeEISENbasisPX, makeSYMbasisM, makeALTSYMbasisM, etc. from gaps/wprogmodforms.txt. Table stakes: fix Block failures, pass acceptance-exercises, close THETA-06 and RRID. Differentiators: Bailey chains, full ETA cusp prover, mod-p identity search.
 
 ---
 
-## How RootOf Works in Symbolic Systems
+## Maple Checklist: Block Status
 
-### Maple
+### Blocks 1–41 Summary
 
-- **Syntax:** `omega := RootOf(z^2+z+1=0)` or `alias(omega=RootOf(z^2+z+1=0))`
-- **Arithmetic:** `evala(omega^4)` → reduces to `omega` (ω⁴ = ω³·ω = ω)
-- **Canonical form:** Single-argument `RootOf(_Z²+_Z+1)`, primitive polynomial
-- **Indexed roots:** `RootOf(expr, x, index=1)` selects by complex argument (counter-clockwise)
-- **Conversion:** `convert(omega, radical)` → `(-1 + I√3)/2`
+| Status | Blocks | Notes |
+|--------|--------|-------|
+| Verified | 1–3, 5–12, 15–23, 26–27, 29, 33–41 | Core prodmake, etamake, jacprodmake, findhom/nonhom, sift, Winquist |
+| FAIL | 4, 10, 13, 14, 25 | factor, RootOf, Jacobi half-integer, findpoly q-shift |
+| SKIP | 24, 28, 30–32 | collect (N/A), triple/quinprod symbolic z, quinprod prodid/seriesid |
+| N/A | 4, 10, 21, 24 | factor→qfactor workaround; RootOf; EQNS[1]; collect |
 
-### Mathematica
+**Note:** Phases 88–90 added quinprod prodid/seriesid and symbolic z for tripleprod/quinprod. maple-checklist.sh expects Blocks 28–32 to pass; verify with current script.
 
-- **Syntax:** `Root[#^2+#+1&, 1]` or `AlgebraicNumber` with field
-- **Simplification:** `RootReduce` reduces algebraic combinations to canonical form
-- **Operations:** Arithmetic on Root/AlgebraicNumber automatically normalized
+### Critical Block Failures (Must Fix)
 
-### SymPy
-
-- **Syntax:** `RootOf(x**2+x+1, 0)` or `QQ.algebraic_field(...)` for Q(θ)
-- **Representation:** ANP (Algebraic Number Pair) — polynomial in θ mod minimal polynomial
-- **Arithmetic:** Operations reduce modulo defining polynomial
-
-### Common Patterns
-
-| Aspect | Maple | Mathematica | SymPy |
-|--------|-------|-------------|-------|
-| Define | `RootOf(z²+z+1=0)` | `Root[#²+#+1&,1]` | `RootOf(x²+x+1,0)` |
-| Simplify | `evala(expr)` | `RootReduce[expr]` | automatic in AlgebraicField |
-| Display | alias / omega | Root or radical | ANP or RootOf |
-| Substitution | symbolic | symbolic | symbolic |
+| Block | Maple Feature | qseries3 Gap | Table Stakes? |
+|-------|---------------|--------------|---------------|
+| 4 | factor(t8) cyclotomic | No factor builtin; qfactor handles q-product only | Differentiator (polynomial factor) |
+| 10 | omega := RootOf(z²+z+1=0); b(q) | No Q(ω); b(q) via eta identity works | Table stakes for Exercise 4 |
+| 13–14 | jacprodmake Slater; jac2series | Half-integer JAC exponents; jac2series on frac exponents | Table stakes for Garvan §3.4 |
+| 25 | findpoly on theta2/theta3 quotients | q-shift mismatch in series addition | Table stakes for Exercise 10 |
 
 ---
 
-## Expected Behavior for RootOf(z²+z+1=0)
+## REQUIREMENTS.md Pending Items
 
-### Mathematical Properties
+### Theta IDs / Ramanujan-Robins
 
-- ω = exp(2πi/3), primitive cube root of unity
-- **Minimal polynomial:** z² + z + 1 = 0
-- **Reduction rules:** ω³ = 1, ω² = -ω - 1, ω + ω² = -1
-- **Field:** Q(ω) = Q(√-3), degree 2 over Q
-- **Elements:** a₀ + a₁ω with aᵢ ∈ Q
+| Req | Function | Purpose | Complexity |
+|-----|----------|---------|------------|
+| THETA-06 | provemodfuncid(jacid, N) | Prove identity on Gamma_1(N) via Sturm bound | High |
+| RRID-01 | RRG(n), RRH(n), RRGstar(n), RRHstar(n) | Rogers-Ramanujan / Göllnitz-Gordon | Medium |
+| RRID-02 | checkid(expr, T) | Check if expression is eta/theta product | Medium |
+| RRID-03 | findids(type, T) | Systematic identity search (types 1–10) | High |
 
-### Arithmetic in Q(ω)
+### GAP Functions (v1.4)
 
-- **Add:** (a₀ + a₁ω) + (b₀ + b₁ω) = (a₀+b₀) + (a₁+b₁)ω
-- **Mul:** Use ω² = -ω - 1 to reduce; e.g. ω·(a₀+a₁ω) = a₀ω + a₁ω² = a₀ω + a₁(-ω-1) = -a₁ + (a₀-a₁)ω
-- **Powers:** ω^k = ω^(k mod 3) — essential simplification for series
+| Req | Function | Purpose | Status |
+|-----|----------|---------|--------|
+| GAP-01 | mprodmake(f,T) | (1+q^n1)*(1+q^n2)*... product form | Phase 24 (Pending) |
+| GAP-02 | checkprod(f,T) | Check "nice" product | Phase 25 (Pending) |
+| GAP-03 | checkmult(f,T) | Check multiplicative coefficients | Phase 25 (Pending) |
+| GAP-04 | findmaxind(L,n,topshift) | Maximal independent subset | Phase 26 (Done per traceability) |
 
-### Substitution into Series
+### ETA Cusp / Identity Prover
 
-- **b(q) = Σ Σ ω^(n-m) q^(n²+nm+m²):** Coefficients become elements of Q(ω)
-- **Representation:** Each coefficient is (a₀, a₁) ∈ Q² meaning a₀ + a₁ω
-- **Existing Series:** `std::map<int, Frac>` must extend to `std::map<int, Algnum>` where Algnum ∈ Q(ω)
+| Req | Function | Purpose | Complexity |
+|-----|----------|---------|------------|
+| ETA-01..06 | cuspmake, cuspord, gammacheck, cuspORDS, etaprodtoqseries, vp | Gamma_0 cusp theory | High |
+| ETA-07..08 | provemodfuncGAMMA0id, provemodfuncGAMMA0UpETAid | Eta-quotient identity proof via Sturm | High |
 
-### Display Format
+### Crank / Bailey / Mod-p
 
-| Format | Example | When to Use |
-|--------|---------|-------------|
-| Polynomial in ω | `1 + 2*omega` | Default for Q(ω) |
-| Maple-style | `omega`, `omega^2` | With alias |
-| Radical | `(-1 + I√3)/2` | Optional, requires sqrt(-3) |
-| Cyclotomic | `ζ₃` or `ω` | Compact notation |
-
----
-
-## Table Stakes (Users Expect These)
-
-Features required for Maple Block 10 parity and qseriesdoc Exercise 4. Missing = product feels incomplete.
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| `omega := RootOf(z^2+z+1=0)` | Maple Block 10, qseriesdoc §3.4 hint | LOW | Parser + symbol binding; can be built-in constant initially |
-| Arithmetic in Q(ω): add, mul | b(q) = Σ ω^(n-m) q^(…) requires ω^k in coefficients | MEDIUM | New type `Algnum` (a₀, a₁) or FracPair; reduce via ω²=-ω-1 |
-| Simplification: ω^k → ω^(k mod 3) | Coefficients must normalize; ω⁴ = ω | LOW | Part of Algnum mul/pow |
-| Series with coefficients in Q(ω) | b(q) is a series; a(q), c(q) are rational | HIGH | Series needs optional `std::map<int, Algnum>` or unified `Coeff` variant |
-| `sum` / theta with ω in exponent | b(q) = Σ Σ ω^(n-m) q^(n²+nm+m²) | MEDIUM | sum() must evaluate ω^(n-m) → Algnum |
-| Display: `a + b*omega` | Users must see coefficients | LOW | Format Algnum as string |
-| etamake / prodmake on Q(ω) series | Maple can run etamake on b(q) | MEDIUM | May need to restrict to rational-only for v1 (see Anti-Features) |
+| Req | Functions | Purpose | Complexity |
+|-----|-----------|---------|------------|
+| CRANK-01..05 | NS, sptcrankresnum, MBAR, ocrankresnum, GFDM2N, etc. | SPT-crank, overpartition crank, M2 tables | High |
+| BAILEY-01..03 | betafind, alphafind, alphaup/down, betaup/down, catalog | Bailey pair computation and chain ops | Medium |
+| MODP-01..02 | findlincombomodp, findhommodp | Mod-p linear / homogeneous relations | Medium |
 
 ---
 
-## Differentiators (Competitive Advantage)
+## Acceptance-Exercises Failures
 
-Valuable but not required for Block 10 / Exercise 4 parity.
+From `tests/acceptance-exercises.sh`:
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| General `RootOf(poly)` | Arbitrary algebraic extensions | HIGH | Requires polynomial ring, gcd, minimal polynomial handling |
-| Indexed root selection | Choose specific root (e.g. ω vs ω²) | MEDIUM | Maple index=1,2; affects display/choice only for z²+z+1 |
-| `convert(expr, radical)` | Explicit (-1+I√3)/2 | LOW | Requires √(-3) as symbolic or display convention |
-| `evala`-style explicit reduce | User-triggered simplification | LOW | Nice for debugging |
-| Cyclotomic ζₙ for n>3 | 5th, 7th roots of unity | MEDIUM | Q(ζ₅) has degree 4; different reduction rules |
+| Test | Requirement | Current Status | Root Cause |
+|------|-------------|----------------|------------|
+| EX-04c | b(q) = Σ Σ ω^(n-m) q^(n²+nm+m²) starts 1 - 3q | FAIL | RootOf(3) / omega not implemented; sum with ω in exponent fails |
+| EX-04a, 04b, 04d, 04e | b(q) eta, a(q), c(q) | PASS | eta identity works |
+| EX-09a/b/c | findnonhomcombo N(q) in a, x | PASS | Relation finding works |
+| EX-10a/b | findpoly cubic m–y relation | PASS (after Block 25 fix) | findpoly works if q-shift fixed |
+
+**Table stakes:** EX-04c requires RootOf / omega for b(q) double-sum; Block 10 and Block 25 fixes are prerequisites.
 
 ---
 
-## Anti-Features (Commonly Requested, Often Problematic)
+## gaps/wprogmodforms.txt: Maple modforms Package
 
-| Anti-Feature | Why Requested | Why Problematic | Alternative |
-|--------------|---------------|-----------------|-------------|
-| Full algebraic number tower | "Support any RootOf" | Nested extensions (Q(ω)(√2)), field membership, primitive element — major scope | Restrict v1 to Q(ω) only |
-| prodmake/etamake on Q(ω) series | Maple can do it | Andrews' algorithm assumes rational coefficients; exponent recurrence uses division | Use identity b(q)=η(τ)³/η(3τ) for prodmake; or defer Q(ω) prodmake |
-| Floating-point evaluation of ω | "Get numeric value" | Project is exact-only; evalf conflicts with zero-dependency | Omit; keep exact |
-| Maple `alias` in REPL | Compact omega display | Alias is session-global; complicates parser | Use `omega` as built-in name for RootOf(z²+z+1=0) |
-| General polynomial factorization over Q(ω) | factor(t8) in Block 4 | Requires factor over number field; major subsystem | Deferred (per PROJECT.md) |
+### Implemented in qseries3
+
+| Maple modforms | qseries3 | Notes |
+|----------------|----------|-------|
+| makebasisM(k,T) | makebasisM(k,T) | E4, E6 basis ✓ |
+| makeALTbasisM(k,T) | makeALTbasisM(k,T) | DELTA12, E6 basis ✓ |
+| makebasisPX(k,T) | makebasisPX(k,T) | P, Phiq(1,3,5) basis ✓ |
+| misc[EISENq] | EISENq / eisenstein | Eisenstein series ✓ |
+| DELTA12, P | DELTA12(T), 1/etaq(1,T) | Cusp form, partition GF ✓ |
+
+### Missing from qseries3
+
+| Maple modforms | Purpose | Complexity |
+|----------------|---------|------------|
+| **EISENqmake(LT)** | Compute E2,E4,E6,E8,E10,E14,DELTA12,P once; save to global; reuse | Low — memoization / precompute |
+| **makeEISENbasisPX(k,T)** | Basis P*X[k] using E2,E4,E6 instead of P1,P3,P5 | Medium |
+| **makeSYMbasisM(k)** | Symbolic basis _E4^a*_E6^b (no T) | Low — display / teaching |
+| **makeALTSYMbasisM(k)** | Symbolic basis with DELTA12 | Low |
+| **makeSYMbasisPX(k)** | Symbolic P*P1^a*P3^b*P5^c | Low |
+| **makeSYMEISENbasisPX(k)** | Symbolic P*E2^a*E4^b*E6^c | Low |
+| **briefmfhelp, mfhelp, mffunctions, modformschanges, modformspversion** | Help / meta | Trivial |
+
+**Recommendation:** EISENqmake is the most valuable missing piece for performance when repeatedly calling makebasisM/makeALTbasisM at different T. Symbolic bases are useful for teaching, not for computation.
+
+---
+
+## Table Stakes
+
+Features users expect for Maple/Garvan parity. Missing = product feels incomplete.
+
+| Feature | Why Expected | Complexity | Source |
+|---------|--------------|------------|--------|
+| Block 25 fix (findpoly q-shift) | Exercise 10, findpoly on theta quotients | Medium | maple-checklist, acceptance-exercises |
+| Block 10 / RootOf(ω) | Exercise 4, b(q) double-sum, EX-04c | High | maple-checklist, Exercise 4 |
+| Block 13–14 (Jacobi half-integer) | Slater identity, jacprodmake/jac2series | Medium | maple-checklist |
+| THETA-06 provemodfuncid | Gamma_1 identity proofs | High | REQUIREMENTS v6.0 |
+| RRID-01..03 | Rogers-Ramanujan identity search | Medium–High | REQUIREMENTS v6.0 |
+| jac2series(f,T) user API | Verification of Jacobi products | Trivial | FEATURE-GAPS |
+
+---
+
+## Differentiators
+
+Valuable for advanced users and research workflows.
+
+| Feature | Value Proposition | Complexity | Source |
+|---------|-------------------|------------|--------|
+| factor(t8) cyclotomic | Block 4; polynomial factor into Φ_n | High | maple-checklist, v9.0 |
+| EISENqmake / Eisenstein memoization | Speed for repeated modform basis calls | Low | gaps/wprogmodforms.txt |
+| makeEISENbasisPX | Alternative P*X basis using Eisenstein | Medium | gaps/wprogmodforms.txt |
+| BAILEY-01..03 | Bailey pair / chain manipulation | Medium | gaps/BAILEY.txt, REQUIREMENTS |
+| ETA-01..08 | Full Gamma_0 cusp prover | High | REQUIREMENTS v6.0 |
+| CRANK-01..05 | SPT-crank, overpartition crank tables | High | REQUIREMENTS v6.0 |
+| findlincombomodp, findhommodp | Mod-p relation finding | Medium | v4.3, v10.0 |
+
+---
+
+## Anti-Features
+
+| Anti-Feature | Why Avoid | Alternative |
+|--------------|-----------|-------------|
+| General RootOf(poly) | Arbitrary algebraic extensions; scope creep | Restrict to ω = RootOf(z²+z+1=0) |
+| Full polynomial factorization | Berlekamp–Zassenhaus; Block 4 needs cyclotomics only | Cyclotomic-only factor |
+| collect() builtin | Maple formatting-only; no computational need | Keep relation output as-is |
+| qetamake variant | etamake covers main use | Use etamake |
 
 ---
 
 ## Feature Dependencies
 
 ```
-RootOf(z²+z+1=0) symbol
-    └── requires → Algnum type (a₀ + a₁ω)
-                      └── requires → ω² = -ω - 1 reduction
-    └── requires → Parser: omega, omega^2 as identifiers
+RootOf(ω) / Omega3
+    └── EX-04c (b(q) double-sum)
+    └── Block 10
 
-Algnum
-    └── requires → add, mul, pow (ω^k reduction)
-    └── enhances → Series (coefficients)
+q-shift alignment in series addition
+    └── Block 25 (findpoly theta quotients)
+    └── EX-10
 
-Series with Q(ω) coefficients
-    └── requires → sum() evaluating ω^exponent → Algnum
-    └── requires → theta / aqprod with Algnum coefficients (if used in sum)
-    └── optionally requires → prodmake/etamake (defer if complex)
+Jacobi half-integer exponents (JAC^(n/2))
+    └── Block 13 (jacprodmake Slater)
+    └── Block 14 (jac2series)
 
-b(q) = Σ Σ ω^(n-m) q^(n²+nm+m²)
-    └── requires → sum(sum(omega^(n-m)*q^(n*n+n*m+m*m), ...))
-    └── requires → omega^(n-m) → Algnum
+factor(t8) cyclotomic
+    └── Block 4
+    └── qfactor → cyclotomic expansion or Φ_n extraction
+
+THETA-06 provemodfuncid
+    └── cuspmake1, getacuspord, Gamma1ModFunc (THETA-01..05 done)
+    └── Sturm bound computation
+
+RRID-01..03
+    └── RRG, RRH, RRGstar, RRHstar
+    └── checkid, findids
 ```
 
 ---
 
-## Maple Parity Checklist (Block 10)
+## MVP Recommendation for v11.1
 
-| Maple Block 10 Item | Required for Parity | v1 Scope |
-|---------------------|---------------------|----------|
-| `omega := RootOf(z^2+z+1=0)` | Yes | Implement as `omega` built-in or `:= RootOf(...)` |
-| Use omega in b(q) sum | Yes | `sum(sum(omega^(n-m)*q^(n*n+n*m+m*m), m, -N, N), n, -N, N)` |
-| etamake(b(q), q, T) | Optional | Use b(q)=η(τ)³/η(3τ) workaround if prodmake over Q(ω) deferred |
-| Display omega, omega^2 | Yes | Table stakes |
+**Prioritize:**
 
----
+1. **Block 25 fix** — q-shift alignment in series add (Phase 97); unblocks EX-10, findpoly parity  
+2. **Block 10 / RootOf(ω)** — Omega3 type, b(q) double-sum (Phases 91–94); unblocks EX-04c  
+3. **Block 13–14** — Jacobi half-integer exponents (Phases 64–65); completes Slater workflow  
+4. **THETA-06** — provemodfuncid for Gamma_1 identity proofs  
+5. **RRID-01** — RRG, RRH, RRGstar, RRHstar as built-ins  
 
-## MVP Definition
+**Defer:**
 
-### Launch With (v1)
-
-- [ ] **omega** — Built-in symbol for RootOf(z²+z+1=0); no general RootOf(poly) parser yet
-- [ ] **Algnum** — Type (a₀, a₁) with add, mul, pow; ω^k reduces to ω^(k mod 3)
-- [ ] **Series over Q(ω)** — Coefficients `std::map<int, Algnum>` or variant; add/mul for such series
-- [ ] **sum(..., omega^exponent, ...)** — Evaluate ω^exponent to Algnum
-- [ ] **Display** — `a + b*omega` or `a - b - b*omega` (reduced form)
-- [ ] **b(q)** — Compute via sum with omega^(n-m)
-
-### Add After Validation (v1.x)
-
-- [ ] **convert(omega, radical)** — Display (-1+I√3)/2
-- [ ] **Indexed RootOf** — RootOf(z²+z+1=0, index=1) vs index=2 (ω vs ω²)
-- [ ] **etamake(b(q))** — If feasible without major prodmake rewrite
-
-### Future Consideration (v2+)
-
-- [ ] General RootOf(poly) for arbitrary irreducible polynomials
-- [ ] Cyclotomic ζₙ for n > 3
-- [ ] factor over Q(ω)
+- Block 4 (factor cyclotomic) — v9.0; qfactor sufficient for most use  
+- ETA-01..08 full cusp prover — high effort  
+- CRANK-01..05 — niche; Bailey chains first  
+- makeEISENbasisPX, symbolic bases — nice-to-have  
 
 ---
 
-## Feature Prioritization Matrix
+## Maple modforms Functions: Coverage Matrix
 
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| omega symbol | HIGH | LOW | P1 |
-| Algnum add/mul/pow | HIGH | MEDIUM | P1 |
-| Series with Q(ω) coeffs | HIGH | HIGH | P1 |
-| sum(omega^k) evaluation | HIGH | MEDIUM | P1 |
-| Display a+b*omega | HIGH | LOW | P1 |
-| convert to radical | MEDIUM | LOW | P2 |
-| General RootOf(poly) | LOW | HIGH | P3 |
-| prodmake on Q(ω) | MEDIUM | HIGH | P3 |
-
-**Priority key:** P1 = Must have for Block 10; P2 = Should have; P3 = Nice to have
-
----
-
-## Competitor Feature Analysis
-
-| Feature | Maple | Mathematica | SymPy | Our v1 Approach |
-|---------|-------|-------------|-------|-----------------|
-| Define ω | RootOf(z²+z+1=0) | Root[#²+#+1&,1] | RootOf(x²+x+1,0) | Built-in omega or RootOf(z²+z+1=0) |
-| Arithmetic | evala | RootReduce | AlgebraicField | Algnum with explicit reduction |
-| Display | omega, omega^2 | Root or radical | ANP | a + b*omega |
-| Series coeffs | Symbolic | Symbolic | Symbolic | std::map<int, Algnum> |
-| General poly | Full | Full | Full | Omit |
-
----
-
-## Dependencies on Existing Frac/Series
-
-| Existing Component | RootOf Integration |
-|--------------------|--------------------|
-| Frac | Algnum = (Frac, Frac) for Q(ω); Frac embeds as (f, 0) |
-| Series::c | Extend to hold Algnum or use variant; Series over Q needs merge with Series over Q(ω) |
-| sum() | Must recognize omega, evaluate omega^int_expr → Algnum |
-| theta, aqprod | Return Series; if coefficients can be Algnum, series ops need Algnum add/mul |
-| prodmake | Works on std::map<int, Frac>; Q(ω) version would need std::map<int, Algnum> — defer |
-| findhom, findnonhom | Linear algebra over Q; Q(ω) would need linalg over Q(ω) — defer |
+| Maple modforms | qseries3 | Status |
+|----------------|----------|--------|
+| makebasisM | makebasisM | ✓ |
+| makeALTbasisM | makeALTbasisM | ✓ |
+| makebasisPX | makebasisPX | ✓ |
+| EISENq (misc) | EISENq, eisenstein | ✓ |
+| DELTA12, P | DELTA12, 1/etaq(1) | ✓ |
+| EISENqmake | — | Missing |
+| makeEISENbasisPX | — | Missing |
+| makeSYMbasisM | — | Missing |
+| makeALTSYMbasisM | — | Missing |
+| makeSYMbasisPX | — | Missing |
+| makeSYMEISENbasisPX | — | Missing |
+| briefmfhelp, mfhelp, mffunctions, modformschanges, modformspversion | help system | Partial (help exists, not modforms-specific) |
 
 ---
 
 ## Sources
 
-- Maple RootOf documentation: https://www.maplesoft.com/support/help/Maple/view.aspx?path=RootOf (HIGH — official)
-- Maple evala: algebraic evaluation for RootOf (HIGH)
-- SymPy numberfields: https://docs.sympy.org/latest/modules/polys/numberfields.html (HIGH)
-- Mathematica RootReduce, AlgebraicNumbers guide (MEDIUM — Wolfram docs)
-- qseriesdoc.md §3.4, Exercise 4 (HIGH — project reference)
-- maple_checklist.md Block 10 (HIGH — project parity target)
-- PROJECT.md v8.0 RootOf milestone (HIGH)
-- Cyclotomic field Q(ω): ω²+ω+1=0, ω³=1 (HIGH — standard)
+- `.planning/REQUIREMENTS.md` — THETA-06, RRID, GAP-*, ETA-*, CRANK-*, BAILEY-*, MODP-*, BLOCK25, BLOCK4, BLOCK10
+- `maple_checklist.md` — Block 1–41 status (FAIL, SKIP, N/A, Verified)
+- `tests/maple-checklist.sh` — 41 blocks, exit allows ≤5 fail
+- `tests/acceptance-exercises.sh` — EX-04a–e, EX-09a–c, EX-10a–b
+- `gaps/wprogmodforms.txt` — Maple modforms package function list and help
+- `gaps/BAILEY.txt` — Bailey package (alphafind, betafind, alphaup/down, betaup/down)
+- `FEATURE-GAPS.md` — mprodmake, checkprod, checkmult, findmaxind, etc.
