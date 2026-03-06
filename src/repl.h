@@ -46,6 +46,8 @@
 #include <tuple>
 #include <cctype>
 #include <cstdlib>
+#include <functional>
+#include <unordered_map>
 
 inline std::string runtimeErr(const std::string& func, const std::string& msg) {
     return func.empty() ? ("Error, " + msg) : ("Error, (in " + func + ") " + msg);
@@ -475,12 +477,34 @@ using EvalResult = std::variant<
     Phi1Result                                        // GSK [core, quotient]
 >;
 
+// DispatchContext: passed to built-in handlers for ev/evi and helpers
+struct DispatchContext {
+    const std::string& name;
+    const std::vector<ExprPtr>& args;
+    Environment& env;
+    const std::map<std::string, int64_t>& sumIndices;
+    Series q;
+    int T;
+    std::function<Series(size_t)> ev;
+    std::function<int64_t(size_t)> evi;
+    std::function<std::vector<Series>(const Expr*)> evalListToSeries;
+    std::function<std::vector<int>(const Expr*)> evalListToInt;
+    std::function<Partition(const Expr*)> evalToPartition;
+};
+
+using BuiltinHandler = std::function<EvalResult(DispatchContext&)>;
+
 // Help table: name -> (signature, description, examples, seeAlso)
 struct HelpEntry {
     std::string sig;
     std::string desc;
     std::vector<std::string> examples;
     std::vector<std::string> seeAlso;
+};
+
+struct BuiltinEntry {
+    HelpEntry help;
+    BuiltinHandler handler;
 };
 
 inline void formatHelpEntry([[maybe_unused]] const std::string& name, const HelpEntry& e) {
@@ -651,6 +675,20 @@ inline const std::map<std::string, HelpEntry>& getHelpTable() {
         {"save", {"save(name)", "save current session to name.qsession file", {}, {}}},
     };
     return table;
+}
+
+inline const std::unordered_map<std::string, BuiltinEntry>& getBuiltinRegistry() {
+    static const std::unordered_map<std::string, BuiltinEntry> reg = []() {
+        std::unordered_map<std::string, BuiltinEntry> m;
+        HelpEntry he{"aqprod(a,q,n,T)", "rising q-factorial (a;q)_n", {"aqprod(q,q,5,50)"}, {"etaq", "prodmake"}};
+        m["aqprod"] = BuiltinEntry{he, [](DispatchContext& ctx) {
+            if (ctx.args.size() != 4)
+                throw std::runtime_error(runtimeErr(ctx.name, "expects 4 arguments"));
+            return aqprod(ctx.ev(0), ctx.ev(1), static_cast<int>(ctx.evi(2)), static_cast<int>(ctx.evi(3)));
+        }};
+        return m;
+    }();
+    return reg;
 }
 
 // Helper: get Series from EnvValue (for variable lookup in arithmetic)
