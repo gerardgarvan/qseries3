@@ -43,6 +43,7 @@
 #include <chrono>
 #include <iomanip>
 #include <set>
+#include <tuple>
 #include <cctype>
 #include <cstdlib>
 
@@ -115,8 +116,11 @@ inline std::string formatParseErrorWithSnippet(const std::string& input, const s
 
 #ifndef __EMSCRIPTEN__
 #if defined(__CYGWIN__) || !defined(_WIN32)
+#define _POSIX_C_SOURCE 200809L
 #include <termios.h>
 #include <unistd.h>
+#include <csignal>
+#include <sys/signal.h>
 #else
 #include <windows.h>
 #endif
@@ -148,6 +152,7 @@ inline int readOneChar() {
         return static_cast<int>(c);
     return -1;
 }
+
 #else
 struct RawModeGuard {
     HANDLE hStdin = nullptr;
@@ -751,6 +756,7 @@ inline int levenshteinDistance(const std::string& a, const std::string& b) {
 
 inline std::string formatProdmake(const std::map<int, Frac>& a, bool mapleStyle = true);
 inline std::string formatEtamake(const std::vector<std::pair<int, Frac>>& eta);
+inline std::string formatUndefinedVariableMsg(const Environment& env, const std::string& name);
 
 inline EvalResult dispatchBuiltin(const std::string& name,
     const std::vector<ExprPtr>& args, Environment& env,
@@ -2685,20 +2691,31 @@ inline std::set<std::string> getCompletionCandidates(const Environment& env) {
     return out;
 }
 
+inline bool strEqualCaseInsensitive(const std::string& a, const std::string& b) {
+    if (a.size() != b.size()) return false;
+    for (size_t i = 0; i < a.size(); ++i)
+        if (std::tolower(static_cast<unsigned char>(a[i])) != std::tolower(static_cast<unsigned char>(b[i])))
+            return false;
+    return true;
+}
+
 inline std::string formatUndefinedVariableMsg(const Environment& env, const std::string& name) {
     auto candidates = getCompletionCandidates(env);
-    std::vector<std::pair<int, std::string>> suggestions;
+    // (distance, case_insensitive_match?0:1, -length, key) — prefer case-only typos (RR→rr)
+    std::vector<std::tuple<int, int, int, std::string>> suggestions;
     for (const auto& key : candidates) {
         int d = levenshteinDistance(name, key);
-        if (d <= 3)
-            suggestions.push_back({d, key});
+        if (d <= 3) {
+            int caseMatch = strEqualCaseInsensitive(name, key) ? 0 : 1;
+            suggestions.push_back({d, caseMatch, -static_cast<int>(key.size()), key});
+        }
     }
     std::sort(suggestions.begin(), suggestions.end());
     std::string msg = "undefined variable: " + name;
     if (!suggestions.empty()) {
         msg += ". Did you mean:";
         for (size_t i = 0; i < std::min(suggestions.size(), size_t(2)); ++i)
-            msg += " " + suggestions[i].second;
+            msg += " " + std::get<3>(suggestions[i]);
         msg += "?";
     }
     return msg;
@@ -2926,6 +2943,17 @@ inline EvalResult evalStmt(const Stmt* s, Environment& env) {
 }
 
 #ifndef __EMSCRIPTEN__
+inline bool bracketsUnclosed(const std::string& s) {
+    int depth_paren = 0, depth_brack = 0;
+    for (unsigned char c : s) {
+        if (c == '(') ++depth_paren;
+        else if (c == ')') { if (--depth_paren < 0) return true; }
+        else if (c == '[') ++depth_brack;
+        else if (c == ']') { if (--depth_brack < 0) return true; }
+    }
+    return depth_paren > 0 || depth_brack > 0;
+}
+
 inline void runRepl() {
     ansi::init();
 
@@ -2991,6 +3019,27 @@ inline void runRepl() {
                 line += " " + next;
             }
             ++contCount;
+        }
+
+        // Bracket continuation: while ( ) [ ] unbalanced, read more lines
+        size_t bracketContCount = 0;
+        constexpr size_t maxBracketContinuations = 100;
+        while (bracketsUnclosed(line) && bracketContCount < maxBracketContinuations) {
+            if (stdin_is_tty()) {
+                std::cout << ansi::gold() << "  > " << ansi::reset() << std::flush;
+                auto nextOpt = readLineRaw(env, history);
+                std::cout << std::endl;
+                if (!nextOpt) break;
+                line += " " + *nextOpt;
+            } else {
+                if (std::cin.eof()) break;
+                std::string next;
+                if (!std::getline(std::cin, next)) break;
+                if (trim(next).empty()) break;
+                std::cout << "  > " << next << std::endl;
+                line += " " + next;
+            }
+            ++bracketContCount;
         }
 
         std::string trimmed = trim(line);
