@@ -9,7 +9,7 @@ See: .planning/PROJECT.md
 **Milestone:** v11.0 Modular Forms
 **Current phase:** 101 (makeALTbasisM)
 **Plan:** 01 complete
-**Status:** Phase complete — ready for next plan
+**Status:** Milestone complete
 
 ## Session Log
 

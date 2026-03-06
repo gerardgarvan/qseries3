@@ -1556,7 +1556,7 @@ Plans:
 
 ## Milestone v11.0 (Modular Forms) — phases 101–102
 
-- [ ] **Phase 101: makeALTbasisM** — Alternative basis of M_k(SL_2(Z)) using Delta_12
+- [x] **Phase 101: makeALTbasisM** — Alternative basis of M_k(SL_2(Z)) using Delta_12 (completed 2026-03-06)
 - [ ] **Phase 102: Cross-Package Integration** — ETA + theta IDs + modforms identity proofs; integration-eta-theta-modforms.sh
 
 ### Phase 101: makeALTbasisM
@@ -1569,7 +1569,7 @@ Plans:
   3. Output spans same space as makebasisM(k, T) (verified by dimension match)
   4. REPL dispatch and help(makeALTbasisM) document usage
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 101-01-PLAN.md — Implement makeALTbasisM in modforms.h, REPL dispatch + help, acceptance tests
@@ -1583,10 +1583,15 @@ Plans:
   2. At least one end-to-end flow: eta identity + theta ID + modular form basis used in a single proof chain
   3. No regressions in maple-checklist or existing acceptance tests
 
+**Plans:** 1 plan
+
+Plans:
+- [ ] 102-01-PLAN.md — Single-chain test (makeALTbasisM/makebasisM), PATH hardening, include in run-all
+
 ### v11.0 Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 101. makeALTbasisM | 0/1 | Not started | - |
+| 101. makeALTbasisM | 0/1 | Complete    | 2026-03-06 |
 | 102. Cross-Package Integration | 0/? | Not started | - |
 

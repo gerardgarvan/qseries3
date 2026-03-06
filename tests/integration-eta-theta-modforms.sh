@@ -1,6 +1,7 @@
 #!/bin/bash
 # integration-eta-theta-modforms.sh — Phase 87: Cross-package ETA + theta IDs + modforms
 # Verifies end-to-end flows chaining eta_cusp, modforms, theta_ids.
+export PATH="/usr/bin:$PATH"
 PASS=0; FAIL=0
 BIN="./dist/qseries.exe"
 [ -f "$BIN" ] || BIN="./dist/qseries"
@@ -42,6 +43,17 @@ check "provemodfuncid Rogers-Ramanujan form" "provemodfuncid([[1, [5,25,-1], [10
 # --- Test 3: ETA roundtrip (optional) ---
 # etamake(theta3(100), 100) yields valid eta product (η or [[...]])
 check "etamake(theta3(100),100) yields eta product" "etamake(theta3(100), 100)" "(η|\[\[[0-9])"
+
+# --- Test 4: Single proof chain (eta + theta + modular form basis) ---
+# Chains makeALTbasisM + provemodfuncGAMMA0id + etamake in one flow
+chain_out=$(run "makeALTbasisM(12,50)" "provemodfuncGAMMA0id([[1, 2,24, 1,-24], [-1, 2,24, 1,-24]], 2)" "etamake(theta3(50), 50)")
+if echo "$chain_out" | grep -qE "basis elements|makeALTbasisM|makebasisM" && \
+   echo "$chain_out" | grep -q "proven=1" && \
+   echo "$chain_out" | grep -qE "η|GETA|EETA|\[\[[0-9]"; then
+    echo "PASS: single proof chain (makeALTbasisM + provemodfuncGAMMA0id + etamake)"; ((PASS++))
+else
+    echo "FAIL: single proof chain (makeALTbasisM + provemodfuncGAMMA0id + etamake)"; ((FAIL++))
+fi
 
 echo ""
 echo "Total: $PASS passed, $FAIL failed"

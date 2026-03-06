@@ -825,7 +825,7 @@ Requirements for implementing Garvan's Maple tcore package — partition t-cores
 
 ### Modular Forms
 - [x] **MF-01**: `makebasisM(k, T)` — basis of M_k(SL_2(Z)) using E4, E6
-- [ ] **MF-02**: `makeALTbasisM(k, T)` — alternative basis using Delta_12 (deferred)
+- [x] **MF-02**: `makeALTbasisM(k, T)` — alternative basis using Delta_12 (deferred)
 - [x] **MF-03**: `DELTA12(T)` — the cusp form q·η(τ)^24
 - [x] **MF-04**: `makebasisPX(k, T)` — basis using partition function P and sigma sums
 
@@ -1026,5 +1026,28 @@ Requirements for Block 25 fix, Block 24, and mod-p relation finders.
 
 ---
 
+## v11.0 Modular Forms
+
+Requirements for extending modular forms capabilities.
+
+### Alternative Basis (MF-02)
+
+- [x] **MF-02**: User can call `makeALTbasisM(k, T)` — returns basis of M_k(SL_2(Z)) using Delta_12 instead of E4/E6
+
+### Cross-Package Integration (INT-02)
+
+- [ ] **INT-02**: Cross-package integration: ETA identity prover + theta IDs + modforms identity proofs work end-to-end; integration test `integration-eta-theta-modforms.sh` passes
+
+### v11.0 Requirements Traceability
+
+| Req ID | Phase | Status |
+|--------|-------|--------|
+| MF-02 | Phase 101 | Complete |
+| INT-02 | Phase 102 | Pending |
+
+**Coverage:** 2/2 v11.0 requirements mapped ✓
+
+---
+
 *Requirements defined: 2025-02-24*
-*Last updated: 2026-03-03 — v10.0 Close Remaining Gaps requirements added*
+*Last updated: 2026-03-05 — v11.0 Modular Forms requirements added*
