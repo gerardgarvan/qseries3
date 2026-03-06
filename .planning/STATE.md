@@ -23,6 +23,7 @@
 | 106. provemodfuncid extensions | BATCH + theta_aids | Complete (106-01) |
 | 67. Modular Series Arithmetic | modp, nterms, findhommodp, F_p linalg | Complete (67-01) |
 | 107. RR Identity Search | findids types 3–10 | Complete (107-01) |
+| 60. etamake scalar/format | scalar factor, abs(ex) in denominator | Complete (60-01) |
 
 ## Session Log
 
@@ -37,3 +38,4 @@
 - 2026-03-06: Phase 107 Plan 01 complete — findids types 4 and 5; type 4 discovers 16 identities; acceptance-rr-id extended; GAP11-06, GAP11-07 satisfied
 - 2026-03-06: Phase 100 Plan 01 complete — VERIFICATION.md for phases 97, 98, 99; v10 audit blocker closed
 - 2026-03-06: Phase 61 Plan 01 complete — q_shift in Series (verified); theta2 q_shift=1/4; etamake display; qdiff preserves q_shift
+- 2026-03-06: Phase 60 Plan 01 complete — etamake scalar factor and formatEtamake display verified (pre-existing); acceptance-etamake-format.sh added
