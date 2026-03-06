@@ -10,20 +10,22 @@
 
 **Milestone:** v11.4 Tech Debt
 **Current phase:** 116 (Built-in Registration)
-**Plan:** —
-**Status:** Roadmap created; ready to plan
-**Last activity:** 2026-03-06 — v11.4 roadmap created (phases 116–118)
+**Plan:** 01 complete
+**Status:** Complete
+**Last activity:** 2026-03-06 — Phase 116 Plan 01 complete (registration table)
 
 ## Progress
 
 | Phase | Goal | Status |
 |-------|------|--------|
-| 116. Built-in Registration | Name→handler lookup; getHelpTable from table | Not started |
+| 116. Built-in Registration | Name→handler lookup; getHelpTable from table | 1 plan complete |
 | 117. Duplication Reduction | expectArg/ev/evi; TTY abstraction | Not started |
 | 118. Brittle Guards | Guard env.at("q"); named constants | Not started |
 
 ## Session Log
 
+- 2026-03-06: Phase 116 Plan 01 complete — getBuiltinRegistry, DispatchContext, ~100 built-ins; dispatchBuiltin uses lookup; getHelpTable derives from registry; commits 5ab93c7, a143c69; 116-01-SUMMARY.md
+- 2026-03-06: Phase 116 planned — 1 plan (116-01); registration table, lookup dispatch, getHelpTable derives; plan-check passed
 - 2026-03-06: v11.4 roadmap created — phases 116–118 (Built-in Registration, Duplication Reduction, Brittle Guards); TD-01–TD-06 mapped
 - 2026-03-06: Milestone v11.4 Tech Debt started — remediate TECH_DEBT.md items
 - 2026-03-06: Phase 115 Plan 01 complete — TECH_DEBT.md with Hotspots, Duplication, Brittle Areas; commit c208e92; 115-01-SUMMARY.md
