@@ -47,7 +47,20 @@
 #include <cstdlib>
 
 inline std::string runtimeErr(const std::string& func, const std::string& msg) {
-    return func.empty() ? msg : (func + ": " + msg);
+    return func.empty() ? ("Error, " + msg) : ("Error, (in " + func + ") " + msg);
+}
+inline std::string ordinal(int n) {
+    if (n <= 0) return std::to_string(n);
+    int d = n % 10, t = (n / 10) % 10;
+    if (t != 1 && d == 1) return std::to_string(n) + "st";
+    if (t != 1 && d == 2) return std::to_string(n) + "nd";
+    if (t != 1 && d == 3) return std::to_string(n) + "rd";
+    return std::to_string(n) + "th";
+}
+inline std::string expectArg(int n, const std::string& name,
+    const std::string& expected, const std::string& received) {
+    return "invalid input: expects its " + ordinal(n) + " argument, " + name +
+        ", to be " + expected + ", but received " + received;
 }
 
 #ifndef __EMSCRIPTEN__
@@ -474,7 +487,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"RRHstar", {"RRHstar(n) or RRHstar(n,T)", "Göllnitz-Gordon H*(n)"}},
         {"geta", {"geta(g,d,n,T)", "Geta(g,d,n) = q^(n·QP2(g/d)·d/2)·JAC(ng,nd,∞)/JAC(0,nd,∞)"}},
         {"checkid", {"checkid(expr,T) or checkid(expr,T,acc)", "check if expr is eta/theta product (CHECKRAMIDF)"}},
-        {"findids", {"findids(type) or findids(type,T)", "search RR identities: type 1 (G(p)H(a)±G(a)H(p)), type 2 (G(a)G(p)±H(a)H(p))"}},
+        {"findids", {"findids(type) or findids(type,T)", "search RR identities: type 1 (G(p)H(a)±G(a)H(p)), type 2 (G(a)G(p)±H(a)H(p)), type 4 (GM(p)HM(a)±GM(a)HM(p)), type 5 (GM(a)GM(p)±HM(a)HM(p))"}},
         {"sieveqcheck", {"sieveqcheck(f,p)", "true if all exponents ≡ same residue mod p"}},
         {"siftfindrange", {"siftfindrange(f,p,T)", "find residue class with fewest terms"}},
         {"sptcrankresnum", {"sptcrankresnum(k,r,n)", "partitions of n with SPT-crank ≡ k mod r"}},
@@ -492,6 +505,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"provemodfuncGAMMA0id", {"provemodfuncGAMMA0id(etaid, N)", "prove eta identity on Gamma_0(N) via Sturm"}},
         {"provemodfuncGAMMA0idBATCH", {"provemodfuncGAMMA0idBATCH(etaids, N)", "batch prove multiple eta identities"}},
         {"provemodfuncid", {"provemodfuncid(jacid, N)", "prove Jacobi theta identity on Gamma_1(N) via Sturm"}},
+        {"provemodfuncidBATCH", {"provemodfuncidBATCH(jacids, N)", "batch prove multiple Jacobi theta identities on Gamma_1(N)"}},
         {"mod", {"mod(a,b)", "integer remainder a mod b"}},
         {"modp", {"modp(f,p)", "reduce series coefficients modulo prime p"}},
         {"mockdesorder", {"mockdesorder(m)", "list mock theta function names of order m (2,3,5,6,7,8,10)"}},
@@ -1663,6 +1677,46 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         ProveModfuncIdResult res = provemodfuncid(jacid, N);
         std::cout << "sturm_bound=" << res.sturm_bound << " proven=" << res.proven << " " << res.message << std::endl;
         return static_cast<int64_t>(res.proven);
+    }
+    if (name == "provemodfuncidBATCH") {
+        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects provemodfuncidBATCH(jacids, N)"));
+        const Expr* listExpr = args[0].get();
+        if (!listExpr || listExpr->tag != Expr::Tag::List)
+            throw std::runtime_error(runtimeErr(name, "jacids must be list of jacid"));
+        std::vector<std::vector<std::pair<Frac, std::vector<JacFactor>>>> jacids;
+        for (const auto& jacidExpr : listExpr->elements) {
+            if (!jacidExpr || jacidExpr->tag != Expr::Tag::List)
+                throw std::runtime_error(runtimeErr(name, "each jacid must be list of [coeff, jaclist] terms"));
+            std::vector<std::pair<Frac, std::vector<JacFactor>>> jacid;
+            for (const auto& term : jacidExpr->elements) {
+                if (!term || term->tag != Expr::Tag::List || term->elements.size() < 1)
+                    throw std::runtime_error(runtimeErr(name, "each term must be [coeff] or [coeff, [a,b,exp], ...]"));
+                Frac c = Frac(static_cast<int64_t>(evalToInt(term->elements[0].get(), env, sumIndices)));
+                std::vector<JacFactor> jac;
+                if (term->elements.size() >= 2) {
+                    for (size_t i = 1; i < term->elements.size(); ++i) {
+                        const Expr* fac = term->elements[i].get();
+                        if (!fac || fac->tag != Expr::Tag::List || fac->elements.size() < 3)
+                            throw std::runtime_error(runtimeErr(name, "each JacFactor must be [a, b, exp]"));
+                        int a = static_cast<int>(evalToInt(fac->elements[0].get(), env, sumIndices));
+                        int b = static_cast<int>(evalToInt(fac->elements[1].get(), env, sumIndices));
+                        Frac e = Frac(static_cast<int64_t>(evalToInt(fac->elements[2].get(), env, sumIndices)));
+                        jac.push_back({a, b, e});
+                    }
+                }
+                jacid.push_back({c, jac});
+            }
+            jacids.push_back(std::move(jacid));
+        }
+        int N = static_cast<int>(evi(1));
+        auto results = provemodfuncidBATCH(jacids, N);
+        int all_proven = 1;
+        for (size_t i = 0; i < results.size(); ++i) {
+            std::cout << "id[" << (i+1) << "] sturm_bound=" << results[i].sturm_bound
+                      << " proven=" << results[i].proven << " " << results[i].message << std::endl;
+            if (results[i].proven != 1) all_proven = 0;
+        }
+        return static_cast<int64_t>(all_proven);
     }
     if (name == "partition") {
         if (args.size() != 1)
