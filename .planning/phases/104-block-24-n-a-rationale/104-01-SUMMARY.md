@@ -55,9 +55,9 @@ completed: 2026-03-06
 ## Task Commits
 
 1. **Task 1: Verify Block 24 N/A rationale** — Verification-only; no file changes; no commit
-2. **Task 2: Validate maple-checklist Block 24 skip and create summary** — `c1fdb1d` (docs)
+2. **Task 2: Validate maple-checklist Block 24 skip and create summary** — `9c74403` (docs)
 
-**Plan metadata:** `c1fdb1d` (docs: complete 104-01 plan)
+**Plan metadata:** `9c74403` (docs: complete 104-01 plan)
 
 ## Files Created/Modified
 
@@ -89,7 +89,7 @@ None — no external service configuration required.
 ## Self-Check: PASSED
 
 - FOUND: .planning/phases/104-block-24-n-a-rationale/104-01-SUMMARY.md
-- FOUND: commit in git log (docs(104-01): complete Block 24 N/A rationale plan)
+- FOUND: 9c74403 (git log)
 
 ---
 *Phase: 104-block-24-n-a-rationale*
