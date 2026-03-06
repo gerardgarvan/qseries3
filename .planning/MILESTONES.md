@@ -1,5 +1,17 @@
 # Milestones
 
+## v11.3 Code Health (Shipped: 2026-03-06)
+
+**Phases completed:** 4 phases (112–115), 4 plans
+
+**Key accomplishments:**
+- Warning audit — zero warnings; -Wshadow; fix tcore.h, eta_cusp.h
+- Build hygiene — CXXFLAGS aligned across Makefile, build.sh, release.yml
+- make lint — cppcheck target; --enable=warning,style,performance
+- TECH_DEBT.md — hotspots, duplication, brittle areas (HEALTH-05)
+
+---
+
 ## v10.0 Close Remaining Gaps (Shipped: 2026-03-05)
 
 **Phases completed:** 4 phases (97–100), 4 plans

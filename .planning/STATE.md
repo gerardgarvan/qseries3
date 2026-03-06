@@ -4,27 +4,28 @@
 
 **Project:** qseries3 — zero-dependency C++20 q-series REPL
 **Core value:** Rogers-Ramanujan must work; prodmake recovers product form with denominators at exponents ≡ ±1 (mod 5)
-**Current focus:** v11.3 Code Health
+**Current focus:** v11.4 Tech Debt
 
 ## Position
 
-**Milestone:** v11.3 Code Health
-**Current phase:** 115 (Tech Debt Inventory)
-**Plan:** 01 complete
-**Status:** Complete
-**Last activity:** 2026-03-06 — Phase 115 Plan 01 complete (TECH_DEBT.md)
+**Milestone:** v11.4 Tech Debt
+**Current phase:** 116 (Built-in Registration)
+**Plan:** —
+**Status:** Roadmap created; ready to plan
+**Last activity:** 2026-03-06 — v11.4 roadmap created (phases 116–118)
 
 ## Progress
 
 | Phase | Goal | Status |
 |-------|------|--------|
-| 112. Warning Audit | Zero warnings; -Wshadow; fix tcore.h, eta_cusp.h | 1 plan complete |
-| 113. Build Hygiene | CXXFLAGS aligned | 1 plan complete |
-| 114. make lint | cppcheck target | 1 plan complete |
-| 115. Tech Debt Inventory | TECH_DEBT.md | 1 plan complete |
+| 116. Built-in Registration | Name→handler lookup; getHelpTable from table | Not started |
+| 117. Duplication Reduction | expectArg/ev/evi; TTY abstraction | Not started |
+| 118. Brittle Guards | Guard env.at("q"); named constants | Not started |
 
 ## Session Log
 
+- 2026-03-06: v11.4 roadmap created — phases 116–118 (Built-in Registration, Duplication Reduction, Brittle Guards); TD-01–TD-06 mapped
+- 2026-03-06: Milestone v11.4 Tech Debt started — remediate TECH_DEBT.md items
 - 2026-03-06: Phase 115 Plan 01 complete — TECH_DEBT.md with Hotspots, Duplication, Brittle Areas; commit c208e92; 115-01-SUMMARY.md
 - 2026-03-01: Phase 115 planned — 1 plan (115-01); create TECH_DEBT.md; research + plan-check passed
 - 2026-03-06: Phase 114 Plan 01 complete — make lint target; cppcheck --enable=warning,style,performance -I src src/main.cpp; commit 06c3ff0; 114-01-SUMMARY.md

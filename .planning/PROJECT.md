@@ -8,14 +8,20 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 **Rogers-Ramanujan must work.** Given `Σ q^(n²) / (q;q)_n`, prodmake must recover the product form with denominators only at exponents ≡ ±1 (mod 5). If this test passes, the core math is correct. Everything else builds on it.
 
-## Current Milestone: v11.3 Code Health
+## Current Milestone: v11.4 Tech Debt
 
-**Goal:** Audit code health and create a plan to make it healthier. Assess warnings, tests, structure, tech debt; produce a documented remediation plan with priorities.
+**Goal:** Remediate tech debt from TECH_DEBT.md. Focus on high-impact, low-risk items: registration table for built-ins, duplication reduction, brittle-area guards.
 
 **Target scope:**
-- Code health assessment — compiler warnings, test coverage, structure, tech debt
-- Remediation plan — documented priorities and actionable steps
-- Optional quick wins — fix known warnings, add missing tests
+- Built-in registration — replace if-chain dispatch with data-driven table; single source for names/arity/help
+- Duplication reduction — expectArg/ev/evi helpers; centralize TTY branching where feasible
+- Brittle guards — guard env.at("q"); named constants for magic numbers; sync help with registration
+
+---
+
+## Previous Milestone: v11.3 Code Health ✓
+
+**Shipped:** Warning audit, build hygiene, make lint, TECH_DEBT.md (hotspots, duplication, brittle areas).
 
 ---
 

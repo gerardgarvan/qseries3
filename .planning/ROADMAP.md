@@ -1767,7 +1767,7 @@ Plans:
 - [x] **Phase 112: Warning Audit** - Zero compiler warnings; fix tcore.h, eta_cusp.h; add -Wshadow, fix shadow warnings (completed 2026-03-06)
 - [x] **Phase 113: Build Hygiene** - CXXFLAGS aligned across Makefile, build.sh, release.yml (completed 2026-03-06)
 - [x] **Phase 114: make lint** - make lint runs cppcheck; no compile DB required (completed 2026-03-06)
-- [ ] **Phase 115: Tech Debt Inventory** - Lightweight one-pass document: hotspots, duplication, brittle areas
+- [x] **Phase 115: Tech Debt Inventory** - Lightweight one-pass document: hotspots, duplication, brittle areas (completed 2026-03-06)
 
 ### Phase 112: Warning Audit
 **Goal**: Clean build with zero compiler warnings; -Wshadow enabled and all shadow warnings fixed
@@ -1832,5 +1832,53 @@ Plans:
 | 112. Warning Audit | 0/1 | Complete    | 2026-03-06 |
 | 113. Build Hygiene | 0/? | Complete    | 2026-03-06 |
 | 114. make lint | 0/? | Complete    | 2026-03-06 |
-| 115. Tech Debt Inventory | 0/? | Not started | - |
+| 115. Tech Debt Inventory | 0/? | Complete    | 2026-03-06 |
+
+---
+
+## Milestone v11.4 (Tech Debt) — phases 116–118
+
+- [ ] **Phase 116: Built-in Registration** - Name→handler lookup; getHelpTable derives from registration table
+- [ ] **Phase 117: Duplication Reduction** - expectArg/ev/evi shared helpers; TTY branching abstraction
+- [ ] **Phase 118: Brittle Guards** - Guard env.at("q"); named constants for magic numbers
+
+### Phase 116: Built-in Registration
+**Goal**: Built-ins dispatched via lookup table; help table derived from same source
+**Depends on**: Phase 115 (or prior REPL phases)
+**Requirements**: TD-01, TD-02
+**Success Criteria** (what must be TRUE):
+  1. Built-in names and handlers stored in a registration data structure (name → handler)
+  2. dispatchBuiltin uses lookup (map/unordered_map) instead of if-else chain
+  3. getHelpTable derives help entries from the registration table (no separate hardcoded list)
+  4. Adding a new built-in requires only one registration entry (single source of truth)
+**Plans**: TBD
+
+### Phase 117: Duplication Reduction
+**Goal**: Built-ins share arg-check and eval helpers; TTY branching abstracted
+**Depends on**: Phase 116 (registration enables cleaner handler signatures)
+**Requirements**: TD-03, TD-04
+**Success Criteria** (what must be TRUE):
+  1. Built-ins use expectArg, ev, evi (or equivalent) for argument checking and evaluation
+  2. At least 3 built-ins migrated to use shared helpers (e.g., etaq, prodmake, etamake)
+  3. runRepl uses an abstraction (e.g., lambda, function pointer) for TTY vs non-TTY branches where feasible
+  4. No duplicated if (stdin_is_tty()) blocks for the same logical branch
+**Plans**: TBD
+
+### Phase 118: Brittle Guards
+**Goal**: q unset gives clear error; magic numbers replaced with named constants
+**Depends on**: Phase 117 (or prior)
+**Requirements**: TD-05, TD-06
+**Success Criteria** (what must be TRUE):
+  1. If env does not contain "q" before dispatch, user sees clear error (e.g., "q not set") — no implicit std::out_of_range
+  2. pow limit, maxHistory, maxContinuations, Levenshtein threshold are named constants (not literal numbers in code)
+  3. All acceptance tests still pass
+**Plans**: TBD
+
+### v11.4 Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 116. Built-in Registration | 0/? | Not started | - |
+| 117. Duplication Reduction | 0/? | Not started | - |
+| 118. Brittle Guards | 0/? | Not started | - |
 

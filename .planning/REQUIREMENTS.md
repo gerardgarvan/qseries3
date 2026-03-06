@@ -1,59 +1,62 @@
-# Requirements: qseries3 — v11.3 Code Health
+# Requirements: qseries3 — v11.4 Tech Debt
 
 **Defined:** 2026-03-06
 **Core Value:** Rogers-Ramanujan must work; prodmake recovers product form with denominators at exponents ≡ ±1 (mod 5)
-**Milestone:** v11.3 — Code health audit and plan
+**Milestone:** v11.4 — Tech debt remediation (from TECH_DEBT.md)
 
-## v11.3 Requirements
+## v11.4 Requirements
 
-Requirements for milestone v11.3. Each maps to roadmap phases.
+Requirements for milestone v11.4. Each maps to roadmap phases. Source: TECH_DEBT.md.
 
-### Warning Audit
+### Built-in Registration
 
-- [ ] **HEALTH-01**: Zero compiler warnings — fix or annotate unused params in tcore.h, eta_cusp.h
-- [ ] **HEALTH-02**: Add -Wshadow to build; fix any new shadow warnings (no global -Wno-\*)
+- [ ] **TD-01**: Built-ins registered in a data structure (name → handler); dispatch uses lookup, not if-chain
+- [ ] **TD-02**: Single source of truth for built-in names and arity; getHelpTable derives from registration table
 
-### Build Hygiene
+### Duplication Reduction
 
-- [ ] **HEALTH-03**: CXXFLAGS aligned across Makefile, build.sh, .github/workflows/release.yml (same -Wall -Wextra -Wpedantic)
-- [ ] **HEALTH-04**: make lint target runs cppcheck (--enable=warning,style,performance); no compile DB required
+- [ ] **TD-03**: expectArg/ev/evi helpers — built-ins use shared arg-check and evaluation helpers
+- [ ] **TD-04**: TTY branching centralized — runRepl uses abstraction for stdin_is_tty() branches where feasible
 
-### Tech Debt Inventory
+### Brittle Guards
 
-- [ ] **HEALTH-05**: Lightweight tech debt inventory — one-pass document: complexity hotspots, duplication, known brittle areas
+- [ ] **TD-05**: Guard env.at("q") — clear error if q unset before dispatch; no implicit throw
+- [ ] **TD-06**: Named constants for magic numbers — pow limit, maxHistory, maxContinuations, Levenshtein threshold
 
-## v11.3 Deferred (Future Milestone)
+## v11.4 Deferred (Future Milestone)
 
 | Feature | Reason |
 |---------|--------|
-| make coverage (gcov/lcov) | Low ROI for single-TU; defer unless requested |
-| make tidy (clang-tidy) | Bear/compile_commands on Cygwin needs validation |
-| -Werror in CI | Escape hatch for compiler upgrades; optional |
-| -Wconversion | Noisy in math code; revisit after HEALTH-01/02 |
+| Split repl.h into smaller headers | High risk; registration table reduces hotspot impact first |
+| Refactor mock.h mockqs_term to table | Lower priority; mock theta is self-contained |
+| formatProdmake/formatEtamake unification | Minor duplication; defer |
+| parseParserMessage robustness | Parser output format stable; low ROI |
+| Platform #ifdef abstraction | Cross-platform; high risk for little gain |
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| CMake / compile_commands.json | Keep Makefile; Bear optional for clang-tidy only |
-| SonarQube / SaaS | Zero-dependency, local tooling only |
-| Coverage gate 80%+ | Arbitrary for REPL; acceptance tests matter more |
+| Reimplement in another language | C++20, zero-deps is non-negotiable |
+| Add external dependencies | Zero-deps constraint |
+| Coverage/tidy tooling | v11.3 deferred; not this milestone |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HEALTH-01 | Phase 112 | Pending |
-| HEALTH-02 | Phase 112 | Pending |
-| HEALTH-03 | Phase 113 | Pending |
-| HEALTH-04 | Phase 114 | Pending |
-| HEALTH-05 | Phase 115 | Pending |
+| TD-01 | Phase 116 | Pending |
+| TD-02 | Phase 116 | Pending |
+| TD-03 | Phase 117 | Pending |
+| TD-04 | Phase 117 | Pending |
+| TD-05 | Phase 118 | Pending |
+| TD-06 | Phase 118 | Pending |
 
 **Coverage:**
-- v11.3 requirements: 5 total
-- Mapped to phases: 5/5
+- v11.4 requirements: 6 total
+- Mapped to phases: 6
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-06*
-*Last updated: 2026-03-06 after v11.3 research synthesis*
+*Last updated: 2026-03-06 after v11.4 milestone start*
