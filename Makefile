@@ -4,7 +4,7 @@ CXX ?= g++
 CXXFLAGS = -std=c++20 -O2 -Wall -Wextra -Wpedantic -Wshadow
 LDFLAGS ?= 
 
-.PHONY: all clean test acceptance acceptance-all acceptance-maple acceptance-factor acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history acceptance-omega acceptance-exercises acceptance-etamake-format integration-eta-theta-modforms demo test-package wasm bench docker-build docker-run
+.PHONY: all clean test lint acceptance acceptance-all acceptance-maple acceptance-factor acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history acceptance-omega acceptance-exercises acceptance-etamake-format integration-eta-theta-modforms demo test-package wasm bench docker-build docker-run
 
 all: dist/qseries.exe dist-demo
 
@@ -27,6 +27,10 @@ debug: src/main.cpp
 bench: src/bench_main.cpp
 	$(CXX) $(CXXFLAGS) -O2 -o qseries_bench src/bench_main.cpp
 	./qseries_bench
+
+# Static analysis (cppcheck; no compile DB)
+lint:
+	cppcheck --enable=warning,style,performance -I src src/main.cpp
 
 # Quick test: run the Rogers-Ramanujan acceptance test
 test: dist/qseries.exe
