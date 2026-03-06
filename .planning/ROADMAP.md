@@ -1600,7 +1600,7 @@ Plans:
 ## Milestone v11.1 (Gap Closure & Improvements) — phases 103–107
 
 - [x] **Phase 103: Block 25 fix** - findpoly q-shift via addAligned; maple-checklist Block 25 passes (completed 2026-03-06)
-- [ ] **Phase 104: Block 24 N/A rationale** - Document N/A (collect is Maple formatting-only); no implementation
+- [x] **Phase 104: Block 24 N/A rationale** - Document N/A (collect is Maple formatting-only); no implementation (completed 2026-03-06)
 - [ ] **Phase 105: findlincombomodp** - findlincombomodp(f, L, p, T); REPL dispatch; mod-p linear combo
 - [ ] **Phase 106: provemodfuncid extensions** - provemodfuncidBATCH; theta_aids regression; acceptance-theta-ids passes
 - [ ] **Phase 107: RR Identity Search** - findids types 3–10; acceptance-rr-id passes
@@ -1641,7 +1641,10 @@ Plans:
   2. Function returns coefficients in F_p such that f ≡ Σ c_i * L_i (mod p)
   3. REPL help(findlincombomodp) documents usage
   4. Acceptance test or mod-7 worksheet demonstrates correct behavior
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 105-01-PLAN.md — Verification-first: run acceptance-modp.sh; fix only if findlincombomodp tests fail
 
 ### Phase 106: provemodfuncid extensions
 **Goal**: provemodfuncidBATCH and theta_aids regression verification
@@ -1670,7 +1673,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 103. Block 25 fix | 0/? | Complete    | 2026-03-06 |
-| 104. Block 24 N/A rationale | 0/? | Not started | - |
+| 104. Block 24 N/A rationale | 0/? | Complete    | 2026-03-06 |
 | 105. findlincombomodp | 0/? | Not started | - |
 | 106. provemodfuncid extensions | 0/? | Not started | - |
 | 107. RR Identity Search | 0/? | Not started | - |
