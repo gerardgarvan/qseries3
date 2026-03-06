@@ -516,8 +516,8 @@ Plans:
 | 64. Fractional Power Infrastructure | 0/? | Complete    | 2026-03-02 |
 | 65. Jacobi Half-Integer Exponents | 0/? | Complete    | 2026-03-02 |
 | 66. Exercise Solutions & Regression | 0/? | Complete    | 2026-03-02 |
-| 67. Modular Series Arithmetic | 1/1 | Complete    | 2026-03-02 |
-| 68. Modular Worksheet Verification | 1/1 | Complete    | 2026-03-02 |
+| 67. Modular Series Arithmetic | 1/1 | Complete    | 2026-03-06 |
+| 68. Modular Worksheet Verification | 1/1 | Complete    | 2026-03-06 |
 | 69. Rank and Crank Functions | 1/1 | Complete    | 2026-03-02 |
 | 70. Partition Type Infrastructure | 0/? | Not started | —          |
 | 71. Core t-core Algorithms | 0/? | Not started | —          |
@@ -955,19 +955,19 @@ Plans:
 
 **Goal:** [To be planned]
 **Depends on:** Phase 59
-**Plans:** 0 plans
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 60 to break down)
+- [x] TBD (run /gsd:plan-phase 60 to break down) (completed 2026-03-06)
 
 ### Phase 61: fix integer exponents only gap
 
 **Goal:** [To be planned]
 **Depends on:** Phase 60
-**Plans:** 0 plans
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 61 to break down)
+- [x] TBD (run /gsd:plan-phase 61 to break down) (completed 2026-03-06)
 
 ### Phase 62: maple checklist satisfied
 
@@ -1280,7 +1280,7 @@ Plans:
   3. `findids(1, 20)` discovers at least 3 known type-1 identities
   4. `findids(2, 20)` discovers at least 2 known type-2 identities
 
-**Plans:** 3 plans
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 86-01-PLAN.md — RRG, RRH (n=1 first), RRGstar, RRHstar (n=1), geta helper, REPL commands
@@ -1538,7 +1538,7 @@ Plans:
   2. `.planning/phases/98-block-24/98-VERIFICATION.md` exists; status passed; Block 24 N/A rationale verified
   3. `.planning/phases/99-findlincombomodp/99-VERIFICATION.md` exists; status passed; findlincombomodp verified
   4. Re-running `/gsd:audit-milestone` yields status `passed` or `tech_debt` (no phases gap)
-**Plans:** 0/1 plans complete
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 100-01-PLAN.md — Add 97-VERIFICATION.md, 98-VERIFICATION.md, 99-VERIFICATION.md from summaries + integration check
@@ -1550,7 +1550,7 @@ Plans:
 | 97. Block 25 fix | 0/? | Not started | - |
 | 98. Block 24 | 0/? | Not started | - |
 | 99. findlincombomodp | 0/? | Not started | - |
-| 100. v10.0 Phase Verification (gap closure) | 0/? | Complete    | 2026-03-05 |
+| 100. v10.0 Phase Verification (gap closure) | 0/? | Complete    | 2026-03-06 |
 
 ---
 
