@@ -222,6 +222,13 @@ namespace ansi {
     inline const char* bold()  { return g_color ? "\033[1m" : ""; }
 }
 
+// REPL configuration constants (Phase 118 TD-06)
+static constexpr int64_t kPowExponentLimit = 10000;
+static constexpr size_t kMaxHistory = 1000;
+static constexpr size_t kMaxContinuations = 100;
+static constexpr size_t kMaxBracketContinuations = 100;
+static constexpr int kLevenshteinSuggestionThreshold = 3;
+
 // Partition: non-decreasing list of positive integers
 struct Partition {
     std::vector<int64_t> parts;
@@ -1893,6 +1900,8 @@ inline std::string formatUndefinedVariableMsg(const Environment& env, const std:
 inline EvalResult dispatchBuiltin(const std::string& name,
     const std::vector<ExprPtr>& args, Environment& env,
     const std::map<std::string, int64_t>& sumIndices) {
+    if (env.env.find("q") == env.env.end())
+        throw std::runtime_error("q not set");
     Series q = getSeriesFromEnv(env.env.at("q"));
     int T = env.T;
 
@@ -1950,7 +1959,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         std::vector<std::pair<int, std::string>> suggestions;
         for (const auto& [key, _] : reg) {
             int d = levenshteinDistance(name, key);
-            if (d <= 3)
+            if (d <= kLevenshteinSuggestionThreshold)
                 suggestions.push_back({d, key});
         }
         std::sort(suggestions.begin(), suggestions.end());
@@ -2062,8 +2071,8 @@ inline EvalResult evalExpr(const Expr* e, Environment& env,
                 case BinOp::Pow: {
                     try {
                         int64_t expVal = evalToInt(e->right.get(), env, sumIndices);
-                        if (expVal > 10000 || expVal < -10000)
-                            throw std::runtime_error("pow: exponent magnitude too large (limit 10000)");
+                        if (expVal > kPowExponentLimit || expVal < -kPowExponentLimit)
+                            throw std::runtime_error("pow: exponent magnitude too large (limit " + std::to_string(kPowExponentLimit) + ")");
                         return l.pow(static_cast<int>(expVal));
                     } catch (...) {
                         EvalResult rv = eval(e->right.get(), env, sumIndices);
@@ -2423,7 +2432,7 @@ inline std::string formatUndefinedVariableMsg(const Environment& env, const std:
     std::vector<std::tuple<int, int, int, std::string>> suggestions;
     for (const auto& key : candidates) {
         int d = levenshteinDistance(name, key);
-        if (d <= 3) {
+        if (d <= kLevenshteinSuggestionThreshold) {
             int caseMatch = strEqualCaseInsensitive(name, key) ? 0 : 1;
             suggestions.push_back({d, caseMatch, -static_cast<int>(key.size()), key});
         }
@@ -2692,7 +2701,7 @@ inline void runRepl() {
 
     Environment env;
     std::deque<std::string> history;
-    const size_t maxHistory = 1000;
+    const size_t maxHistory = kMaxHistory;
     size_t inputLineNum = 0;
 
     if (stdin_is_tty()) {
@@ -2702,7 +2711,7 @@ inline void runRepl() {
         loadHistory(history, maxHistory);
     }
 
-    constexpr size_t maxContinuations = 100;
+    constexpr size_t maxContinuations = kMaxContinuations;
 
     auto readLineFn = [&](const std::string& prompt) -> std::optional<std::string> {
         if (stdin_is_tty()) {
@@ -2743,7 +2752,7 @@ inline void runRepl() {
 
         // Bracket continuation: while ( ) [ ] unbalanced, read more lines
         size_t bracketContCount = 0;
-        constexpr size_t maxBracketContinuations = 100;
+        constexpr size_t maxBracketContinuations = kMaxBracketContinuations;
         while (bracketsUnclosed(line) && bracketContCount < maxBracketContinuations) {
             auto nextOpt = readLineFn("  > ");
             if (!nextOpt) break;
