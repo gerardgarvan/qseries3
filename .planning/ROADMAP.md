@@ -1744,10 +1744,11 @@ Plans:
   2. Trailing backslash at EOF in script mode does not hang (e.g., `printf 'x := 1\' | qseries` exits)
   3. Ctrl+C in raw mode restores termios before re-raise — shell remains usable
   4. All TTY features (tab, history, banner) are guarded with stdin_is_tty() in script mode
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 111-01-PLAN.md — TBD (run /gsd:plan-phase 111 to break down)
+- [ ] 111-01-PLAN.md — Bracket-aware multi-line, EOF guard, TTY audit (ERGO-01, ERGO-02, ERGO-04)
+- [ ] 111-02-PLAN.md — SIGINT termios restore (ERGO-03)
 
 ### v11.2 Progress
 
