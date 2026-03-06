@@ -591,10 +591,10 @@ inline const std::unordered_map<std::string, BuiltinEntry>& getBuiltinRegistry()
         });
 
         regBuiltin("etaq", H("etaq(k) or etaq(k,T) or etaq(q,k,T)", "eta product \u03A0(1-q^{kn})", {"etaq(1, 20)"}, {"etamake", "aqprod"}), [](DispatchContext& ctx) {
+            expectArgCount(ctx, {1, 2, 3});
             if (ctx.args.size() == 1) return etaq(ctx.q, static_cast<int>(ctx.evi(0)), ctx.T);
             if (ctx.args.size() == 2) return etaq(ctx.q, static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)));
-            if (ctx.args.size() == 3) return etaq(ctx.ev(0), static_cast<int>(ctx.evi(1)), static_cast<int>(ctx.evi(2)));
-            throw std::runtime_error(runtimeErr(ctx.name, expectArg(1, "arguments", "1, 2, or 3", std::to_string(ctx.args.size()) + " arguments")));
+            return etaq(ctx.ev(0), static_cast<int>(ctx.evi(1)), static_cast<int>(ctx.evi(2)));
         });
 
         regBuiltin("theta2", H("theta2(T) or theta2(q,T)", "theta_2", {}, {}), [](DispatchContext& ctx) {
@@ -664,7 +664,7 @@ inline const std::unordered_map<std::string, BuiltinEntry>& getBuiltinRegistry()
             throw std::runtime_error(runtimeErr(ctx.name, "expected T(r,n) or T(r,n,T)"));
         });
         regBuiltin("prodmake", H("prodmake(f,T)", "Andrews' algorithm: series \u2192 infinite product", {"rr := sum(q^(n^2)/aqprod(q,q,n,50), n, 0, 8)", "prodmake(rr, 40)"}, {"etamake", "jacprodmake"}), [](DispatchContext& ctx) {
-            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, expectArg(1, "arguments", "2 (f and T)", std::to_string(ctx.args.size()) + " arguments")));
+            expectArgCount(ctx, 2);
             return prodmake(ctx.ev(0), static_cast<int>(ctx.evi(1)));
         });
         regBuiltin("RRG", H("RRG(n) or RRG(n,T)", "Rogers-Ramanujan G(n)", {}, {}), [](DispatchContext& ctx) {
@@ -758,9 +758,9 @@ inline const std::unordered_map<std::string, BuiltinEntry>& getBuiltinRegistry()
             throw std::runtime_error(runtimeErr(ctx.name, "expects 1, 2, or 3 arguments"));
         });
         regBuiltin("etamake", H("etamake(f,T)", "identify f as eta product", {}, {"prodmake", "etaq", "jacprodmake"}), [](DispatchContext& ctx) {
+            expectArgCount(ctx, {2, 3});
             if (ctx.args.size() == 2) return etamake(ctx.ev(0), static_cast<int>(ctx.evi(1)));
-            if (ctx.args.size() == 3) return etamake(ctx.ev(0), static_cast<int>(ctx.evi(2)));
-            throw std::runtime_error(runtimeErr(ctx.name, expectArg(1, "arguments", "2 or 3", std::to_string(ctx.args.size()) + " arguments")));
+            return etamake(ctx.ev(0), static_cast<int>(ctx.evi(2)));
         });
         regBuiltin("jacprodmake", H("jacprodmake(f,T)", "identify f as Jacobi product", {}, {"prodmake", "etamake", "jac2prod"}), [](DispatchContext& ctx) {
             if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
