@@ -1765,7 +1765,7 @@ Plans:
 ## Milestone v11.3 (Code Health) — phases 112–115
 
 - [x] **Phase 112: Warning Audit** - Zero compiler warnings; fix tcore.h, eta_cusp.h; add -Wshadow, fix shadow warnings (completed 2026-03-06)
-- [ ] **Phase 113: Build Hygiene** - CXXFLAGS aligned across Makefile, build.sh, release.yml
+- [x] **Phase 113: Build Hygiene** - CXXFLAGS aligned across Makefile, build.sh, release.yml (completed 2026-03-06)
 - [ ] **Phase 114: make lint** - make lint runs cppcheck; no compile DB required
 - [ ] **Phase 115: Tech Debt Inventory** - Lightweight one-pass document: hotspots, duplication, brittle areas
 
@@ -1792,7 +1792,10 @@ Plans:
   2. build.sh uses the same CXXFLAGS
   3. .github/workflows/release.yml uses the same CXXFLAGS for g++ builds
   4. `make`, `./build.sh`, and CI build all produce zero warnings
-**Plans**: TBD
+**Plans**: 1 plan (113-01)
+
+Plans:
+- [ ] 113-01-PLAN.md — Add -Wpedantic -Wshadow to build.sh and release.yml
 
 ### Phase 114: make lint
 **Goal**: Static analysis available via make lint
@@ -1821,7 +1824,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 112. Warning Audit | 0/1 | Complete    | 2026-03-06 |
-| 113. Build Hygiene | 0/? | Not started | - |
+| 113. Build Hygiene | 0/? | Complete    | 2026-03-06 |
 | 114. make lint | 0/? | Not started | - |
 | 115. Tech Debt Inventory | 0/? | Not started | - |
 

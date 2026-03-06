@@ -11,7 +11,7 @@
 **Milestone:** v11.3 Code Health
 **Current phase:** 113 (Build Hygiene)
 **Plan:** 01 complete
-**Status:** Complete
+**Status:** Milestone complete
 **Last activity:** 2026-03-06 — v11.3 roadmap created (phases 112–115)
 
 ## Progress
