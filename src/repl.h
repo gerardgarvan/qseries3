@@ -2760,6 +2760,10 @@ inline void handleTabCompletion(std::string& line, size_t& pos, const Environmen
     redrawLineRaw(line, pos);
 }
 
+/* Single (line, pos) buffer: line and pos form the one editing buffer shared by
+   tab completion and history navigation. No second buffer. handleTabCompletion
+   and up/down arrows modify line/pos in place. savedLine and histIdx are
+   auxiliary for history recall only. */
 inline std::optional<std::string> readLineRaw(Environment& env, const std::deque<std::string>& history) {
     RawModeGuard guard;
     std::string line;
