@@ -556,6 +556,12 @@ inline void formatHelpEntry([[maybe_unused]] const std::string& name, const Help
 inline EvalResult eval(const Expr* e, Environment& env,
     const std::map<std::string, int64_t>& sumIndices);
 
+inline const std::unordered_map<std::string, BuiltinEntry>& getBuiltinRegistry();
+inline int64_t evalToInt(const Expr* e, Environment& env, const std::map<std::string, int64_t>& sumIndices);
+inline std::string formatProdmake(const std::map<int, Frac>& a, bool mapleStyle = true);
+inline std::string formatEtamake(const std::vector<std::pair<int, Frac>>& eta);
+inline std::string formatUndefinedVariableMsg(const Environment& env, const std::string& name);
+
 inline const std::map<std::string, HelpEntry>& getHelpTable() {
     static const std::map<std::string, HelpEntry> table = []() {
         std::map<std::string, HelpEntry> t;
@@ -573,6 +579,10 @@ inline const std::unordered_map<std::string, BuiltinEntry>& getBuiltinRegistry()
             m[n] = BuiltinEntry{std::move(h), std::move(f)};
         };
 #define H(sig, desc, ex, see) HelpEntry{sig, desc, ex, see}
+#define SEE2(a, b) std::vector<std::string>{a, b}
+#define SEE3(a, b, c) std::vector<std::string>{a, b, c}
+#define SEE4(a, b, c, d) std::vector<std::string>{a, b, c, d}
+#define EX2(a, b) std::vector<std::string>{a, b}
 
         regBuiltin("RootOf", H("RootOf(3) or RootOf([1,1,1])", "primitive cube root of unity omega", {}, {}), [](DispatchContext& ctx) {
             if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
@@ -592,12 +602,12 @@ inline const std::unordered_map<std::string, BuiltinEntry>& getBuiltinRegistry()
             throw std::runtime_error(runtimeErr(ctx.name, "expects int or list argument"));
         });
 
-        regBuiltin("aqprod", H("aqprod(a,q,n,T)", "rising q-factorial (a;q)_n", {"aqprod(q,q,5,50)"}, {"etaq", "prodmake"}), [](DispatchContext& ctx) {
+        regBuiltin("aqprod", H("aqprod(a,q,n,T)", "rising q-factorial (a;q)_n", {"aqprod(q,q,5,50)"}, SEE2("etaq", "prodmake")), [](DispatchContext& ctx) {
             if (ctx.args.size() != 4) throw std::runtime_error(runtimeErr(ctx.name, "expects 4 arguments"));
             return aqprod(ctx.ev(0), ctx.ev(1), static_cast<int>(ctx.evi(2)), static_cast<int>(ctx.evi(3)));
         });
 
-        regBuiltin("etaq", H("etaq(k) or etaq(k,T) or etaq(q,k,T)", "eta product \u03A0(1-q^{kn})", {"etaq(1, 20)"}, {"etamake", "aqprod"}), [](DispatchContext& ctx) {
+        regBuiltin("etaq", H("etaq(k) or etaq(k,T) or etaq(q,k,T)", "eta product \u03A0(1-q^{kn})", {"etaq(1, 20)"}, SEE2("etamake", "aqprod")), [](DispatchContext& ctx) {
             expectArgCount(ctx, {1, 2, 3});
             if (ctx.args.size() == 1) return etaq(ctx.q, static_cast<int>(ctx.evi(0)), ctx.T);
             if (ctx.args.size() == 2) return etaq(ctx.q, static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)));
@@ -609,7 +619,7 @@ inline const std::unordered_map<std::string, BuiltinEntry>& getBuiltinRegistry()
             if (ctx.args.size() == 2) return theta2(ctx.ev(0), static_cast<int>(ctx.evi(1)));
             throw std::runtime_error(runtimeErr(ctx.name, "expected theta2/3/4(T) or theta2/3/4(q,T)"));
         });
-        regBuiltin("theta3", H("theta3(T) or theta3(q,T)", "theta_3", {"theta3(20)"}, {"etaq", "etamake", "theta", "theta4"}), [](DispatchContext& ctx) {
+        regBuiltin("theta3", H("theta3(T) or theta3(q,T)", "theta_3", {"theta3(20)"}, SEE4("etaq", "etamake", "theta", "theta4")), [](DispatchContext& ctx) {
             if (ctx.args.size() == 1) return theta3(ctx.q, static_cast<int>(ctx.evi(0)));
             if (ctx.args.size() == 2) return theta3(ctx.ev(0), static_cast<int>(ctx.evi(1)));
             throw std::runtime_error(runtimeErr(ctx.name, "expected theta2/3/4(T) or theta2/3/4(q,T)"));
@@ -639,9 +649,9 @@ inline const std::unordered_map<std::string, BuiltinEntry>& getBuiltinRegistry()
                 std::cout << formatBivariate(b) << std::endl;
                 return EvalResult(DisplayOnly{});
             }
-            return tripleprod(ctx.ev(0), ctx.ev(1), static_cast<int>(ctx.evi(2)));
+            return EvalResult(tripleprod(ctx.ev(0), ctx.ev(1), static_cast<int>(ctx.evi(2))));
         });
-        regBuiltin("quinprod", H("quinprod(z,q,T) or quinprod(z,q,prodid) or quinprod(z,q,seriesid)", "quintuple product", {}, {}), [](DispatchContext& ctx) {
+        regBuiltin("quinprod", H("quinprod(z,q,T) or quinprod(z,q,prodid) or quinprod(z,q,seriesid)", "quintuple product", {}, {}), [](DispatchContext& ctx) -> EvalResult {
             if (ctx.args.size() != 3) throw std::runtime_error(runtimeErr(ctx.name, "expects 3 arguments"));
             if (ctx.args[2]->tag == Expr::Tag::Var) {
                 const std::string& v = ctx.args[2]->varName;
@@ -655,7 +665,7 @@ inline const std::unordered_map<std::string, BuiltinEntry>& getBuiltinRegistry()
                 std::cout << formatBivariate(b) << std::endl;
                 return DisplayOnly{};
             }
-            return quinprod(ctx.ev(0), ctx.ev(1), static_cast<int>(ctx.evi(2)));
+            return EvalResult(quinprod(ctx.ev(0), ctx.ev(1), static_cast<int>(ctx.evi(2))));
         });
         regBuiltin("winquist", H("winquist(a,b,q,T)", "Winquist identity", {}, {}), [](DispatchContext& ctx) {
             if (ctx.args.size() != 4) throw std::runtime_error(runtimeErr(ctx.name, "expects 4 arguments"));
@@ -670,7 +680,7 @@ inline const std::unordered_map<std::string, BuiltinEntry>& getBuiltinRegistry()
             if (ctx.args.size() == 3) return T_rn(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)), static_cast<int>(ctx.evi(2)));
             throw std::runtime_error(runtimeErr(ctx.name, "expected T(r,n) or T(r,n,T)"));
         });
-        regBuiltin("prodmake", H("prodmake(f,T)", "Andrews' algorithm: series \u2192 infinite product", {"rr := sum(q^(n^2)/aqprod(q,q,n,50), n, 0, 8)", "prodmake(rr, 40)"}, {"etamake", "jacprodmake"}), [](DispatchContext& ctx) {
+        regBuiltin("prodmake", H("prodmake(f,T)", "Andrews' algorithm: series \u2192 infinite product", EX2("rr := sum(q^(n^2)/aqprod(q,q,n,50), n, 0, 8)", "prodmake(rr, 40)"), SEE2("etamake", "jacprodmake")), [](DispatchContext& ctx) {
             expectArgCount(ctx, 2);
             return prodmake(ctx.ev(0), static_cast<int>(ctx.evi(1)));
         });
@@ -764,12 +774,12 @@ inline const std::unordered_map<std::string, BuiltinEntry>& getBuiltinRegistry()
             if (ctx.args.size() == 3) return checkmult(ctx.ev(0), static_cast<int>(ctx.evi(1)), ctx.evi(2) != 0);
             throw std::runtime_error(runtimeErr(ctx.name, "expects 1, 2, or 3 arguments"));
         });
-        regBuiltin("etamake", H("etamake(f,T)", "identify f as eta product", {}, {"prodmake", "etaq", "jacprodmake"}), [](DispatchContext& ctx) {
+        regBuiltin("etamake", H("etamake(f,T)", "identify f as eta product", {}, SEE3("prodmake", "etaq", "jacprodmake")), [](DispatchContext& ctx) {
             expectArgCount(ctx, {2, 3});
             if (ctx.args.size() == 2) return etamake(ctx.ev(0), static_cast<int>(ctx.evi(1)));
             return etamake(ctx.ev(0), static_cast<int>(ctx.evi(2)));
         });
-        regBuiltin("jacprodmake", H("jacprodmake(f,T)", "identify f as Jacobi product", {}, {"prodmake", "etamake", "jac2prod"}), [](DispatchContext& ctx) {
+        regBuiltin("jacprodmake", H("jacprodmake(f,T)", "identify f as Jacobi product", {}, SEE3("prodmake", "etamake", "jac2prod")), [](DispatchContext& ctx) {
             if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
             return jacprodmake(ctx.ev(0), static_cast<int>(ctx.evi(1)));
         });
@@ -1011,10 +1021,10 @@ inline const std::unordered_map<std::string, BuiltinEntry>& getBuiltinRegistry()
             for (size_t i = 1; i < ctx.args.size(); ++i) result = std::max(result, ctx.evi(i));
             return result;
         });
-        regBuiltin("add", H2("add(expr, var, lo, hi)", "summation (use sum)", {}, {}), [](DispatchContext&) {
+        regBuiltin("add", H2("add(expr, var, lo, hi)", "summation (use sum)", {}, {}), [](DispatchContext&) -> EvalResult {
             throw std::runtime_error("add and sum use special syntax sum(expr, var, lo, hi); they are not called as regular functions");
         });
-        regBuiltin("sum", H2("sum(expr, var, lo, hi)", "summation over index var from lo to hi", {}, {}), [](DispatchContext&) {
+        regBuiltin("sum", H2("sum(expr, var, lo, hi)", "summation over index var from lo to hi", {}, {}), [](DispatchContext&) -> EvalResult {
             throw std::runtime_error("sum uses special syntax sum(expr, var, lo, hi); it is not called as a regular function");
         });
         regBuiltin("load", H2("load(name)", "restore session from name.qsession file", {}, {}), [](DispatchContext& ctx) {
@@ -1132,7 +1142,7 @@ inline const std::unordered_map<std::string, BuiltinEntry>& getBuiltinRegistry()
             for (const auto& elem : listExpr->elements) {
                 if (!elem || elem->tag != Expr::Tag::List || elem->elements.size() < 3)
                     throw std::runtime_error(runtimeErr(ctx.name, "each element must be [n,a,c]"));
-                L.push_back({static_cast<int>(evalToInt(elem->elements[0].get(), ctx.env, ctx.sumIndices)),
+                L.push_back(std::vector<int>{static_cast<int>(evalToInt(elem->elements[0].get(), ctx.env, ctx.sumIndices)),
                              static_cast<int>(evalToInt(elem->elements[1].get(), ctx.env, ctx.sumIndices)),
                              static_cast<int>(evalToInt(elem->elements[2].get(), ctx.env, ctx.sumIndices))});
             }
@@ -1892,10 +1902,6 @@ inline int levenshteinDistance(const std::string& a, const std::string& b) {
     }
     return static_cast<int>(prev[n]);
 }
-
-inline std::string formatProdmake(const std::map<int, Frac>& a, bool mapleStyle = true);
-inline std::string formatEtamake(const std::vector<std::pair<int, Frac>>& eta);
-inline std::string formatUndefinedVariableMsg(const Environment& env, const std::string& name);
 
 inline EvalResult dispatchBuiltin(const std::string& name,
     const std::vector<ExprPtr>& args, Environment& env,
