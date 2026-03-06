@@ -413,6 +413,7 @@ inline const std::map<std::string, std::pair<std::string, std::string>>& getHelp
         {"DELTA12", {"DELTA12(T)", "discriminant cusp form q·η(q)^24"}},
         {"EISENq", {"EISENq(d,T)", "Eisenstein series E_d(q), d even (2,4,6,...)"}},
         {"makebasisM", {"makebasisM(k,T)", "basis of M_k(SL_2(Z)) using E4, E6"}},
+        {"makeALTbasisM", {"makeALTbasisM(k,T)", "basis of M_k(SL_2(Z)) using Delta_12 and E6"}},
         {"makebasisPX", {"makebasisPX(k,T)", "basis P*X[k] using partition function P"}},
         {"QP2", {"QP2(num, den)", "second periodic Bernoulli: fpart^2-fpart+1/6"}},
         {"getacuspord", {"getacuspord(n, r, a, c)", "order of η_{n,r} at cusp a/c"}},
@@ -1343,6 +1344,14 @@ inline EvalResult dispatchBuiltin(const std::string& name,
     if (name == "makebasisM") {
         if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects makebasisM(k, T)"));
         auto basis = makebasisM(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
+        std::cout << "[" << basis.size() << " basis elements]" << std::endl;
+        for (size_t i = 0; i < basis.size(); ++i)
+            std::cout << "  " << (i + 1) << ": " << basis[i].str() << std::endl;
+        return DisplayOnly{};
+    }
+    if (name == "makeALTbasisM") {
+        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects makeALTbasisM(k, T)"));
+        auto basis = makeALTbasisM(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
         std::cout << "[" << basis.size() << " basis elements]" << std::endl;
         for (size_t i = 0; i < basis.size(); ++i)
             std::cout << "  " << (i + 1) << ": " << basis[i].str() << std::endl;
