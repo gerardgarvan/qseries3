@@ -10,20 +10,21 @@
 
 **Milestone:** v11.2 Improve User Experience
 **Current phase:** 108 (Error Diagnostics)
-**Plan:** —
+**Plan:** 02
 **Status:** Ready to execute
 
 ## Progress
 
 | Phase | Goal | Status |
 |-------|------|--------|
-| 108 | Error Diagnostics | Planned (2 plans) |
+| 108 | Error Diagnostics | 1/2 plans complete |
 | 109 | Help Extensions | Not started |
 | 110 | Input Convenience | Not started |
 | 111 | Ergonomics Polish | Not started |
 
 ## Session Log
 
+- 2026-03-06: Phase 108 Plan 01 complete — Maple format, ordinal, expectArg; etaq/prodmake/etamake migrated; commits 8efbbff, d67436d
 - 2026-03-06: Phase 108 planned — 2 plans in 2 waves; research + verification passed
 - 2026-03-06: Phase 108 context gathered — parse errors (caret, ANSI red), Maple format, expectArg helper, script line numbers
 - 2026-03-06: Milestone v11.2 roadmap created — phases 108–111 (Error Diagnostics, Help Extensions, Input Convenience, Ergonomics Polish); 14 requirements mapped

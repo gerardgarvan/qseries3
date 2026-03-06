@@ -63,6 +63,56 @@ inline std::string expectArg(int n, const std::string& name,
         ", to be " + expected + ", but received " + received;
 }
 
+// Parse "parser: line N, col M: message" — return true if successful
+inline bool parseParserMessage(const std::string& msg, int& line, int& col, std::string& rest) {
+    if (msg.size() < 13 || msg.compare(0, 8, "parser: ") != 0) return false;
+    size_t i = 8;
+    if (msg.compare(i, 5, "line ") != 0) return false;
+    i += 5;
+    line = 0;
+    while (i < msg.size() && std::isdigit(static_cast<unsigned char>(msg[i])))
+        line = line * 10 + (msg[i++] - '0');
+    if (i + 6 > msg.size() || msg.compare(i, 6, ", col ") != 0) return false;
+    i += 6;
+    col = 0;
+    while (i < msg.size() && std::isdigit(static_cast<unsigned char>(msg[i])))
+        col = col * 10 + (msg[i++] - '0');
+    if (i < msg.size() && msg[i] == ':') { ++i; if (i < msg.size() && msg[i] == ' ') ++i; }
+    rest = (i < msg.size()) ? msg.substr(i) : "";
+    return line > 0 && col > 0;
+}
+
+inline std::string getLineAt(const std::string& input, int lineNum) {
+    int cur = 1;
+    for (size_t i = 0; i < input.size(); ++i) {
+        if (cur == lineNum) {
+            size_t end = input.find('\n', i);
+            if (end == std::string::npos) end = input.size();
+            return input.substr(i, end - i);
+        }
+        if (input[i] == '\n') ++cur;
+    }
+    return "";
+}
+
+inline std::string caretLine(int col) {
+    return std::string(col > 0 ? static_cast<size_t>(col - 1) : 0, ' ') + "^";
+}
+
+inline std::string formatParseErrorWithSnippet(const std::string& input, const std::string& msg) {
+    int line = 0, col = 0;
+    std::string rest;
+    if (parseParserMessage(msg, line, col, rest)) {
+        std::string srcLine = getLineAt(input, line);
+        std::string out = "  " + srcLine + "\n  " + caretLine(col) + "\nError, (in parser) line " +
+            std::to_string(line) + ", col " + std::to_string(col) + ": " + rest;
+        return out;
+    }
+    if (msg.size() >= 8 && msg.compare(0, 8, "parser: ") == 0)
+        return "Error, (in parser) " + msg.substr(8);
+    return msg;
+}
+
 #ifndef __EMSCRIPTEN__
 #if defined(__CYGWIN__) || !defined(_WIN32)
 #include <termios.h>
