@@ -9,21 +9,23 @@
 ## Position
 
 **Milestone:** v11.4 Tech Debt
-**Current phase:** 116 (Built-in Registration)
+**Current phase:** 117 (Duplication Reduction)
 **Plan:** 01 complete
-**Status:** Complete
-**Last activity:** 2026-03-06 — Phase 116 Plan 01 complete (registration table)
+**Status:** Completed
+**Last activity:** 2026-03-06 — Phase 117 Plan 01 complete (117-01)
 
 ## Progress
 
 | Phase | Goal | Status |
 |-------|------|--------|
 | 116. Built-in Registration | Name→handler lookup; getHelpTable from table | 1 plan complete |
-| 117. Duplication Reduction | expectArg/ev/evi; TTY abstraction | Not started |
+| 117. Duplication Reduction | expectArg/ev/evi; TTY abstraction | 1 plan complete |
 | 118. Brittle Guards | Guard env.at("q"); named constants | Not started |
 
 ## Session Log
 
+- 2026-03-06: Phase 117 Plan 01 complete — expectArgCount (2 overloads), etaq/prodmake/etamake migration, readLineFn TTY abstraction; commits 1ee3029, 9224cb5, 548a94c; 117-01-SUMMARY.md
+- 2026-03-06: Phase 117 planned — 1 plan (117-01); expectArgCount, migrate etaq/prodmake/etamake, readLineFn TTY abstraction; plan-check passed
 - 2026-03-06: Phase 116 Plan 01 complete — getBuiltinRegistry, DispatchContext, ~100 built-ins; dispatchBuiltin uses lookup; getHelpTable derives from registry; commits 5ab93c7, a143c69; 116-01-SUMMARY.md
 - 2026-03-06: Phase 116 planned — 1 plan (116-01); registration table, lookup dispatch, getHelpTable derives; plan-check passed
 - 2026-03-06: v11.4 roadmap created — phases 116–118 (Built-in Registration, Duplication Reduction, Brittle Guards); TD-01–TD-06 mapped
