@@ -1691,7 +1691,7 @@ Plans:
 - [x] **Phase 108: Error Diagnostics** - Parse errors with source line + caret; Maple-style runtime/argument errors; script line numbers (completed 2026-03-06)
 - [x] **Phase 109: Help Extensions** - Per-function examples; SYNOPSIS/SEE ALSO; examples from Garvan tutorial (completed 2026-03-06)
 - [x] **Phase 110: Input Convenience** - Typo suggestions for undefined variables; tab completion signature hints; unified line/pos buffer (completed 2026-03-06)
-- [ ] **Phase 111: Ergonomics Polish** - Bracket-aware multi-line; trailing backslash EOF; SIGINT termios restore; TTY guards in script mode
+- [x] **Phase 111: Ergonomics Polish** - Bracket-aware multi-line; trailing backslash EOF; SIGINT termios restore; TTY guards in script mode (completed 2026-03-06)
 
 ### Phase 108: Error Diagnostics
 **Goal**: Users get clear, actionable error messages that point to the problem location
@@ -1744,11 +1744,12 @@ Plans:
   2. Trailing backslash at EOF in script mode does not hang (e.g., `printf 'x := 1\' | qseries` exits)
   3. Ctrl+C in raw mode restores termios before re-raise — shell remains usable
   4. All TTY features (tab, history, banner) are guarded with stdin_is_tty() in script mode
-**Plans**: 2 plans
+**Plans**: 3 plans (111-03 gap closure)
 
 Plans:
 - [ ] 111-01-PLAN.md — Bracket-aware multi-line, EOF guard, TTY audit (ERGO-01, ERGO-02, ERGO-04)
 - [ ] 111-02-PLAN.md — SIGINT termios restore (ERGO-03)
+- [ ] 111-03-PLAN.md — Gap closure: re-add SIGINT handler (ERGO-03)
 
 ### v11.2 Progress
 
@@ -1757,5 +1758,5 @@ Plans:
 | 108. Error Diagnostics | 0/2 | Complete    | 2026-03-06 |
 | 109. Help Extensions | 0/1 | Complete    | 2026-03-06 |
 | 110. Input Convenience | 0/? | Complete    | 2026-03-06 |
-| 111. Ergonomics Polish | 0/? | Not started | - |
+| 111. Ergonomics Polish | 0/? | Complete    | 2026-03-06 |
 

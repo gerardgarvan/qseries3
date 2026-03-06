@@ -11,7 +11,7 @@
 **Milestone:** v11.2 Improve User Experience
 **Current phase:** 111 (Ergonomics Polish)
 **Plan:** 01, 02, 03 complete
-**Status:** Phase 111 complete
+**Status:** Milestone complete
 
 ## Progress
 
