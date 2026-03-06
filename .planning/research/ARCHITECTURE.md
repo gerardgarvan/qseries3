@@ -7,6 +7,215 @@
 
 ---
 
+# REPL UX Integration Architecture
+
+**Domain:** REPL ergonomics, error diagnostics, help/docs, input convenience  
+**Researched:** 2026-03-06  
+**Milestone Context:** SUBSEQUENT — Add REPL ergonomics, error diagnostics, help/docs, input convenience. Existing: repl.h, parser.h, readline, dispatch, display. Zero external deps.  
+**Confidence:** HIGH
+
+---
+
+## System Overview: REPL Layer
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        USER INPUT LAYER                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  TTY: readLineRaw (RawModeGuard, readOneChar)   │  Script: std::getline       │
+│  handleTabCompletion ◄── getCompletionCandidates ◄── getHelpTable + env       │
+│  History (↑/↓), Backslash continuation, Ctrl+L (clear)                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                        REPL LOOP (runRepl)                                    │
+│  trim, suppress_output (trailing :), save/load (pre-parse), clear             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  parse(trimmed)  ──►  evalStmt  ──►  dispatchBuiltin / eval  ──►  display    │
+│       │                    │                      │                    │     │
+│       │                    │                      │                    │     │
+│       ▼                    ▼                      ▼                    ▼     │
+│  [ERROR PATH]        [ERROR PATH]           [ERROR PATH]          [SUCCESS]  │
+│  parser throws       evalStmt throws        dispatchBuiltin       format*    │
+│  runtime_error       runtime_error         runtime_error          ansi::*    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  catch → std::cerr ansi::red() "error: " e.what()   │  timing (t0..t1)        │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Integration Points: Feature → Component Mapping
+
+| Feature Area | Integration Point | Component | New vs Modified |
+|--------------|-------------------|-----------|-----------------|
+| **REPL ergonomics** | Prompt/prompt continuation, timing, suppress output | `runRepl`, `redrawLineRaw` | **Modified** |
+| **Error messaging** | Parse errors, runtime errors, script line numbers | `parser.h` (Tokenizer, Parser), `runRepl` catch, `dispatchBuiltin` | **Modified** |
+| **Help system** | `help`, `help(func)`, tab completion candidates | `getHelpTable`, `dispatchBuiltin("help", ...)`, `handleTabCompletion` | **Modified** (extend table, add `?` shortcut) |
+| **Input features** | Raw line edit, tab completion, history, continuation | `readLineRaw`, `handleTabCompletion`, `getCompletionCandidates` | **Modified** (extend completion rules) |
+
+---
+
+## Component Responsibilities
+
+| Component | Responsibility | Communicates With |
+|-----------|----------------|-------------------|
+| `runRepl` | Main loop: read → trim → parse → eval → display; error catch; timing; history load/save | `readLineRaw`, `parse`, `evalStmt`, `display`, `loadHistory`, `saveHistory` |
+| `readLineRaw` | Char-by-char input, ESC sequences, Tab, Backspace; history navigation; Ctrl+L | `handleTabCompletion`, `redrawLineRaw`, `getCompletionCandidates` |
+| `handleTabCompletion` | Prefix match, LCP, single/multi completion | `getCompletionCandidates`, `getHelpTable`, `redrawLineRaw` |
+| `getCompletionCandidates` | Union of built-in names + env keys | `getHelpTable`, `Environment` |
+| `getHelpTable` | Static map name → (signature, description) | `dispatchBuiltin("help")`, `handleTabCompletion` |
+| `dispatchBuiltin` | Route built-in calls; `help` returns DisplayOnly; unknown → suggestions | `getHelpTable`, `eval`, all qfuncs/convert/relations |
+| `parse` | Tokenize → parseStmt; throws with line/col | `Tokenizer`, `Parser` |
+| `display` | Visit EvalResult → formatEtamake, formatProdmake, etc. | All format* helpers |
+
+---
+
+## Data Flow
+
+### Input → Eval → Display (Success Path)
+
+```
+User types line
+    ↓
+readLineRaw (TTY) or getline (script)
+    ↓
+Backslash continuation loop (runRepl) → line concatenated
+    ↓
+trim, suppress_output (trailing :), save/load shortcut
+    ↓
+history.push_back(trimmed)
+    ↓
+parse(trimmed) → StmtPtr
+    ↓
+evalStmt(stmt, env) → eval → dispatchBuiltin
+    ↓
+display(res, env, T)
+    ↓
+timing (if TTY)
+```
+
+### Error Path (Single Funnel)
+
+```
+parse() throws runtime_error  ──┐
+evalStmt() throws             ──┼──► catch in runRepl
+dispatchBuiltin throws        ──┘         ↓
+eval/evalToInt throws         ──┐    std::cerr << ansi::red() << "error: "
+                                └──► if (!stdin_is_tty() && inputLineNum > 0)
+                                         std::cerr << "line " << inputLineNum << ": ";
+                                     std::cerr << e.what() << std::endl;
+```
+
+All errors converge at `runRepl`'s single `catch`; no separate error-handling component.
+
+### Help System Data Flow
+
+```
+help           → dispatchBuiltin("help", {}) → getHelpTable() → list all names
+help(etaq)     → dispatchBuiltin("help", [Var("etaq")]) → table["etaq"] → print sig + desc
+unknown built-in → dispatchBuiltin fallback → levenshtein suggestions
+Tab completion → handleTabCompletion → getCompletionCandidates() → getHelpTable + env.env
+```
+
+---
+
+## New vs Modified Components (Explicit)
+
+### Modified (No New Files)
+
+| Component | Current State | Modification for Ergo/Error/Help/Input |
+|-----------|---------------|----------------------------------------|
+| `parser.h` | Tokenizer throws "parser: line N, col C: expected X" | Improve messages (underline offending token, suggest fix); keep offsetToLineCol |
+| `repl.h` runRepl | Single catch, line number only in script mode | Add caret/underline for parse errors if TTY; optional verbose mode |
+| `repl.h` getHelpTable | Static map, ~90 entries | Add entries for new built-ins; optional `help("topic")` search |
+| `repl.h` handleTabCompletion | Prefix match on identifier; functions get `(` appended | Add subcommand completion (e.g. `help eta` → `etaq`, `etamake`); optional path-style |
+| `repl.h` readLineRaw | Tab, arrows, Backspace, Ctrl+L | Optional: Home/End, Ctrl+A/E (if not already); optional `?` as help shortcut |
+| `repl.h` ansi | gold, red, dim, reset, bold | Optional: cyan for hints, yellow for warnings |
+
+### New (Optional / Future)
+
+| Component | Purpose | Integration |
+|-----------|---------|-------------|
+| `formatParseError(input, offset, msg)` | Pretty-print parse error with caret | Called from runRepl catch when exception message contains "parser:" |
+| `helpSearch(query)` | Fuzzy/search over getHelpTable | New branch in dispatchBuiltin("help", [Var("?")]) or help("query") |
+| Completion context (optional) | After `(`, complete arg types | Would require parse-in-progress; high complexity, defer |
+
+---
+
+## Suggested Build Order (Dependencies)
+
+```
+1. Error diagnostics (parser + REPL catch)
+   ├── Parser: ensure all throws use offsetToLineCol + kindToExpected
+   ├── REPL: formatParseError(input, offset, msg) for TTY
+   └── REPL: script mode "line N: " prefix (already present)
+   Rationale: Errors are cross-cutting; improving them first helps debug later changes.
+
+2. Help system extensions
+   ├── Add missing getHelpTable entries
+   ├── Optional: help("substring") search
+   └── Optional: ? as help shortcut in readLineRaw
+   Rationale: getHelpTable is shared by help + tab completion; extend once.
+
+3. Input convenience
+   ├── Tab: extend completion (e.g. after . or for multi-token)
+   ├── Optional: Home/End in readLineRaw
+   └── Optional: ? → help
+   Rationale: Depends on getHelpTable; no parser changes.
+
+4. Ergonomics polish
+   ├── Continuation prompt consistency
+   ├── Timing format tweaks
+   └── Clear/suppress_output behavior
+   Rationale: Cosmetic; depends on nothing.
+```
+
+**Build order rationale:** Error handling is foundational for debugging. Help and completion share `getHelpTable`, so extend that next. Input conveniences touch `readLineRaw` and completion. Ergonomics are last as they are mostly cosmetic.
+
+---
+
+## Internal Boundaries
+
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| runRepl ↔ readLineRaw | `std::optional<std::string>` | readLineRaw returns nullopt on EOF; runRepl breaks loop |
+| runRepl ↔ parse | `parse(string)` → `StmtPtr`; throws on error | Parser owns Tokenizer; no streaming |
+| runRepl ↔ evalStmt | `evalStmt(Stmt*, Env)` → `EvalResult`; throws | evalStmt calls eval → dispatchBuiltin |
+| dispatchBuiltin ↔ getHelpTable | const ref to map | getHelpTable is static; no mutation |
+| handleTabCompletion ↔ getCompletionCandidates | set of strings | Completion is synchronous; env read-only |
+| Emscripten (main_wasm.cpp) | `evaluate(string)` → string | No runRepl; uses parse, evalStmt, display; redirects cout/cerr to oss |
+
+---
+
+## Anti-Patterns for REPL UX
+
+1. **Don’t add a separate error module** — Keep one catch in runRepl and improve message content. A separate ErrorReporter would add indirection without benefit.
+2. **Don’t duplicate getHelpTable** — Help and tab completion must share the same source of truth.
+3. **Don’t block readLineRaw on I/O** — Completion and redraw must stay synchronous; no async help fetch.
+4. **Don’t change parser API for errors** — Parser should keep throwing `runtime_error`; REPL is responsible for presentation (colors, caret, line numbers).
+
+---
+
+## Scalability (REPL Context)
+
+| Concern | TTY Mode | Script Mode | Emscripten |
+|---------|----------|-------------|------------|
+| History size | 1000 lines, file persist | N/A | N/A |
+| Completion candidates | ~90 built-ins + env | N/A | N/A |
+| Error context | Full line + caret possible | Line number only | Captured in oss |
+| Timing | Per-command | Suppressed | Not shown |
+
+---
+
+## Sources
+
+- `src/repl.h` — runRepl, readLineRaw, handleTabCompletion, getHelpTable, display, evalStmt, dispatchBuiltin
+- `src/parser.h` — Tokenizer, Parser, offsetToLineCol, kindToExpected
+- `src/main_wasm.cpp` — evaluate, error capture
+- `SPEC.md` — Architecture diagram, file structure
+- `.planning/ROADMAP.md` — Phases 17–22 (help, timing, continuation, tab, errors)
+
+---
+
 ## Executive Summary
 
 Missing features (provemodfuncid enhancements, RR identity search, Block 25 fix, etc.) integrate into a well-defined data-flow pipeline. **provemodfuncid** and **RR identity search** are already implemented; the main gaps are extensions (provemodfuncidBATCH, findids types 3–10), robustness (Block 25 q-shift normalization), and deferred stubs (U_p operator). No new top-level components are required—only modifications and extensions to existing headers.

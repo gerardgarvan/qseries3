@@ -1,175 +1,117 @@
-# Project Research Summary — v11.1 Gap Closure & Improvements
+# Project Research Summary
 
-**Project:** qseries3 (q-series REPL)  
-**Domain:** Maple qseries parity, eta/theta identity proving, modular forms  
-**Milestone:** v11.1 — Gap Closure & Improvements  
-**Researched:** 2026-03-06  
-**Confidence:** HIGH (mature codebase, zero-deps constraint, clear gaps)
-
----
+**Project:** qseries3
+**Domain:** REPL UX for Maple users — ergonomics, error diagnostics, help, input convenience
+**Researched:** 2026-03-06
+**Confidence:** HIGH
 
 ## Executive Summary
 
-qseries3 is a zero-dependency C++20 REPL for exact q-series arithmetic and Andrews-style series-to-product conversion. The codebase achieves 40/41 maple-checklist blocks. Remaining gaps are **algorithmic and integrative**—no stack additions required. For v11.1, close maple-checklist failures (Blocks 25, 10, 13–14), RR identity search (RRID-01..03), THETA-06 provemodfuncid extensions, Block 24 rationale, and findlincombomodp.
+The qseries3 REPL targets mathematicians transitioning from Maple. Research shows that Maple users expect familiar patterns: `help(topic)` with CALLING SEQUENCE and EXAMPLES, errors that name the function and point to the problem (column + caret), and input convenience (tab completion, history, multi-line). **No stack additions are required** — all enhancements extend the existing in-house infrastructure (`repl.h`, `parser.h`, `ansi::`). Do not add readline, ncurses, or any external line-edit libraries; zero-dependency constraint is non-negotiable.
 
-**Recommendation:** Keep C++20, single-file Makefile, in-house BigInt/Frac/Series. Address gaps by extending existing headers (theta_ids.h, rr_ids.h, linalg.h, relations.h). Phases 97–99 (Block 25, Block 24, findlincombomodp) form Tier 1; Theta IDs (Phase 85) and RR identity (Phase 86) form Tiers 2–3.
-
-**Key risks:** (1) q-shift/truncation misalignment in series arithmetic—Block 25 and findpoly; (2) Sturm-bound precision and mintot→int overflow in provers; (3) Maple semantic drift (optional args, output format). Mitigation: align q_shifts before findpoly, document Sturm cap, audit optional args per new built-in.
+**Recommended approach:** Implement improvements in this order: (1) error diagnostics with source snippet + caret; (2) help extensions (examples, Maple-style structure); (3) input convenience (argument hints in tab completion, typo suggestions for variables); (4) ergonomics polish. Critical risks: raw terminal mode leaving the shell broken on Ctrl+C (requires SIGINT handler), and script vs interactive path divergence (all TTY features must guard on `stdin_is_tty()`).
 
 ---
 
 ## Key Findings
 
-### Stack Additions: None
+### Recommended Stack
 
-| Verdict | Rationale |
-|---------|-----------|
-| **No stack changes** | Gaps (provemodfuncid, findids, findlincombomodp, Block 25/24) reduce to existing Series, Frac, BigInt, and headers |
-| Stay C++20 | Portability; C++23 not required |
-| Keep Makefile, single TU | Zero deps; no CMake, Conan, vcpkg |
-| No external libs | GMP, Boost, fmt, spdlog explicitly excluded |
+**No additions.** The current stack — termios/SetConsoleMode, custom `readLineRaw`, ANSI escape sequences, `getHelpTable`, `offsetToLineCol` — suffices for all planned REPL UX work. Extend `ansi::` with cyan/green/underline for diagnostics; extend `getHelpTable` with examples; extend `handleTabCompletion` for argument hints; extend continuation logic for bracket-aware multi-line.
 
-**Optional low-priority tweaks:** `[[nodiscard]]` on critical returns; cppcheck in CI if zero install cost.
+**Core technologies (unchanged):**
+- Raw terminal (termios / SetConsoleMode) — line editing, arrows, tab
+- Custom readLineRaw — no readline; zero deps
+- ANSI escapes — red, gold, dim; add cyan, green, underline for diagnostics
+- Parser offsetToLineCol — enables source snippet + caret for parse errors
 
----
+### Expected Features
 
-### Feature Table Stakes vs Differentiators
+**Must have (table stakes) — already present:**
+- `help`, `help(func)` — signature + description ✓
+- Tab completion (identifiers + built-ins) ✓
+- History (up/down), multi-line (backslash), semicolon suppress ✓
+- Runtime errors with function name ✓
 
-#### Table Stakes (users expect for Maple/Garvan parity)
+**Should have for Maple parity (priority gaps):**
+- **P1:** Parse errors with source snippet + caret — GCC/Clang style; high value, medium effort
+- **P1:** Typo suggestions for undefined variable — "Did you mean: y?"; low effort, reuses levenshtein
+- **P2:** Per-function help with 1–2 examples — e.g. Rogers-Ramanujan for `help(prodmake)`
+- **P2:** Richer help structure — SYNOPSIS, SEE ALSO
 
-| Feature | Source | Complexity |
-|---------|--------|------------|
-| Block 25 fix (findpoly q-shift) | maple-checklist, EX-10 | Medium |
-| Block 10 / RootOf(ω) for b(q) | maple-checklist, EX-04c | High |
-| Block 13–14 (Jacobi half-integer) | maple-checklist, Garvan §3.4 | Medium |
-| THETA-06 provemodfuncid | REQUIREMENTS | High |
-| RRID-01..03 (RRG, RRH, checkid, findids) | REQUIREMENTS | Medium–High |
-| jac2series(f,T) user API | FEATURE-GAPS | Trivial |
+**Defer (v2+):**
+- `??func` (calling sequence only), `???func` (examples only)
+- Help categories / index
+- Delimiter auto-close, 2-D math input
 
-#### Differentiators (advanced users)
+### Architecture Approach
 
-| Feature | Value | Complexity |
-|---------|-------|------------|
-| factor(t8) cyclotomic (Block 4) | Polynomial factor into Φ_n | High |
-| EISENqmake / Eisenstein memoization | Speed for repeated modform calls | Low |
-| BAILEY-01..03 | Bailey pair/chain manipulation | Medium |
-| ETA-01..08 full cusp prover | Gamma_0 eta-quotient proofs | High |
-| findlincombomodp, findhommodp | Mod-p relation finding | Medium |
+REPL UX changes integrate into the existing read→parse→eval→display pipeline. Error handling funnels through a single catch in `runRepl`; help and completion share `getHelpTable`. New work is all modifications: `formatParseError(input, offset, msg)` in the catch block, extended help table values, and completion logic. No new top-level components.
 
-#### Defer to v2+
+**Major components (modified, not new):**
+1. **runRepl catch** — format parse errors with source line + caret; keep script "line N:" prefix
+2. **getHelpTable** — add optional examples field; keep single source of truth for help + completion
+3. **handleTabCompletion** — add function signature hints when completing built-ins
+4. **readLineRaw / continuation loop** — bracket-aware multi-line; optional Ctrl+R history search
 
-- Block 4 (factor cyclotomic); qfactor sufficient
-- ETA-01..08 full cusp prover
-- CRANK-01..05
-- makeEISENbasisPX, symbolic bases
+### Critical Pitfalls
 
----
+1. **Raw terminal leaves shell broken on Ctrl+C** — Register SIGINT handler that restores termios before re-raising. RAII alone fails on crash/kill. Phase 28 or any raw-mode phase must include this.
 
-### Architecture: Integration Points and Build Order
+2. **Script vs interactive path divergence** — Every TTY feature must guard on `stdin_is_tty()`. Tab, history, banner, timing: all can break or hang when piped. Add CI tests: `qseries < script.qs` must exit 0.
 
-#### Data Flow Pipeline
+3. **Error format breaks Maple expectations** — Use `(in funcname) message`; use "expects its N-th argument, name, to be X, but received Y" for argument errors. Phase 21 must address before other UX polish.
 
-```
-REPL/Parser → Built-ins (provemodfuncid, checkid, findids, findpoly, …)
-                    ↓
-eta_cusp | theta_ids | rr_ids | modforms | convert | relations | linalg
-                    ↓
-Series (map<int,Frac>) → Frac → BigInt
-```
+4. **Tab completion and history fight over buffer** — Use single `(line, pos)` state. Tab must be cursor-position aware; history restores full line, `pos = line.size()`. Test: Tab at middle of word, Up/Down then Tab.
 
-#### Integration Points for Gap Closure
-
-| Gap | Integrates With | Type | Action |
-|-----|-----------------|------|--------|
-| Block 25 (q-shift) | Series::addAligned, findpoly | **Modified** | Use addAligned before findpoly |
-| provemodfuncidBATCH | theta_ids.h | **New function** | Batch jacid list |
-| findids types 3–10 | rr_ids.h | **Extension** | Implement remaining types |
-| findlincombomodp | linalg.h, relations.h | **New function** | modp + F_p solve |
-| Block 24 | repl.h | **Docs** | N/A rationale; no collect impl |
-
-#### Recommended Build Order (Phase Tiers)
-
-| Tier | Phases | Rationale |
-|------|--------|-----------|
-| **Tier 1** | 97, 98, 99 | Block 25 fix unblocks findpoly; Block 24 N/A rationale; findlincombomodp completes mod-p story. No new headers. |
-| **Tier 2** | 85 | provemodfuncidBATCH, theta_aids regression. Depends on theta_ids (already integrated). |
-| **Tier 3** | 86 | findids types 3–10, acceptance-rr-id. RRG/RRH/checkid exist. |
-| **Deferred** | provemodfuncGAMMA0UpETAid | U_p operator; stub only; complex. |
-
-#### Component Dependency Order
-
-```
-BigInt → Frac → Series → qfuncs → convert → linalg → relations
-                    ↓
-    eta_cusp | theta_ids | modforms | rr_ids
-                    ↓
-                  repl.h (dispatch)
-```
-
----
-
-### Pitfalls to Avoid
-
-#### Critical (must address)
-
-1. **Series inverse and truncation** — Wrong recurrence or q-shift causes prodmake/etamake to fail. Detection: Rogers-Ramanujan yields denominators at exponents ≠ ±1 (mod 5).
-
-2. **q-shift alignment** — findpoly on theta quotients fails without addAligned. Prevention: align q_shift before addition; propagate min truncation. Phase: 63, 97.
-
-3. **Maple semantic drift** — Optional-arg order, 1-based vs 0-based, output format. Prevention: run exact Maple command, document output, add real test in maple-checklist.sh.
-
-4. **Double-sum truncation (EX-04c)** — b(q) double-sum needs sufficient T and range. Prevention: increase T (80–100), range (±15); verify SeriesOmega semantics.
-
-5. **Sturm-bound precision** — mintot→int overflow or fractional mintot. Prevention: BigInt-based Sturm when needed; document 500 cap; explicit depth in output.
-
-#### Phase-specific warnings
-
-| Phase | Pitfall | Mitigation |
-|-------|---------|------------|
-| Block 25 | q-shift misalignment | addAligned before findpoly |
-| Block 24 | Implementing collect | Document N/A; do not implement |
-| provemodfuncid | mintot overflow | BigInt Sturm; document cap |
-| findlincombomodp | F_p solve | Use existing modp, linalg kernel |
-| New built-ins | Optional-arg drift | Audit 1/2/3-arg; add optional-arg test |
+5. **Multi-line EOF hang in script mode** — Trailing backslash on last line must not block. Cap continuations; treat EOF as end of input. Test: `printf 'x := 1\\' | qseries` must exit.
 
 ---
 
 ## Implications for Roadmap
 
-### Phase 1: Block 25 Fix (Phase 97)
-**Rationale:** Unblocks findpoly on theta quotients; EX-10; no new components.  
-**Delivers:** Block 25 passes; findpoly works on theta2/theta3 quotients.  
-**Addresses:** maple-checklist, EX-10.  
-**Avoids:** Pitfall 2 (q-shift alignment).
+Based on research, suggested phase structure:
 
-### Phase 2: Block 24 Rationale (Phase 98)
-**Rationale:** Clarify scope; avoid collect implementation.  
-**Delivers:** N/A rationale documented; no implementation.  
-**Avoids:** Pitfall 6 (Block 24 scope creep).
+### Phase 1: Error Diagnostics
+**Rationale:** Errors are cross-cutting; improving them first helps debug all later changes.
+**Delivers:** `formatParseError(input, offset, msg)` with source line + caret; Maple-style runtime messages via `runtimeErr`.
+**Addresses:** Parse errors with column + snippet (P1), error format (PITFALLS #3)
+**Avoids:** Parser throws without location; generic messages
 
-### Phase 3: findlincombomodp (Phase 99)
-**Rationale:** Completes mod-p linear algebra story.  
-**Delivers:** `findlincombomodp(f, L, p, T)` built-in.  
-**Uses:** linalg.h F_p kernel, modp, relations.h.  
-**Avoids:** Optional-arg drift.
+### Phase 2: Help Extensions
+**Rationale:** getHelpTable is shared by help + tab completion; extend once.
+**Delivers:** Per-function examples (1–2 per key built-in); optional richer structure (SYNOPSIS, SEE ALSO).
+**Addresses:** Per-function help with examples (P2), Maple CALLING SEQUENCE + EXAMPLES parity
+**Uses:** Existing getHelpTable; qseriesdoc.md / Garvan examples as content source
 
-### Phase 4: provemodfuncid Extensions (Phase 85)
-**Rationale:** provemodfuncid exists; add BATCH and theta_aids regression.  
-**Delivers:** provemodfuncidBATCH; 2+ theta_aids verified.  
-**Avoids:** Pitfall 5 (Sturm-bound precision).
+### Phase 3: Input Convenience
+**Rationale:** Depends on getHelpTable for completion hints; no parser changes.
+**Delivers:** Argument hints in tab completion (signature from getHelpTable); typo suggestions for undefined variable.
+**Addresses:** Typo suggestions for variables (P1), Maple discoverability
+**Avoids:** Tab + history buffer conflict (single line/pos)
 
-### Phase 5: RR Identity Search (Phase 86)
-**Rationale:** RRG, RRH, checkid, findids types 1–2 exist.  
-**Delivers:** findids types 3–10; acceptance-rr-id passes.  
-**Avoids:** Maple semantic drift; output format mismatch.
+### Phase 4: Ergonomics Polish
+**Rationale:** Cosmetic; depends on nothing.
+**Delivers:** Bracket-aware multi-line continuation; optional Ctrl+R history search; continuation prompt consistency.
+**Addresses:** Maple multi-line expectations; input convenience
+**Avoids:** Multi-line EOF hang (script-mode guards)
+
+### Phase Ordering Rationale
+
+- **Error diagnostics first** — PITFALLS recommends Phase 21 early; every subsequent phase benefits from better failure reporting.
+- **Help before input** — Tab completion argument hints consume `getHelpTable`; extend help content before completion logic.
+- **Ergonomics last** — Mostly cosmetic; no architectural dependencies.
+- **Raw-mode phases** — Must include SIGINT handler in the same phase that introduces/enhances raw mode.
 
 ### Research Flags
 
-| Phase | Flag | Reason |
-|-------|------|--------|
-| 85 | Needs research if theta_aids grow | cusp formulas differ Gamma_0 vs Gamma_1 |
-| 94 (Block 10 / RootOf) | Needs research | omega/SeriesOmega, b(q) double-sum semantics |
-| 97, 98, 99 | Standard patterns | addAligned exists; linalg F_p exists; Block 24 is docs-only |
+Phases likely needing deeper research during planning:
+- **Phase 1 (Error diagnostics):** Verify parser exception payload (offset vs line/col) for `formatParseError`; confirm script-mode line-number handling.
+- **Phase 4 (Multi-line):** Bracket-balance rules for edge cases (strings, nested); max continuation cap.
+
+Phases with standard patterns (skip research-phase):
+- **Phase 2 (Help):** getHelpTable extension is straightforward; content curation from qseriesdoc.md.
+- **Phase 3 (Input):** Typo suggestions reuse existing levenshtein + built-in set; completion hints are data-driven.
 
 ---
 
@@ -177,33 +119,34 @@ BigInt → Frac → Series → qfuncs → convert → linalg → relations
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | SPEC, .cursorrules, zero-deps explicit; no stack change needed |
-| Features | HIGH | maple-checklist, REQUIREMENTS, FEATURE-GAPS well documented |
-| Architecture | HIGH | Integration test passes; data flow documented in headers |
-| Pitfalls | HIGH | SPEC §576+, known failure modes (Block 25, EX-04c, inverse) |
+| Stack | HIGH | Explicit "no additions"; STACK.md verified against codebase |
+| Features | HIGH | Maple docs and prodmake.html verified; feature matrix from FEATURES.md |
+| Architecture | HIGH | ARCHITECTURE.md maps components; integration points clear |
+| Pitfalls | HIGH | Maple Error Message Guide, Python termios post-mortems, REPL community reports |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **EX-04c / Block 10:** RootOf(ω) and b(q) double-sum—Phases 91–94; may need phase research.
-- **Sturm cap 500:** Document in output; consider BigInt path for large mintot.
-- **maple-checklist Blocks 28–32:** Quinprod symbolic z; verify against current script.
+- **`?topic` syntax:** Research recommends keeping `help(topic)`; adding `?topic` would require parser changes. Document clearly for Maple users.
+- **NO_COLOR handling:** ANSI extension (cyan, green, underline) must respect existing `ansi::init()` NO_COLOR check.
+- **Emscripten:** REPL UX enhancements target TTY; WASM path uses `evaluate()` and captures cout/cerr. Ensure error format is useful in both.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- `SPEC.md` — Zero-deps, single static binary
-- `src/eta_cusp.h`, `src/theta_ids.h`, `src/rr_ids.h`, `src/convert.h`
-- `tests/integration-eta-theta-modforms.sh`
-- `maple_checklist.md`, `REQUIREMENTS.md`, `FEATURE-GAPS.md`
+- Maple Help, Error Message Guide Overview — maplesoft.com
+- qseries prodmake.html — qseries.org/fgarvan/qmaple/qseries/functions/prodmake.html
+- src/repl.h, src/parser.h — RawModeGuard, readLineRaw, getHelpTable, offsetToLineCol
+- .planning/research/STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md
 
-### Secondary
-- `.planning/ROADMAP.md`, `.planning/PROJECT.md`
-- `gaps/wprogmodforms.txt`, `gaps/BAILEY.txt`
+### Secondary (MEDIUM confidence)
+- Python termios Ctrl+C / raw mode — cpython#128330
+- OhMyREPL error display patterns — color, reverse stack
+- Phase research files — 20-tab-completion, 21-error-messages, 31-up-down-arrows
 
 ---
-*Research completed: 2026-03-06*  
+*Research completed: 2026-03-06*
 *Ready for roadmap: yes*
