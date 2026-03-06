@@ -8,16 +8,20 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 **Rogers-Ramanujan must work.** Given `Σ q^(n²) / (q;q)_n`, prodmake must recover the product form with denominators only at exponents ≡ ±1 (mod 5). If this test passes, the core math is correct. Everything else builds on it.
 
-## Current Milestone: v11.2 Improve User Experience
+## Current Milestone: v11.3 Code Health
 
-**Goal:** Improve REPL usability for mathematicians, especially those accustomed to Maple. Make qseries3 feel natural and productive.
+**Goal:** Audit code health and create a plan to make it healthier. Assess warnings, tests, structure, tech debt; produce a documented remediation plan with priorities.
 
 **Target scope:**
-- REPL ergonomics — prompt layout, output clarity, truncation control
-- Error messages & diagnostics — clearer parse/runtime errors, typo suggestions
-- Help & docs — help system, per-function help, MANUAL.md improvements
-- Input convenience — tab completion, multi-line input, history navigation
-- Research: UX patterns for Maple users transitioning to a REPL
+- Code health assessment — compiler warnings, test coverage, structure, tech debt
+- Remediation plan — documented priorities and actionable steps
+- Optional quick wins — fix known warnings, add missing tests
+
+---
+
+## Previous Milestone: v11.2 Improve User Experience ✓
+
+**Shipped:** Error diagnostics, help extensions, input convenience, ergonomics polish (phases 108–111).
 
 ---
 
@@ -199,4 +203,4 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 | jacprodmake 80% periodicity threshold | Don't demand exact match; verify reconstruction | — Pending |
 
 ---
-*Last updated: 2026-03-05 after v11.0 milestone start*
+*Last updated: 2026-03-06 after v11.3 milestone start*

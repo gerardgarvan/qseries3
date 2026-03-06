@@ -1760,3 +1760,65 @@ Plans:
 | 110. Input Convenience | 0/? | Complete    | 2026-03-06 |
 | 111. Ergonomics Polish | 0/? | Complete    | 2026-03-06 |
 
+---
+
+## Milestone v11.3 (Code Health) — phases 112–115
+
+- [ ] **Phase 112: Warning Audit** - Zero compiler warnings; fix tcore.h, eta_cusp.h; add -Wshadow, fix shadow warnings
+- [ ] **Phase 113: Build Hygiene** - CXXFLAGS aligned across Makefile, build.sh, release.yml
+- [ ] **Phase 114: make lint** - make lint runs cppcheck; no compile DB required
+- [ ] **Phase 115: Tech Debt Inventory** - Lightweight one-pass document: hotspots, duplication, brittle areas
+
+### Phase 112: Warning Audit
+**Goal**: Clean build with zero compiler warnings; -Wshadow enabled and all shadow warnings fixed
+**Depends on**: Phase 111 (or prior REPL phases)
+**Requirements**: HEALTH-01, HEALTH-02
+**Success Criteria** (what must be TRUE):
+  1. `g++ -std=c++20 -O2 -Wall -Wextra -Wpedantic -Wshadow` produces zero warnings
+  2. tcore.h and eta_cusp.h have no unused-parameter or other warning sources (fix or annotate)
+  3. No global -Wno-* flags used to suppress warnings
+  4. All existing acceptance tests still pass
+**Plans**: TBD
+
+### Phase 113: Build Hygiene
+**Goal**: CXXFLAGS consistent across all build entry points
+**Depends on**: Phase 112 (warnings baseline established)
+**Requirements**: HEALTH-03
+**Success Criteria** (what must be TRUE):
+  1. Makefile CXXFLAGS includes -Wall -Wextra -Wpedantic -Wshadow (same as Phase 112)
+  2. build.sh uses the same CXXFLAGS
+  3. .github/workflows/release.yml uses the same CXXFLAGS for g++ builds
+  4. `make`, `./build.sh`, and CI build all produce zero warnings
+**Plans**: TBD
+
+### Phase 114: make lint
+**Goal**: Static analysis available via make lint
+**Depends on**: Phase 113 (build surfaces aligned)
+**Requirements**: HEALTH-04
+**Success Criteria** (what must be TRUE):
+  1. `make lint` runs cppcheck on source files
+  2. cppcheck uses --enable=warning,style,performance
+  3. No compile database required (standalone cppcheck invocation)
+  4. make lint completes and reports findings (or passes with zero issues)
+**Plans**: TBD
+
+### Phase 115: Tech Debt Inventory
+**Goal**: Documented tech debt for future remediation planning
+**Depends on**: Phase 114 (lint available; optional — can run in parallel)
+**Requirements**: HEALTH-05
+**Success Criteria** (what must be TRUE):
+  1. TECH_DEBT.md (or equivalent) exists in the repo
+  2. Document lists complexity hotspots, code duplication, known brittle areas
+  3. One-pass lightweight format (not an exhaustive audit)
+  4. Actionable for future planning (prioritization or phase mapping)
+**Plans**: TBD
+
+### v11.3 Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 112. Warning Audit | 0/? | Not started | - |
+| 113. Build Hygiene | 0/? | Not started | - |
+| 114. make lint | 0/? | Not started | - |
+| 115. Tech Debt Inventory | 0/? | Not started | - |
+

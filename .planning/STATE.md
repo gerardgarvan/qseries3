@@ -4,23 +4,24 @@
 
 **Project:** qseries3 — zero-dependency C++20 q-series REPL
 **Core value:** Rogers-Ramanujan must work; prodmake recovers product form with denominators at exponents ≡ ±1 (mod 5)
-**Current focus:** v11.2 Improve User Experience
+**Current focus:** v11.3 Code Health
 
 ## Position
 
-**Milestone:** v11.2 Improve User Experience
-**Current phase:** 111 (Ergonomics Polish)
-**Plan:** 01, 02, 03 complete
-**Status:** Milestone complete
+**Milestone:** v11.3 Code Health
+**Current phase:** 112 (Warning Audit)
+**Plan:** —
+**Status:** Ready to plan
+**Last activity:** 2026-03-06 — v11.3 roadmap created (phases 112–115)
 
 ## Progress
 
 | Phase | Goal | Status |
 |-------|------|--------|
-| 108 | Error Diagnostics | 2/2 plans complete |
-| 109 | Help Extensions | 1/1 plans complete |
-| 110 | Input Convenience | 1/1 plans complete |
-| 111 | Ergonomics Polish | 3/3 plans complete |
+| 112. Warning Audit | Zero warnings; -Wshadow; fix tcore.h, eta_cusp.h | Not started |
+| 113. Build Hygiene | CXXFLAGS aligned | Not started |
+| 114. make lint | cppcheck target | Not started |
+| 115. Tech Debt Inventory | TECH_DEBT.md | Not started |
 
 ## Session Log
 
@@ -36,6 +37,7 @@
 - 2026-03-06: Phase 108 Plan 02 complete — parse error snippet + caret, formatParseErrorWithSnippet, script line prefix, WASM Maple format; acceptance-error-diagnostics.sh; commits 11e79a3, 0f1b1f9, 55c226e
 - 2026-03-06: Phase 108 Plan 01 complete — Maple format, ordinal, expectArg; etaq/prodmake/etamake migrated; commits 8efbbff, d67436d
 - 2026-03-06: Phase 108 planned — 2 plans in 2 waves; research + verification passed
+- 2026-03-06: v11.3 roadmap created — phases 112–115 (Warning Audit, Build Hygiene, make lint, Tech Debt Inventory); 5/5 requirements mapped
 - 2026-03-06: Phase 108 context gathered — parse errors (caret, ANSI red), Maple format, expectArg helper, script line numbers
 - 2026-03-06: Milestone v11.2 roadmap created — phases 108–111 (Error Diagnostics, Help Extensions, Input Convenience, Ergonomics Polish); 14 requirements mapped
 - 2026-03-06: Milestone v11.2 started — Improve User Experience (REPL ergonomics, errors, help, input; research for Maple users)
