@@ -1764,7 +1764,7 @@ Plans:
 
 ## Milestone v11.3 (Code Health) — phases 112–115
 
-- [ ] **Phase 112: Warning Audit** - Zero compiler warnings; fix tcore.h, eta_cusp.h; add -Wshadow, fix shadow warnings
+- [x] **Phase 112: Warning Audit** - Zero compiler warnings; fix tcore.h, eta_cusp.h; add -Wshadow, fix shadow warnings (completed 2026-03-06)
 - [ ] **Phase 113: Build Hygiene** - CXXFLAGS aligned across Makefile, build.sh, release.yml
 - [ ] **Phase 114: make lint** - make lint runs cppcheck; no compile DB required
 - [ ] **Phase 115: Tech Debt Inventory** - Lightweight one-pass document: hotspots, duplication, brittle areas
@@ -1820,7 +1820,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 112. Warning Audit | 0/1 | Not started | - |
+| 112. Warning Audit | 0/1 | Complete    | 2026-03-06 |
 | 113. Build Hygiene | 0/? | Not started | - |
 | 114. make lint | 0/? | Not started | - |
 | 115. Tech Debt Inventory | 0/? | Not started | - |

@@ -11,7 +11,7 @@
 **Milestone:** v11.3 Code Health
 **Current phase:** 112 (Warning Audit)
 **Plan:** 01 complete
-**Status:** Completed
+**Status:** Milestone complete
 **Last activity:** 2026-03-06 — v11.3 roadmap created (phases 112–115)
 
 ## Progress
