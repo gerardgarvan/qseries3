@@ -731,7 +731,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         }
         if (args.size() == 3)
             return etaq(ev(0), static_cast<int>(evi(1)), static_cast<int>(evi(2)));
-        throw std::runtime_error(runtimeErr(name, "expected etaq(k), etaq(k,T), or etaq(q,k,T), got " + std::to_string(args.size()) + " arguments"));
+        throw std::runtime_error(runtimeErr(name, expectArg(1, "arguments", "1, 2, or 3", std::to_string(args.size()) + " arguments")));
     }
     if (name == "theta2" || name == "theta3" || name == "theta4") {
         if (args.size() == 1) {
@@ -816,7 +816,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
     }
     if (name == "prodmake") {
         if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
+            throw std::runtime_error(runtimeErr(name, expectArg(1, "arguments", "2 (f and T)", std::to_string(args.size()) + " arguments")));
         return prodmake(ev(0), static_cast<int>(evi(1)));
     }
     if (name == "RRG") {
@@ -947,7 +947,7 @@ inline EvalResult dispatchBuiltin(const std::string& name,
             return etamake(ev(0), static_cast<int>(evi(1)));
         if (args.size() == 3)
             return etamake(ev(0), static_cast<int>(evi(2)));
-        throw std::runtime_error(runtimeErr(name, "expects 2 or 3 arguments"));
+        throw std::runtime_error(runtimeErr(name, expectArg(1, "arguments", "2 or 3", std::to_string(args.size()) + " arguments")));
     }
     if (name == "jacprodmake") {
         if (args.size() != 2)
