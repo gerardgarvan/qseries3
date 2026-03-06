@@ -8,9 +8,15 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 **Rogers-Ramanujan must work.** Given `Σ q^(n²) / (q;q)_n`, prodmake must recover the product form with denominators only at exponents ≡ ±1 (mod 5). If this test passes, the core math is correct. Everything else builds on it.
 
-## Current Milestone: (Planning next)
+## Current Milestone: Planning next (v11.1 or v12.0)
 
-v10.0 shipped. Planning next milestone.
+**v11.0 shipped.** See Previous Milestone below.
+
+---
+
+## Previous Milestone: v11.0 Modular Forms ✓
+
+**Shipped:** makeALTbasisM(k,T) (Delta-based basis); cross-package integration (single proof chain, PATH hardening, run-all inclusion). integration-eta-theta-modforms.sh: 6 passed.
 
 ---
 
@@ -186,4 +192,4 @@ v10.0 shipped. Planning next milestone.
 | jacprodmake 80% periodicity threshold | Don't demand exact match; verify reconstruction | — Pending |
 
 ---
-*Last updated: 2026-03-05 after v10.0 milestone*
+*Last updated: 2026-03-05 after v11.0 milestone start*
