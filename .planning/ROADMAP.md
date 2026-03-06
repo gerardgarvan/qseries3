@@ -1644,7 +1644,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 105-01-PLAN.md — Verification-first: run acceptance-modp.sh; fix only if findlincombomodp tests fail
+- [x] 105-01-PLAN.md — Verification-first: run acceptance-modp.sh; fix BIN resolution; findlincombomodp verified
 
 ### Phase 106: provemodfuncid extensions
 **Goal**: provemodfuncidBATCH and theta_aids regression verification
@@ -1655,7 +1655,10 @@ Plans:
   2. At least 2 theta_aids identities verified
   3. tests/acceptance-theta-ids.sh passes
   4. No regressions in provemodfuncid single-identity flow
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 106-01-PLAN.md — provemodfuncidBATCH in theta_ids.h; REPL dispatch + help; acceptance-theta-ids Test 9
 
 ### Phase 107: RR Identity Search
 **Goal**: findids types 3–10 and acceptance-rr-id verification
@@ -1674,7 +1677,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 103. Block 25 fix | 0/? | Complete    | 2026-03-06 |
 | 104. Block 24 N/A rationale | 0/? | Complete    | 2026-03-06 |
-| 105. findlincombomodp | 0/? | Not started | - |
+| 105. findlincombomodp | 1/1 | Complete | 2026-03-01 |
 | 106. provemodfuncid extensions | 0/? | Not started | - |
 | 107. RR Identity Search | 0/? | Not started | - |
 
