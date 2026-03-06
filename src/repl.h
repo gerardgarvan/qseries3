@@ -3013,6 +3013,7 @@ inline void runRepl() {
                 if (!nextOpt) break;
                 line += " " + *nextOpt;
             } else {
+                if (std::cin.eof()) break;
                 std::string next;
                 if (!std::getline(std::cin, next)) break;
                 std::cout << "  > " << next << std::endl;
