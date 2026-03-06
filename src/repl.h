@@ -3002,10 +3002,14 @@ inline void runRepl() {
                 std::cout << ansi::dim() << std::fixed << std::setprecision(3) << secs << "s" << ansi::reset() << std::endl;
             }
         } catch (const std::exception& e) {
-            std::cerr << ansi::red() << "error: " << ansi::reset();
-            if (!stdin_is_tty() && inputLineNum > 0)
-                std::cerr << "line " << inputLineNum << ": ";
-            std::cerr << e.what() << std::endl;
+            std::string prefix;
+            if (!stdin_is_tty()) {
+                prefix = (inputLineNum > 0) ? ("line " + std::to_string(inputLineNum) + ": ") : "line ?: ";
+            }
+            std::string text = e.what();
+            bool isParse = (text.size() >= 8 && text.compare(0, 8, "parser: ") == 0);
+            std::string msg = isParse ? formatParseErrorWithSnippet(trimmed, text) : text;
+            std::cerr << ansi::red() << prefix << msg << ansi::reset() << std::endl;
         }
     }
 
