@@ -4,31 +4,28 @@
 
 **Project:** qseries3 — zero-dependency C++20 q-series REPL
 **Core value:** Rogers-Ramanujan must work; prodmake recovers product form with denominators at exponents ≡ ±1 (mod 5)
-**Current focus:** v11.1 Gap Closure & Improvements
+**Current focus:** v11.2 Improve User Experience
 
 ## Position
 
-**Milestone:** v11.1 Gap Closure & Improvements
-**Current phase:** 68 (Modular Worksheet Verification)
-**Plan:** 01 (complete)
-**Status:** v11.1 milestone complete
+**Milestone:** v11.2 Improve User Experience
+**Current phase:** 108 (Error Diagnostics)
+**Plan:** —
+**Status:** Ready to plan
 
 ## Progress
 
 | Phase | Goal | Status |
 |-------|------|--------|
-| 103. Block 25 fix | findpoly q-shift via addAligned | Complete (103-01) |
-| 104. Block 24 N/A rationale | Document N/A | Complete (104-01) |
-| 105. findlincombomodp | mod-p linear combo | Complete (105-01) |
-| 106. provemodfuncid extensions | BATCH + theta_aids | Complete (106-01) |
-| 67. Modular Series Arithmetic | modp, nterms, findhommodp, F_p linalg | Complete (67-01) |
-| 68. Modular Worksheet Verification | mod-7 eta dissection acceptance tests | Complete (68-01) |
-| 107. RR Identity Search | findids types 3–10 | Complete (107-01) |
-| 60. etamake scalar/format | scalar factor, abs(ex) in denominator | Complete (60-01) |
+| 108 | Error Diagnostics | Not started |
+| 109 | Help Extensions | Not started |
+| 110 | Input Convenience | Not started |
+| 111 | Ergonomics Polish | Not started |
 
 ## Session Log
 
-- 2026-03-06: Milestone v11.1 started — gap analysis, functions/features needed, extensive research
+- 2026-03-06: Milestone v11.2 roadmap created — phases 108–111 (Error Diagnostics, Help Extensions, Input Convenience, Ergonomics Polish); 14 requirements mapped
+- 2026-03-06: Milestone v11.2 started — Improve User Experience (REPL ergonomics, errors, help, input; research for Maple users)
 - 2026-03-06: ROADMAP v11.1 created — phases 103–107 appended; 7 requirements mapped; STATE.md updated
 - 2026-03-06: Phase 103 Plan 01 complete — verification-only; Block 25 and EX-10 pass; no code changes
 - 2026-03-06: Phase 104 context gathered — Block 24 N/A rationale; verification-first
@@ -40,4 +37,3 @@
 - 2026-03-06: Phase 100 Plan 01 complete — VERIFICATION.md for phases 97, 98, 99; v10 audit blocker closed
 - 2026-03-06: Phase 61 Plan 01 complete — q_shift in Series (verified); theta2 q_shift=1/4; etamake display; qdiff preserves q_shift
 - 2026-03-06: Phase 60 Plan 01 complete — etamake scalar factor and formatEtamake display verified (pre-existing); acceptance-etamake-format.sh added
-- 2026-03-06: Phase 68 Plan 01 complete — acceptance-worksheet-mod7.sh; 8 tests (A0, findhommodp X7/X8, nterms, jacprodmake)

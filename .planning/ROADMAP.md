@@ -1684,3 +1684,76 @@ Plans:
 | 106. provemodfuncid extensions | 1/1 | Complete | 2026-03-06 |
 | 107. RR Identity Search | 1/1 | Complete | 2026-03-06 |
 
+---
+
+## Milestone v11.2 (Improve User Experience) — phases 108–111
+
+- [ ] **Phase 108: Error Diagnostics** - Parse errors with source line + caret; Maple-style runtime/argument errors; script line numbers
+- [ ] **Phase 109: Help Extensions** - Per-function examples; SYNOPSIS/SEE ALSO; examples from Garvan tutorial
+- [ ] **Phase 110: Input Convenience** - Typo suggestions for undefined variables; tab completion signature hints; unified line/pos buffer
+- [ ] **Phase 111: Ergonomics Polish** - Bracket-aware multi-line; trailing backslash EOF; SIGINT termios restore; TTY guards in script mode
+
+### Phase 108: Error Diagnostics
+**Goal**: Users get clear, actionable error messages that point to the problem location
+**Depends on**: Phase 107 (or prior REPL phases)
+**Requirements**: ERR-01, ERR-02, ERR-03, ERR-04, ERR-05
+**Success Criteria** (what must be TRUE):
+  1. Parse errors display the source line with a caret under the error position (GCC/Clang style)
+  2. Parse errors show line:col when offsetToLineCol is available
+  3. Runtime errors follow Maple format: `(in funcname) message`
+  4. Argument errors use format: "expects its N-th argument, name, to be X, but received Y"
+  5. Script mode prepends line number to error output (e.g., "line 3:")
+**Plans**: TBD
+
+Plans:
+- [ ] 108-01-PLAN.md — TBD (run /gsd:plan-phase 108 to break down)
+
+### Phase 109: Help Extensions
+**Goal**: Per-function help is more useful with examples and clearer structure
+**Depends on**: Phase 108
+**Requirements**: HELP-01, HELP-02, HELP-03
+**Success Criteria** (what must be TRUE):
+  1. help(prodmake), help(etamake), and other key built-ins include 1–2 examples
+  2. Help output has SYNOPSIS section; optionally SEE ALSO
+  3. Examples are sourced from qseriesdoc.md / Garvan tutorial where applicable
+**Plans**: TBD
+
+Plans:
+- [ ] 109-01-PLAN.md — TBD (run /gsd:plan-phase 109 to break down)
+
+### Phase 110: Input Convenience
+**Goal**: Users get helpful suggestions and completion hints without buffer conflicts
+**Depends on**: Phase 109
+**Requirements**: INPUT-01, INPUT-02, INPUT-03
+**Success Criteria** (what must be TRUE):
+  1. Typing an undefined variable shows "Did you mean: x?" (or similar) when a close match exists
+  2. Tab completion shows function signature hint when completing a built-in
+  3. Tab and history share a single (line, pos) buffer — no cursor/history conflict
+**Plans**: TBD
+
+Plans:
+- [ ] 110-01-PLAN.md — TBD (run /gsd:plan-phase 110 to break down)
+
+### Phase 111: Ergonomics Polish
+**Goal**: REPL handles multi-line input and script mode robustly; Ctrl+C restores terminal
+**Depends on**: Phase 110
+**Requirements**: ERGO-01, ERGO-02, ERGO-03, ERGO-04
+**Success Criteria** (what must be TRUE):
+  1. Bracket-aware multi-line: REPL continues prompting when parens/brackets are unclosed
+  2. Trailing backslash at EOF in script mode does not hang (e.g., `printf 'x := 1\' | qseries` exits)
+  3. Ctrl+C in raw mode restores termios before re-raise — shell remains usable
+  4. All TTY features (tab, history, banner) are guarded with stdin_is_tty() in script mode
+**Plans**: TBD
+
+Plans:
+- [ ] 111-01-PLAN.md — TBD (run /gsd:plan-phase 111 to break down)
+
+### v11.2 Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 108. Error Diagnostics | 0/? | Not started | - |
+| 109. Help Extensions | 0/? | Not started | - |
+| 110. Input Convenience | 0/? | Not started | - |
+| 111. Ergonomics Polish | 0/? | Not started | - |
+
