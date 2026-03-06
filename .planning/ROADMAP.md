@@ -1836,11 +1836,11 @@ Plans:
 
 ---
 
-## Milestone v11.4 (Tech Debt) — phases 116–118
+## Milestone v11.4 (Tech Debt) — phases 116–119 ✓
 
-- [ ] **Phase 116: Built-in Registration** - Name→handler lookup; getHelpTable derives from registration table
-- [ ] **Phase 117: Duplication Reduction** - expectArg/ev/evi shared helpers; TTY branching abstraction
-- [ ] **Phase 118: Brittle Guards** - Guard env.at("q"); named constants for magic numbers
+- [x] **Phase 116: Built-in Registration** - Name→handler lookup; getHelpTable derives from registration table (completed 2026-03-06)
+- [x] **Phase 117: Duplication Reduction** - expectArg/ev/evi shared helpers; TTY branching abstraction (completed 2026-03-06)
+- [x] **Phase 118: Brittle Guards** - Guard env.at("q"); named constants for magic numbers (completed 2026-03-06)
 
 ### Phase 116: Built-in Registration
 **Goal**: Built-ins dispatched via lookup table; help table derived from same source
@@ -1851,7 +1851,10 @@ Plans:
   2. dispatchBuiltin uses lookup (map/unordered_map) instead of if-else chain
   3. getHelpTable derives help entries from the registration table (no separate hardcoded list)
   4. Adding a new built-in requires only one registration entry (single source of truth)
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 116-01-PLAN.md — Registration table; dispatch via lookup; getHelpTable derives from registry
 
 ### Phase 117: Duplication Reduction
 **Goal**: Built-ins share arg-check and eval helpers; TTY branching abstracted
@@ -1862,7 +1865,10 @@ Plans:
   2. At least 3 built-ins migrated to use shared helpers (e.g., etaq, prodmake, etamake)
   3. runRepl uses an abstraction (e.g., lambda, function pointer) for TTY vs non-TTY branches where feasible
   4. No duplicated if (stdin_is_tty()) blocks for the same logical branch
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 117-01-PLAN.md — expectArgCount helper; migrate etaq/prodmake/etamake; readLineFn TTY abstraction
 
 ### Phase 118: Brittle Guards
 **Goal**: q unset gives clear error; magic numbers replaced with named constants
@@ -1872,13 +1878,33 @@ Plans:
   1. If env does not contain "q" before dispatch, user sees clear error (e.g., "q not set") — no implicit std::out_of_range
   2. pow limit, maxHistory, maxContinuations, Levenshtein threshold are named constants (not literal numbers in code)
   3. All acceptance tests still pass
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 118-01-PLAN.md — Guard env.at("q"); named constants for magic numbers
+
+### Phase 119: Fix Cygwin Build (Gap Closure)
+**Goal**: Fix pre-existing Cygwin g++ 13 build failures so make succeeds; unblock acceptance test verification
+**Depends on**: Phase 118
+**Gap Closure**: Closes tech debt from v11.4 audit (phases 116–118)
+**Success Criteria** (what must be TRUE):
+  1. `make` succeeds in Cygwin g++ 13
+  2. H macro comma splitting fixed (brace-inits in seeAlso/examples)
+  3. Forward declarations for getBuiltinRegistry, evalToInt, formatEtamake, formatProdmake, formatUndefinedVariableMsg
+  4. tripleprod/quinprod return types explicit where needed
+  5. add/sum regBuiltin lambda convertible to BuiltinHandler
+  6. Acceptance tests run (make acceptance or equivalent)
+**Plans**: 1 plan
+
+Plans:
+- [x] 119-01-PLAN.md — Fix Cygwin g++ 13 build (H macro, forward decls, tripleprod/quinprod, add/sum, L.push_back)
 
 ### v11.4 Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 116. Built-in Registration | 0/? | Not started | - |
-| 117. Duplication Reduction | 0/? | Not started | - |
-| 118. Brittle Guards | 0/? | Not started | - |
+| 116. Built-in Registration | 0/1 | Complete    | 2026-03-06 |
+| 117. Duplication Reduction | 0/1 | Complete    | 2026-03-06 |
+| 118. Brittle Guards | 0/1 | Complete    | 2026-03-06 |
+| 119. Fix Cygwin Build | 1/1 | Complete    | 2026-03-06 |
 

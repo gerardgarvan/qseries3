@@ -4,15 +4,15 @@
 
 **Project:** qseries3 — zero-dependency C++20 q-series REPL
 **Core value:** Rogers-Ramanujan must work; prodmake recovers product form with denominators at exponents ≡ ±1 (mod 5)
-**Current focus:** v11.4 Tech Debt
+**Current focus:** Milestone v11.4 complete
 
 ## Position
 
-**Milestone:** v11.4 Tech Debt
-**Current phase:** 119 (Fix Cygwin Build)
-**Plan:** 01 complete
-**Status:** Complete
-**Last activity:** 2026-03-06 — Phase 119 Plan 01 complete (119-01)
+**Milestone:** v11.4 Tech Debt (completed)
+**Current phase:** —
+**Plan:** —
+**Status:** Milestone shipped
+**Last activity:** 2026-03-06 — Milestone v11.4 complete; tag v11.4
 
 ## Progress
 
@@ -25,8 +25,10 @@
 
 ## Session Log
 
+- 2026-03-06: Milestone v11.4 complete — audit updated to completed; archived to .planning/milestones/v11.4-MILESTONE-AUDIT.md; MILESTONES.md, PROJECT.md updated; tag v11.4
 - 2026-03-06: Phase 119 Plan 01 complete — Cygwin build fixes (forward decls, SEE2/SEE3/SEE4/EX2 macros, tripleprod/quinprod/add/sum, L.push_back); commit d6dffc1; 119-01-SUMMARY.md
-- 2026-03-01: Phase 119 planned — 1 plan (119-01); Fix Cygwin g++ 13 build (H macro parens, forward decls, tripleprod/quinprod, add/sum, L.push_back); plan-check passed; gap closure for v11.4 tech debt
+- 2026-03-06: Phase 119 Plan 01 complete — Cygwin g++ 13 build fixes; forward decls, SEE2/SEE3/SEE4/EX2 macros, tripleprod/quinprod/add/sum, L.push_back; commit d6dffc1; 119-01-SUMMARY.md; make succeeds, 10/10 acceptance tests pass
+- 2026-03-01: Phase 119 planned — 1 plan (119-01); Fix Cygwin g++ 13 build; plan-check passed; gap closure for v11.4 tech debt
 - 2026-03-06: Phase 118 Plan 01 complete — named constants, q-guard in dispatchBuiltin; commit e62d8c2; 118-01-SUMMARY.md
 - 2026-03-06: Phase 118 planned — 1 plan (118-01); q guard, named constants; plan-check passed
 - 2026-03-06: Phase 117 Plan 01 complete — expectArgCount, readLineFn; etaq/prodmake/etamake migrated; commits 1ee3029, 9224cb5, 548a94c; 117-01-SUMMARY.md

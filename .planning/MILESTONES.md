@@ -1,5 +1,19 @@
 # Milestones
 
+## v11.4 Tech Debt (Shipped: 2026-03-06)
+
+**Phases completed:** 4 phases (116–119), 4 plans
+
+**Key accomplishments:**
+- Built-in registration — getBuiltinRegistry, dispatchBuiltin lookup; getHelpTable derives from registry
+- Duplication reduction — expectArgCount, readLineFn TTY abstraction; etaq/prodmake/etamake migrated
+- Brittle guards — q-guard in dispatchBuiltin; named constants (kPowExponentLimit, kMaxHistory, etc.)
+- Fix Cygwin build — H macro SEE2/SEE3/SEE4/EX2; forward decls; tripleprod/quinprod/add/sum; L.push_back
+
+**TD-01–TD-06:** All 6 requirements satisfied. Cygwin g++ 13 build succeeds; acceptance tests pass.
+
+---
+
 ## v11.3 Code Health (Shipped: 2026-03-06)
 
 **Phases completed:** 4 phases (112–115), 4 plans

@@ -8,14 +8,15 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 **Rogers-Ramanujan must work.** Given `Σ q^(n²) / (q;q)_n`, prodmake must recover the product form with denominators only at exponents ≡ ±1 (mod 5). If this test passes, the core math is correct. Everything else builds on it.
 
-## Current Milestone: v11.4 Tech Debt
+## Current Milestone: TBD
 
-**Goal:** Remediate tech debt from TECH_DEBT.md. Focus on high-impact, low-risk items: registration table for built-ins, duplication reduction, brittle-area guards.
+Next milestone to be defined. See ROADMAP.md and TECH_DEBT.md for backlog.
 
-**Target scope:**
-- Built-in registration — replace if-chain dispatch with data-driven table; single source for names/arity/help
-- Duplication reduction — expectArg/ev/evi helpers; centralize TTY branching where feasible
-- Brittle guards — guard env.at("q"); named constants for magic numbers; sync help with registration
+---
+
+## Previous Milestone: v11.4 Tech Debt ✓
+
+**Shipped:** Built-in registration, duplication reduction, brittle guards, Fix Cygwin build (phases 116–119). TD-01–TD-06 satisfied. Cygwin g++ 13 build succeeds; acceptance tests pass.
 
 ---
 
