@@ -1690,7 +1690,7 @@ Plans:
 
 - [x] **Phase 108: Error Diagnostics** - Parse errors with source line + caret; Maple-style runtime/argument errors; script line numbers (completed 2026-03-06)
 - [x] **Phase 109: Help Extensions** - Per-function examples; SYNOPSIS/SEE ALSO; examples from Garvan tutorial (completed 2026-03-06)
-- [ ] **Phase 110: Input Convenience** - Typo suggestions for undefined variables; tab completion signature hints; unified line/pos buffer
+- [x] **Phase 110: Input Convenience** - Typo suggestions for undefined variables; tab completion signature hints; unified line/pos buffer (completed 2026-03-06)
 - [ ] **Phase 111: Ergonomics Polish** - Bracket-aware multi-line; trailing backslash EOF; SIGINT termios restore; TTY guards in script mode
 
 ### Phase 108: Error Diagnostics
@@ -1755,6 +1755,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 108. Error Diagnostics | 0/2 | Complete    | 2026-03-06 |
 | 109. Help Extensions | 0/1 | Complete    | 2026-03-06 |
-| 110. Input Convenience | 0/? | Not started | - |
+| 110. Input Convenience | 0/? | Complete    | 2026-03-06 |
 | 111. Ergonomics Polish | 0/? | Not started | - |
 

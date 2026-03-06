@@ -11,7 +11,7 @@
 **Milestone:** v11.2 Improve User Experience
 **Current phase:** 110 (Input Convenience)
 **Plan:** 01 complete
-**Status:** Completed 110-01-PLAN.md
+**Status:** Milestone complete
 
 ## Progress
 
