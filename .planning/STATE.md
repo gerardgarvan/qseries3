@@ -9,9 +9,9 @@
 ## Position
 
 **Milestone:** v11.3 Code Health
-**Current phase:** 112 (Warning Audit)
+**Current phase:** 113 (Build Hygiene)
 **Plan:** 01 complete
-**Status:** Milestone complete
+**Status:** Complete
 **Last activity:** 2026-03-06 — v11.3 roadmap created (phases 112–115)
 
 ## Progress
@@ -19,12 +19,13 @@
 | Phase | Goal | Status |
 |-------|------|--------|
 | 112. Warning Audit | Zero warnings; -Wshadow; fix tcore.h, eta_cusp.h | 1 plan complete |
-| 113. Build Hygiene | CXXFLAGS aligned | Not started |
+| 113. Build Hygiene | CXXFLAGS aligned | 1 plan complete |
 | 114. make lint | cppcheck target | Not started |
 | 115. Tech Debt Inventory | TECH_DEBT.md | Not started |
 
 ## Session Log
 
+- 2026-03-06: Phase 113 Plan 01 complete — add -Wpedantic -Wshadow to build.sh and release.yml; CXXFLAGS aligned with Makefile; commits 62b40ce, 4eb5c9f; 113-01-SUMMARY.md
 - 2026-03-06: Phase 112 Plan 01 complete — fix tcore.h/eta_cusp.h warnings, add -Wshadow to Makefile; commits 8571009, 45c060b, ed89709; 112-01-SUMMARY.md
 - 2026-03-06: Phase 111 Plan 03 complete — re-add SIGINT handler (ERGO-03 gap closure); commit ad0b09d; 111-03-SUMMARY.md; uses signal() not sigaction (Cygwin)
 - 2026-03-06: Phase 111 Plan 01 complete — bracketsUnclosed, bracket continuation, EOF guard (ERGO-01, ERGO-02, ERGO-04); acceptance-ergonomics.sh; commits e4edaa9, ddd57bc
@@ -38,6 +39,7 @@
 - 2026-03-06: Phase 108 Plan 02 complete — parse error snippet + caret, formatParseErrorWithSnippet, script line prefix, WASM Maple format; acceptance-error-diagnostics.sh; commits 11e79a3, 0f1b1f9, 55c226e
 - 2026-03-06: Phase 108 Plan 01 complete — Maple format, ordinal, expectArg; etaq/prodmake/etamake migrated; commits 8efbbff, d67436d
 - 2026-03-06: Phase 108 planned — 2 plans in 2 waves; research + verification passed
+- 2026-03-06: Phase 113 planned — 1 plan (113-01); add -Wpedantic -Wshadow to build.sh, release.yml; research + verification passed
 - 2026-03-06: Phase 112 planned — 1 plan (112-01); fix tcore.h/eta_cusp.h, add -Wshadow; research + plan-check passed
 - 2026-03-06: v11.3 roadmap created — phases 112–115 (Warning Audit, Build Hygiene, make lint, Tech Debt Inventory); 5/5 requirements mapped
 - 2026-03-06: Phase 108 context gathered — parse errors (caret, ANSI red), Maple format, expectArg helper, script line numbers
