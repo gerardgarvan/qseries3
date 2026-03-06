@@ -1703,10 +1703,11 @@ Plans:
   3. Runtime errors follow Maple format: `(in funcname) message`
   4. Argument errors use format: "expects its N-th argument, name, to be X, but received Y"
   5. Script mode prepends line number to error output (e.g., "line 3:")
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 108-01-PLAN.md — TBD (run /gsd:plan-phase 108 to break down)
+- [ ] 108-01-PLAN.md — Maple format (runtimeErr), expectArg helper, migrate etaq/prodmake/etamake
+- [ ] 108-02-PLAN.md — Parse snippet+caret, catch block update, script line prefix, acceptance tests
 
 ### Phase 109: Help Extensions
 **Goal**: Per-function help is more useful with examples and clearer structure
@@ -1752,7 +1753,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 108. Error Diagnostics | 0/? | Not started | - |
+| 108. Error Diagnostics | 0/2 | Not started | - |
 | 109. Help Extensions | 0/? | Not started | - |
 | 110. Input Convenience | 0/? | Not started | - |
 | 111. Ergonomics Polish | 0/? | Not started | - |
