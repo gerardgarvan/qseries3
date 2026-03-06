@@ -1557,7 +1557,7 @@ Plans:
 ## Milestone v11.0 (Modular Forms) — phases 101–102
 
 - [x] **Phase 101: makeALTbasisM** — Alternative basis of M_k(SL_2(Z)) using Delta_12 (completed 2026-03-06)
-- [ ] **Phase 102: Cross-Package Integration** — ETA + theta IDs + modforms identity proofs; integration-eta-theta-modforms.sh
+- [x] **Phase 102: Cross-Package Integration** — ETA + theta IDs + modforms identity proofs; integration-eta-theta-modforms.sh (completed 2026-03-06)
 
 ### Phase 101: makeALTbasisM
 **Goal:** User can call makeALTbasisM(k, T) — returns basis of M_k(SL_2(Z)) using Delta_12 instead of E4/E6
@@ -1583,7 +1583,7 @@ Plans:
   2. At least one end-to-end flow: eta identity + theta ID + modular form basis used in a single proof chain
   3. No regressions in maple-checklist or existing acceptance tests
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 102-01-PLAN.md — Single-chain test (makeALTbasisM/makebasisM), PATH hardening, include in run-all
@@ -1593,5 +1593,79 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 101. makeALTbasisM | 0/1 | Complete    | 2026-03-06 |
-| 102. Cross-Package Integration | 0/? | Not started | - |
+| 102. Cross-Package Integration | 0/? | Complete    | 2026-03-06 |
+
+---
+
+## Milestone v11.1 (Gap Closure & Improvements) — phases 103–107
+
+- [ ] **Phase 103: Block 25 fix** - findpoly q-shift via addAligned; maple-checklist Block 25 passes
+- [ ] **Phase 104: Block 24 N/A rationale** - Document N/A (collect is Maple formatting-only); no implementation
+- [ ] **Phase 105: findlincombomodp** - findlincombomodp(f, L, p, T); REPL dispatch; mod-p linear combo
+- [ ] **Phase 106: provemodfuncid extensions** - provemodfuncidBATCH; theta_aids regression; acceptance-theta-ids passes
+- [ ] **Phase 107: RR Identity Search** - findids types 3–10; acceptance-rr-id passes
+
+### Phase 103: Block 25 fix
+**Goal**: findpoly works on theta2/theta3 quotients; q-shift alignment via addAligned before polynomial relation finding
+**Depends on**: Phase 102
+**Requirements**: GAP11-01
+**Success Criteria** (what must be TRUE):
+  1. User can run findpoly on theta2/theta3 quotients and obtain a polynomial relation
+  2. maple-checklist Block 25 passes (no skip)
+  3. Series with different q-shifts are normalized (addAligned) before findpoly
+  4. No regressions in existing findpoly or related tests
+**Plans**: TBD
+
+### Phase 104: Block 24 N/A rationale
+**Goal**: Document Block 24 as N/A; clarify scope without implementing collect
+**Depends on**: Phase 103
+**Requirements**: GAP11-02
+**Success Criteria** (what must be TRUE):
+  1. Block 24 has documented N/A rationale (collect is Maple formatting-only)
+  2. maple-checklist Block 24 has explicit skip rationale in test file or adjacent doc
+  3. No implementation of collect — scope explicitly deferred
+**Plans**: TBD
+
+### Phase 105: findlincombomodp
+**Goal**: User can express a series as linear combination of others mod p
+**Depends on**: Phase 104
+**Requirements**: GAP11-03
+**Success Criteria** (what must be TRUE):
+  1. User can call findlincombomodp(f, L, p, T) from REPL
+  2. Function returns coefficients in F_p such that f ≡ Σ c_i * L_i (mod p)
+  3. REPL help(findlincombomodp) documents usage
+  4. Acceptance test or mod-7 worksheet demonstrates correct behavior
+**Plans**: TBD
+
+### Phase 106: provemodfuncid extensions
+**Goal**: provemodfuncidBATCH and theta_aids regression verification
+**Depends on**: Phase 105
+**Requirements**: GAP11-04, GAP11-05
+**Success Criteria** (what must be TRUE):
+  1. User can call provemodfuncidBATCH to prove multiple jacid identities on Gamma_1(N)
+  2. At least 2 theta_aids identities verified
+  3. tests/acceptance-theta-ids.sh passes
+  4. No regressions in provemodfuncid single-identity flow
+**Plans**: TBD
+
+### Phase 107: RR Identity Search
+**Goal**: findids types 3–10 and acceptance-rr-id verification
+**Depends on**: Phase 106
+**Requirements**: GAP11-06, GAP11-07
+**Success Criteria** (what must be TRUE):
+  1. findids(type, T) works for types 3–10 (not just 1–2)
+  2. RRG, RRH, checkid produce expected results
+  3. tests/acceptance-rr-id.sh passes
+  4. findids discovers identities for at least 2 of types 3–10
+**Plans**: TBD
+
+### v11.1 Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 103. Block 25 fix | 0/? | Not started | - |
+| 104. Block 24 N/A rationale | 0/? | Not started | - |
+| 105. findlincombomodp | 0/? | Not started | - |
+| 106. provemodfuncid extensions | 0/? | Not started | - |
+| 107. RR Identity Search | 0/? | Not started | - |
 

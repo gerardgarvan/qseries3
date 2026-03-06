@@ -8,9 +8,11 @@ A standalone single-binary REPL for q-series computation in C++20. Reimplements 
 
 **Rogers-Ramanujan must work.** Given `Σ q^(n²) / (q;q)_n`, prodmake must recover the product form with denominators only at exponents ≡ ±1 (mod 5). If this test passes, the core math is correct. Everything else builds on it.
 
-## Current Milestone: Planning next (v11.1 or v12.0)
+## Current Milestone: v11.1 Gap Closure & Improvements
 
-**v11.0 shipped.** See Previous Milestone below.
+**Goal:** Identify and address functions, features, and gaps needed to improve the program—Maple qseries parity, known problems, and resolvable issues.
+
+**Target scope:** Gap analysis (maple-checklist blocks, Maple vs qseries3), missing functions, known failures, improvement opportunities.
 
 ---
 

@@ -1049,5 +1049,41 @@ Requirements for extending modular forms capabilities.
 
 ---
 
+## v11.1 Gap Closure & Improvements
+
+Requirements derived from research (STACK, FEATURES, ARCHITECTURE, PITFALLS). Focus: maple-checklist parity, mod-p relations, theta/RR extensions.
+
+### Tier 1: Maple Checklist & Mod-p (Phases 97–99)
+
+- [ ] **GAP11-01**: Block 25 fix — findpoly on theta2/theta3 quotients works via q-shift alignment (addAligned before addition)
+- [ ] **GAP11-02**: Block 24 rationale — Document N/A (collect is Maple formatting-only); no implementation
+- [ ] **GAP11-03**: findlincombomodp — User can call `findlincombomodp(f, L, p, T)` to find mod-p linear combination; REPL dispatch
+
+### Tier 2: Theta IDs Extensions (Phase 85)
+
+- [ ] **GAP11-04**: provemodfuncidBATCH — Batch prove multiple jacid identities on Gamma_1(N)
+- [ ] **GAP11-05**: theta_aids regression — Verify 2+ theta_aids identities; acceptance-theta-ids passes
+
+### Tier 3: RR Identity Search (Phase 86)
+
+- [ ] **GAP11-06**: findids types 3–10 — Extend findids beyond types 1–2 for systematic identity search
+- [ ] **GAP11-07**: acceptance-rr-id — RR identity search tests pass; RRG, RRH, checkid, findids verified
+
+### v11.1 Traceability
+
+| Req ID | Phase | Status |
+|--------|-------|--------|
+| GAP11-01 | Phase 103 | Pending |
+| GAP11-02 | Phase 104 | Pending |
+| GAP11-03 | Phase 105 | Pending |
+| GAP11-04 | Phase 106 | Pending |
+| GAP11-05 | Phase 106 | Pending |
+| GAP11-06 | Phase 107 | Pending |
+| GAP11-07 | Phase 107 | Pending |
+
+**Coverage:** 7/7 v11.1 requirements mapped ✓
+
+---
+
 *Requirements defined: 2025-02-24*
-*Last updated: 2026-03-05 — v11.0 Modular Forms requirements added*
+*Last updated: 2026-03-06 — v11.1 Gap Closure requirements added*
