@@ -492,6 +492,27 @@ struct DispatchContext {
     std::function<Partition(const Expr*)> evalToPartition;
 };
 
+// expectArgCount: validate ctx.args.size() against allowed counts
+inline void expectArgCount(const DispatchContext& ctx, size_t n) {
+    if (ctx.args.size() != n)
+        throw std::runtime_error(runtimeErr(ctx.name, expectArg(1, "arguments", std::to_string(n), std::to_string(ctx.args.size()) + " arguments")));
+}
+inline void expectArgCount(const DispatchContext& ctx, std::initializer_list<size_t> allowed) {
+    for (size_t a : allowed)
+        if (ctx.args.size() == a) return;
+    std::string allowedStr;
+    if (allowed.size() == 1) allowedStr = std::to_string(*allowed.begin());
+    else if (allowed.size() == 2) allowedStr = std::to_string(*allowed.begin()) + " or " + std::to_string(*(allowed.begin() + 1));
+    else {
+        auto it = allowed.begin();
+        for (size_t i = 0; i < allowed.size(); ++i, ++it) {
+            if (i > 0) allowedStr += (i + 1 == allowed.size()) ? ", or " : ", ";
+            allowedStr += std::to_string(*it);
+        }
+    }
+    throw std::runtime_error(runtimeErr(ctx.name, expectArg(1, "arguments", allowedStr, std::to_string(ctx.args.size()) + " arguments")));
+}
+
 using BuiltinHandler = std::function<EvalResult(DispatchContext&)>;
 
 // Help table: name -> (signature, description, examples, seeAlso)
