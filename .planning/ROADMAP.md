@@ -1730,10 +1730,10 @@ Plans:
   1. Typing an undefined variable shows "Did you mean: x?" (or similar) when a close match exists
   2. Tab completion shows function signature hint when completing a built-in
   3. Tab and history share a single (line, pos) buffer — no cursor/history conflict
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 110-01-PLAN.md — TBD (run /gsd:plan-phase 110 to break down)
+- [ ] 110-01-PLAN.md — Typo suggestions, sig hint on tab, single-buffer doc
 
 ### Phase 111: Ergonomics Polish
 **Goal**: REPL handles multi-line input and script mode robustly; Ctrl+C restores terminal
