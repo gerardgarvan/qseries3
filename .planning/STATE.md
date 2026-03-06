@@ -10,7 +10,7 @@
 
 **Milestone:** v11.2 Improve User Experience
 **Current phase:** 111 (Ergonomics Polish)
-**Plan:** 01, 02 complete
+**Plan:** 01, 02, 03 complete
 **Status:** Phase 111 complete
 
 ## Progress
@@ -20,12 +20,14 @@
 | 108 | Error Diagnostics | 2/2 plans complete |
 | 109 | Help Extensions | 1/1 plans complete |
 | 110 | Input Convenience | 1/1 plans complete |
-| 111 | Ergonomics Polish | 2/2 plans complete |
+| 111 | Ergonomics Polish | 3/3 plans complete |
 
 ## Session Log
 
+- 2026-03-06: Phase 111 Plan 03 complete — re-add SIGINT handler (ERGO-03 gap closure); commit ad0b09d; 111-03-SUMMARY.md; uses signal() not sigaction (Cygwin)
 - 2026-03-06: Phase 111 Plan 01 complete — bracketsUnclosed, bracket continuation, EOF guard (ERGO-01, ERGO-02, ERGO-04); acceptance-ergonomics.sh; commits e4edaa9, ddd57bc
 - 2026-03-06: Phase 111 Plan 02 complete — SIGINT handler restores termios (ERGO-03); commit 09c984c; 111-02-SUMMARY.md
+- 2026-03-06: Phase 111 gap plan 111-03 created — re-add SIGINT handler (ERGO-03)
 - 2026-03-06: Phase 111 planned — 2 plans (111-01 bracket/EOF/TTY, 111-02 SIGINT); research + verification passed
 - 2026-03-06: Phase 110 Plan 01 complete — formatUndefinedVariableMsg, sig hint on tab, single-buffer doc; acceptance-input-convenience.sh; commits 58b8610, b7036c6, ba8c01c
 - 2026-03-06: Phase 110 planned — 1 plan (110-01); typo suggestions, sig hint on tab, single-buffer doc; research + verification passed
