@@ -1,182 +1,175 @@
-# Feature Landscape: REPL UX for Maple Users
+# Feature Landscape: Code Health Audit & Remediation
 
-**Domain:** q-series REPL — ergonomics, error diagnostics, help, input convenience for mathematicians transitioning from Maple  
+**Domain:** Code health assessment and remediation for existing C++20 REPL  
 **Researched:** 2026-03-06  
-**Confidence:** HIGH  
+**Project context:** qseries3 — zero-dependency C++20 q-series REPL; acceptance tests (acceptance-*.sh, maple-checklist), Makefile, g++ -Wall -Wextra -Wpedantic. Known warnings in tcore.h, eta_cusp.h (unused params).
 
 ---
 
-## Executive Summary
+## How Code Health Assessments Typically Work
 
-Mathematicians used to Maple's qseries package and worksheet model expect: (1) help that mirrors Maple's `?topic` / `help(topic)` with **calling sequence, synopsis, examples**; (2) **clear error messages** with location and context; (3) **input convenience** — tab completion, history, multi-line; (4) **ergonomic prompt/output layout** that separates input from result. qseries3 already has help, tab completion, history, multi-line, ANSI color, and "Did you mean" for unknown built-ins. Gaps: clearer parse errors (source snippet + caret), richer per-function help (examples, Maple-style structure), undefined-variable typo suggestions, and prompt/output layout polish. Table stakes for Maple-to-REPL transition: `help`/`help(func)`, tab completion, history, multi-line, semicolon suppress, clear runtime errors with function name. Differentiators: parse errors with caret, per-function examples in help, typo suggestions for variables.
+Code health assessment follows a four-pillar model:
 
----
+1. **Warning audit** — Compiler flags, zero-warnings policy, selective promotion to errors  
+2. **Test coverage** — Line/function/branch coverage, automation, thresholds  
+3. **Tech debt identification** — Complexity metrics, duplication, hotspots, prioritization  
+4. **Build hygiene** — Reproducibility, incremental correctness, dependency tracking  
 
-## Maple User Expectations
-
-### Help System
-
-| Maple Pattern | What Users Expect | qseries3 Status |
-|---------------|-------------------|-----------------|
-| `?topic` or `help(topic)` | Open help for a topic | `help(func)` — present |
-| Per-function pages | CALLING SEQUENCE, PARAMETERS, SYNOPSIS, EXAMPLES, SEE ALSO | Signature + one-line description only |
-| `??topic` | Brief (calling sequence + params) | Not implemented |
-| `???topic` | Examples only | Not implemented |
-| Index / category list | Browse all commands | `help` lists flat built-in names |
-
-**Source:** [Maple Help](https://www.maplesoft.com/support/help/Maple/view.aspx?path=help), [qseries prodmake.html](https://qseries.org/fgarvan/qmaple/qseries/functions/prodmake.html)
-
-### Error Messages
-
-Maple errors include function name and brief context. Compiler-style diagnostics (GCC/Clang) are the modern standard: `location: message`, optional source snippet + caret.
-
-### Input Convenience
-
-| Feature | Maple | Mathematica | qseries3 |
-|---------|-------|-------------|----------|
-| Tab completion | Prefix match only | Partial, middle-of-word, abbreviation | Prefix match (identifiers + built-ins) ✓ |
-| History | Up/down | Up/down | Up/down ✓ |
-| Multi-line | Semicolon-separated or continuation | Natural multi-line | Backslash continuation ✓ |
-| Delimiter matching | Limited | Auto-close brackets | None |
-| Command templates | Keyboard only | Mouse + keyboard | None |
-
-**Source:** Maple 2025 interface updates; Mathematica vs Maple ease-of-use comparison (LOW confidence for detailed feature matrix).
+Assessments run at three stages: IDE during development, PR before merge, CI/CD during builds. Focus on *new code* first (clean-as-you-code) to avoid overwhelming legacy remediation.
 
 ---
 
-## Feature Landscape
+## Table Stakes
 
-### Table Stakes (Users Expect These)
-
-Features users assume exist. Missing = product feels incomplete.
+Features users and maintainers expect. Missing = project feels unmaintainable.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| **help** and **help(func)** | Maple `?topic` / `help(topic)` is standard | LOW | ✓ Present; general help + per-function signature + one-liner |
-| **Tab completion** | Maple has autocomplete; mathematicians rely on it | LOW | ✓ Present; identifiers and built-in names |
-| **Command history (up/down)** | Standard REPL behavior | LOW | ✓ Present; 100 commands |
-| **Multi-line input** | Long expressions (sum, findhom) are common | LOW | ✓ Present; backslash continuation |
-| **Semicolon suppress output** | Maple uses `;` vs `:` for display vs suppress | LOW | ✓ Present |
-| **Clear runtime errors** | Function name + context (e.g. `etaq: expected ...`) | LOW | ✓ Present; runtimeErr helper, script line number |
-| **Arrow-key line navigation** | Edit within line without retyping | LOW | ✓ Present (TTY) |
-| **Per-function help with signature** | Maple pages show CALLING SEQUENCE | LOW | ✓ Present; signature + one-line description |
+| Zero compiler warnings | Professional C++ projects use -Wall -Wextra; warnings hide real issues | Low | Project already uses flags; need to fix tcore.h, eta_cusp.h |
+| Acceptance tests pass | Regression baseline; SPEC/ROADMAP acceptance gates | Low | acceptance.sh, maple-checklist, run-all.sh already exist |
+| Single-command build | `make` produces working binary; no manual steps | Low | Makefile present; already table-stakes met |
+| Basic test harness | Tests run via Make targets; deterministic pass/fail | Low | `make acceptance` etc. present |
+| No silent regressions | Changes don't break existing behavior without being caught | Low | Depends on acceptance tests; table stakes if tests cover critical paths |
 
-### Differentiators (Competitive Advantage)
+---
 
-Features that set the product apart. Not required, but valuable.
+## Differentiators
+
+Features that set a well-maintained codebase apart. Not required, but valued.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| **Parse errors with source snippet + caret** | Pinpoints exact column; GCC/Clang style | MEDIUM | Parser has offset; needs snippet + caret in REPL catch |
-| **Per-function help with examples** | Maple prodmake.html has EXAMPLES; speeds learning | MEDIUM | Extend help table: optional third field (examples) or link to doc |
-| **Typo suggestions for undefined variable** | "Did you mean: x?" when `y` is undefined | LOW | Already done for unknown built-in; extend to evalExpr Var branch |
-| **Richer help structure** | Maple: CALLING SEQUENCE, SYNOPSIS, EXAMPLES | MEDIUM | Multi-line help text per function; `help(prodmake)` could show 3–5 lines |
-| **Color-gated output** | Prompt, errors, timing, help names visually distinct | LOW | ✓ Present; ANSI gold/red/dim |
+| Warning audit report | Systematic inventory of all warnings; per-file remediation plan | Low | Document current warnings; fix or justify each |
+| -Werror in CI | New warnings block merge; prevents regression | Low | Add -Werror to release.yml / build.sh for CI only |
+| Test coverage metrics | Quantifies gaps; informs where to add tests | Medium | Needs gcov/lcov; single-file main.cpp complicates granularity |
+| Tech debt inventory | Prioritized list: complexity, duplication, hotspots | Medium | Manual or tool-assisted (SonarQube, clang-tidy); must map to phase work |
+| Build hygiene audit | Reproducible builds; correct incremental deps | Low | Single main.cpp → few deps; still valuable for wasm, bench targets |
+| Sanitizers in debug build | Catches UB, leaks early | Low | Makefile already has `debug` target with -fsanitize=address,undefined |
+| Static analysis (clang-tidy) | Finds bugs and style issues beyond compiler | Medium | No integration yet; would need config and CI |
 
-### Anti-Features (Commonly Requested, Often Problematic)
+---
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| **Full worksheet/document mode** | Maple has worksheet; Mathematica has notebook | Requires GUI, cell model, rich display; conflicts with single-binary REPL | Keep REPL; optional script mode (✓ present) for batch work |
-| **2-D Math input** | Maple worksheet uses 2-D notation | Needs WYSIWYG editor, symbol palette; not feasible in terminal REPL | 1-D syntax; document notation in help and MANUAL |
-| **External browser for help** | Maple can open help in browser | Adds dependency, breaks offline/single-binary | Inline `help(func)` in terminal |
-| **AI-powered completion** | Mathematica has context-aware suggestions | Out of scope; external API; no training on q-series | Tab completion on known identifiers + built-ins |
-| **Delimiter auto-close** | Mathematica auto-closes `[` with `]` | Can confuse users; cursor placement edge cases | Manual typing; document in quick-start |
-| **`?func` syntax** | Maple uses `?` for help | Parser already uses `#` for comment; `?` could conflict | Keep `help(func)`; document in help |
+## Anti-Features
+
+Features to explicitly NOT build.
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|--------------------|
+| SonarQube or heavy SaaS | Overkill for single-developer, zero-dependency REPL; adds infra | Use GCC warnings + clang-tidy locally if needed |
+| Coverage gate at 80%+ | Arbitrary; project is REPL with acceptance tests, not unit-tested library | Track coverage trends; fix critical gaps only |
+| Widespread -Wno-* suppressions | Hides real issues; creates maintenance debt | Fix or annotate (e.g. `[[maybe_unused]]`) explicitly |
+| New build system (CMake/Bazel) | Project is small; Makefile works; migration is tech debt | Improve existing Makefile hygiene only |
+| Duplicate test frameworks | Project uses bash acceptance tests; adding GTest changes paradigm | Extend acceptance tests; optional bench_main.cpp stays |
+
+---
+
+## Expected Behaviors by Pillar
+
+### 1. Warning Audit
+
+| Behavior | Expected | qseries3 Status |
+|----------|----------|-----------------|
+| Use -Wall -Wextra | Baseline for any C++ project | ✅ Already in CXXFLAGS |
+| Use -Wpedantic | Standards compliance | ✅ Already in CXXFLAGS |
+| Zero warnings on clean build | Professional baseline | ❌ tcore.h, eta_cusp.h have unused-parameter |
+| Document or fix each warning | No silent suppressions | ❌ Not done |
+| Optional: -Werror in CI | Block new warnings | ❌ release.yml uses -Wall -Wextra only |
+| Unused-parameter handling | Fix, use `[[maybe_unused]]`, or (void)param | Partial (repl.h uses [[maybe_unused]]) |
+
+**Remediation actions:** Fix or annotate unused params in tcore.h, eta_cusp.h; optionally add -Werror for CI.
+
+### 2. Test Coverage
+
+| Behavior | Expected | qseries3 Status |
+|----------|----------|-----------------|
+| Acceptance tests cover critical paths | Rogers-Ramanujan, SPEC tests | ✅ acceptance.sh, maple-checklist |
+| Run tests in CI | Automated regression | ✅ run-all.sh, GitHub Actions |
+| Coverage measurement | Optional; gcov + lcov | ❌ Not set up |
+| Coverage target | 80%+ for production libs; not strict for REPL | N/A — REPL; acceptance coverage matters more |
+| Branch/edge coverage | Tests both success and failure paths | Partial — acceptance tests focus on success |
+
+**Remediation actions:** Ensure acceptance-all / run-all exercise all critical commands; add coverage target only if ROI justified (single main.cpp complicates line attribution).
+
+### 3. Tech Debt Identification
+
+| Behavior | Expected | qseries3 Status |
+|----------|----------|-----------------|
+| Identify high-complexity files | repl.h, parser.h likely | Manual; no metrics |
+| Duplication scan | Copy-paste across headers | Manual |
+| Hotspot analysis | Most-changed, most-tested | Can derive from git + test mapping |
+| Prioritized backlog | Link debt to phases; fix in context | Phase plans exist; no explicit debt backlog |
+| Focus on new-code quality | Don't boil the ocean | Align with clean-as-you-code |
+
+**Remediation actions:** Create lightweight debt inventory (complexity, duplication, known hotspots); attach to phase work rather than separate “debt sprint.”
+
+### 4. Build Hygiene
+
+| Behavior | Expected | qseries3 Status |
+|----------|----------|-----------------|
+| Single-command build | `make` | ✅ |
+| Clean rebuild works | `make clean && make` | ✅ |
+| Incremental build correctness | Rebuild when headers change | ⚠️ main.cpp includes all; single TU → full rebuild on any change |
+| Reproducible build | Same source → same binary (modulo timestamp) | Not verified |
+| Multiple targets (debug, wasm, bench) | Separate builds for different purposes | ✅ debug, wasm, bench targets exist |
+| Consistent CXXFLAGS | Same flags for main, wasm, CI | ⚠️ release.yml omits -Wpedantic; build.sh omits -Wpedantic |
+
+**Remediation actions:** Align CXXFLAGS across Makefile, build.sh, release.yml; document reproducibility expectations (timestamp stripping if needed).
 
 ---
 
 ## Feature Dependencies
 
 ```
-help(func) with examples
-    └── requires ──> help table (exists) + richer content (examples text)
-                          └── depends on ──> qseriesdoc.md / Garvan examples
-
-Typo suggestions for undefined variable
-    └── requires ──> getHelpTable() or built-in name set (exists)
-    └── requires ──> levenshteinDistance (exists, used for unknown built-in)
-
-Parse errors with snippet + caret
-    └── requires ──> Token.offset / line, col (parser has offsetToLineCol)
-    └── requires ──> REPL catch block formats error (currently prints e.what())
+Zero compiler warnings → Warning audit report (warnings must be enumerated first)
+Acceptance tests pass → Test coverage metrics (coverage measures what tests hit)
+Makefile / build scripts → Build hygiene audit (audit existing build)
+Tech debt inventory → Phase planning (debt items feed phase tasks)
 ```
 
-### Dependency Notes
+---
 
-- **Per-function examples require help table extension:** Add optional `examples` string per entry; or keep help table minimal and reference qseriesdoc.md / website.
-- **Typo suggestions for variables:** Reuse existing `levenshteinDistance` and built-in set; add variable name set from `env.env` for "undefined variable: x. Did you mean: y?"
-- **Source snippet + caret:** Parser throws `"parser: line L, col C: message"`; REPL can parse that or use a custom ParseError. Snippet needs the raw input line; REPL has it in the catch scope.
+## Dependencies on Existing qseries3
+
+| Feature | Depends On | Status |
+|---------|------------|--------|
+| Warning audit | Makefile CXXFLAGS, g++ | CXXFLAGS already strict; fix remaining warnings |
+| Test coverage | acceptance-*.sh, run-all.sh, maple-checklist | Tests exist; coverage tooling optional |
+| Tech debt ID | src/*.h, repl.h, parser.h | Codebase present; needs systematic scan |
+| Build hygiene | Makefile, build.sh, .github/workflows/release.yml | Build system present; align flags |
 
 ---
 
-## MVP Definition (REPL UX Milestone)
+## MVP Recommendation for Code Health Phase
 
-### Launch With (v1 for this milestone)
+Prioritize:
 
-- [x] help, help(func) — DONE
-- [x] Tab completion — DONE
-- [x] History, multi-line, semicolon suppress — DONE
-- [x] Runtime errors with function name — DONE
-- [x] Typo suggestions for unknown built-in — DONE
-- [ ] **Parse errors with column + optional snippet/caret** — HIGH value, MEDIUM effort
-- [ ] **Typo suggestions for undefined variable** — LOW effort, reuses existing logic
+1. **Warning audit + remediation** — Fix tcore.h, eta_cusp.h; document any remaining; optionally -Werror in CI  
+2. **CXXFLAGS alignment** — Makefile, build.sh, release.yml use same -Wall -Wextra -Wpedantic  
+3. **Lightweight tech debt inventory** — One-pass: complexity hotspots, duplication, known brittle areas  
 
-### Add After Validation (v1.x)
+Defer:
 
-- [ ] **Per-function help with 1–2 examples** — e.g. `help(prodmake)` shows Rogers-Ramanujan example
-- [ ] **Richer help structure** — SYNOPSIS + SEE ALSO for key functions (prodmake, etamake, etc.)
-
-### Future Consideration (v2+)
-
-- [ ] `??func` brief help (signature only)
-- [ ] `???func` examples only
-- [ ] Help categories (e.g. "Conversion: prodmake, etamake, jacprodmake")
+- **Coverage tooling** — ROI low for single-TU REPL; acceptance tests are primary gate  
+- **clang-tidy / SonarQube** — Add only if warning cleanup doesn’t suffice  
 
 ---
 
-## Feature Prioritization Matrix
+## Complexity Summary
 
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| Parse errors with snippet + caret | HIGH | MEDIUM | P1 |
-| Typo suggestions for undefined variable | MEDIUM | LOW | P1 |
-| Per-function help with examples | HIGH | MEDIUM | P2 |
-| Richer help structure (SYNOPSIS, SEE ALSO) | MEDIUM | MEDIUM | P2 |
-| `??func` / `???func` | LOW | LOW | P3 |
-
-**Priority key:** P1 = must have for this milestone; P2 = should have; P3 = nice to have.
-
----
-
-## Competitor Feature Analysis
-
-| Feature | Maple | Mathematica | qseries3 Approach |
-|---------|-------|-------------|-------------------|
-| Help invocation | `?topic`, `help(topic)` | `?symbol` | `help`, `help(func)` |
-| Per-function content | CALLING SEQUENCE, SYNOPSIS, EXAMPLES | Full doc + examples | Signature + one-liner; add examples |
-| Error format | Function + message | Full traceback | `func: message`; add location + snippet |
-| Tab completion | Prefix match | Partial, abbreviation | Prefix match (sufficient for REPL) |
-| Typo suggestions | Limited | "Did you mean" for symbols | Present for unknown built-in; add for variable |
-
----
-
-## What Makes UX "Best" for Maple-to-REPL Transition
-
-1. **Minimal syntax change** — `help(func)` mirrors Maple; `:=` for assignment; function call `name(args)` same.
-2. **Familiar help structure** — When `help(prodmake)` shows CALLING SEQUENCE + SYNOPSIS + 1–2 EXAMPLES, Maple users feel at home.
-3. **Errors that point to the problem** — Column number + caret under the bad character; function name in runtime errors.
-4. **Fast recovery from typos** — "Did you mean: prodmake?" for `prodmakee`; extend to "undefined variable x, did you mean: y?" when `env` has a close match.
-5. **No surprises** — Single binary, no package install, no worksheet complexity. REPL is a focused tool.
-6. **Script mode for worksheet-like workflow** — `qseries < script.qs` lets users prepare commands in a file, akin to Maple cells.
+| Feature | Complexity | Reason |
+|---------|------------|--------|
+| Warning audit + fix | Low | Small set of known warnings; [[maybe_unused]] or removal |
+| CXXFLAGS alignment | Low | Edit 3 files |
+| Tech debt inventory | Medium | Requires manual or tool-assisted scan; interpretation |
+| Coverage setup | Medium | gcov/lcov + CI; single TU dilutes value |
+| Static analysis integration | Medium | clang-tidy config, CI integration |
 
 ---
 
 ## Sources
 
-- Maple Help: https://www.maplesoft.com/support/help/Maple/view.aspx?path=help
-- Maple qseries prodmake: https://qseries.org/fgarvan/qmaple/qseries/functions/prodmake.html
-- qseries functions index: https://qseries.org/fgarvan/qmaple/qseries/functions/
-- Maple 2025 Interface: https://www.maplesoft.com/support/help/maple/view.aspx?path=updates%2FMaple2025%2FInterface
-- Phase 21 Research (error messages): .planning/phases/21-error-messages/21-RESEARCH.md
-- Codebase: src/repl.h (help, runtimeErr, typo suggestions, tab completion), src/parser.h (offsetToLineCol)
+- GCC Warning Options: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html (official)
+- SonarQube Clean-as-you-code: https://docs.sonarsource.com/sonarqube-server/2025.1/user-guide/clean-as-you-code/introduction/
+- C++ coverage: gcov, lcov; SonarQube C/C++ coverage docs
+- Tech debt: CodeScene, Sonar technical debt ratio; CodeAnt tracking metrics
+- Build hygiene: Reproducible Builds, content-hash Make patterns

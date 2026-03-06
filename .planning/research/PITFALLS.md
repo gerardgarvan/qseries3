@@ -1,271 +1,264 @@
-# Pitfalls Research
+# Domain Pitfalls: Code Health Tooling
 
-**Domain:** REPL UX improvements (ergonomics, errors, help, input) for existing REPL — targeting Maple users
+**Domain:** Code health assessment and tooling integration on a mature C++ codebase
 **Project:** qseries3
 **Researched:** 2026-03-06
-**Confidence:** HIGH (Maple docs verified; REPL pitfalls from community + Python/Julia post-mortems)
+**Confidence:** HIGH (official GCC/LLVM docs; community post-mortems; project context)
+
+---
 
 ## Executive Summary
 
-Adding REPL UX polish to an existing readline-style REPL (history, tab completion, multi-line, errors, help) introduces integration risks that break Maple users’ expectations. The main failure modes: (1) raw terminal mode leaving the shell unusable on Ctrl+C, (2) script vs interactive path divergence, (3) error/help formats that differ from Maple, (4) features not guarding on `stdin_is_tty()`. Prevention requires centralizing TTY checks, adopting Maple-style error messages, and registering signal handlers for raw mode. Phase placement: error/help polish before or alongside ergonomics; raw-mode safeguards in the same phase as line editing.
+Adding code health tooling (static analysis, coverage, stricter warnings, CI checks) to a mature C++ codebase like qseries3 (~15 headers, single TU, existing -Wall -Wextra -Wpedantic) introduces three major failure modes: (1) **warning suppression** that hides real issues or leaks across scopes, (2) **coverage scope** that is too narrow (missing headers) or too broad (third-party, generated code), and (3) **plan scope creep** where “fix all warnings” or “100% coverage” balloons into rewrites. Prevention: fix before suppress, define scope up front, adopt incrementally.
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Raw Terminal Mode Leaves Shell Broken on Ctrl+C
+### Pitfall 1: Pragmas Without Balanced Push/Pop
 
 **What goes wrong:**
-When the REPL uses raw terminal mode (termios / SetConsoleMode with ECHO/ICANON disabled) for line editing, Tab completion, and arrow keys, Ctrl+C does not generate SIGINT in the usual way. If the process is killed or crashes before the destructor restores termios, the shell remains in raw mode: no echo, no line buffering, garbage output.
+Using `#pragma GCC diagnostic ignored "-Wfoo"` without a matching `#pragma GCC diagnostic pop` causes the suppression to persist for the rest of the file. Warnings in unrelated code are silently suppressed.
 
 **Why it happens:**
-Raw mode typically clears `ISIG` (or equivalent), so Ctrl+C is read as bytes (0x03) instead of raising SIGINT. A crash or `kill -9` bypasses the RAII destructor that restores termios.
+Developers add `#pragma GCC diagnostic ignored` to silence a single warning and forget the pop. In header files, this leaks to every translation unit that includes the header.
 
-**How to avoid:**
-- Register `SIGINT` (and optionally `SIGTERM`) handlers that restore termios and re-raise. Use `atexit` or a scoped guard that restores on any exit path.
-- Ensure `RawModeGuard` (or equivalent) restores in its destructor and is never bypassed. Python 3.13 fixed a similar bug via deep-copy of `c_cc` before modification.
-- Document that users should run `reset` if the terminal is corrupted.
+**Consequences:**
+- Real bugs hidden below the pragma
+- Headers poison downstream code
+- Cross-compiler builds (GCC vs Clang) behave differently; Clang may not honor GCC pragmas
 
-**Warning signs:**
-- Terminal stops echoing input after Ctrl+C or crash.
-- Output appears only after Enter.
-- Tests that pipe input never hit raw mode; only manual testing exposes the issue.
+**Prevention:**
+- Always use balanced blocks:
+  ```cpp
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wunused-parameter"
+  // only the problematic call/section
+  #pragma GCC diagnostic pop
+  ```
+- Prefer fixing the warning (omit parameter name, `[[maybe_unused]]`, `(void)x`) over pragmas
+- Never put bare `ignored` without `push`/`pop` in headers
 
-**Phase to address:**
-Phase 28 (Arrow-key line navigation) or the phase that introduces/enhances raw mode. Must be addressed before or in the same phase as any feature relying on raw terminal.
+**Detection:**
+- Grep for `#pragma GCC diagnostic ignored` without a preceding `push` or following `pop`
+- Run with `-Werror`; if pragmas leak, unrelated code may start failing
+
+**Phase to address:** Code health / warning-cleanup phase. Add as acceptance: “no pragma diagnostic without matching push/pop.”
 
 ---
 
-### Pitfall 2: Script vs Interactive Path Divergence
+### Pitfall 2: Template Instantiation Ignores Pragma Scope
 
 **What goes wrong:**
-Banner, timing, history, tab completion, arrow keys, and raw-mode features are guarded by `stdin_is_tty()`. If a feature is added without this guard, it can: (a) break when `qseries < script.qs` (e.g. timing or banner to non-TTY stdout), or (b) block forever waiting for TTY input (e.g. Tab in raw mode when stdin is a pipe).
+Pragmas placed around template *definitions* often do not affect diagnostics from template *instantiation*, which happens later or in a different TU. The “fix” appears to work locally but warnings reappear when the template is used elsewhere.
 
 **Why it happens:**
-Developers test interactively and forget that `stdin_is_tty()` is false in script/CI/pipe scenarios. New code assumes TTY.
+The compiler emits diagnostics at instantiation time, not definition time. Pragma scope ends at the definition; instantiation is out of scope.
 
-**How to avoid:**
-- Every REPL feature that depends on TTY must check `stdin_is_tty()` before use.
-- Maintain a clear contract: script mode = `getline`, no banner, no timing, no raw-mode, no history load/save.
-- Add CI/acceptance tests that run `qseries < script.qs` and assert exit 0 and expected output.
+**Prevention:**
+- Wrap the *call site* (the code that instantiates the template), not the template definition
+- Or fix the template itself (e.g. use SFINAE, concepts, or correct types) instead of suppressing
 
-**Warning signs:**
-- Tests pass interactively but hang or fail when piped.
-- Demo script produces different output than interactive session (e.g. timing lines).
-- Feature works in terminal but not in `qseries < demo.qs`.
-
-**Phase to address:**
-Phase 16 (Script mode) and any phase adding interactive-only behavior (20 Tab completion, 28 Arrow keys, 18 Timing). Each such phase must add or extend script-mode guards and tests.
+**Phase to address:** Static analysis / clang-tidy phase. If using NOLINT on templates, verify on all instantiation sites.
 
 ---
 
-### Pitfall 3: Error Message Format Breaks Maple Users’ Expectations
+### Pitfall 3: NOLINT / Suppression Creep and Technical Debt
 
 **What goes wrong:**
-Maple users expect error messages in the form:  
-`Error, (in funcname) invalid input: funcname expects its N-th argument, argname, to be of type X, but received Y`  
-Generic messages like `runtime_error: etaq: k must be positive` or parser errors without function context feel unfamiliar and less actionable.
+Adding `// NOLINT` or `// NOLINTNEXTLINE` to silence clang-tidy (or similar) without fixing the underlying issue causes suppressions to accumulate. There is no easy way to re-enable checks or audit which suppressions are intentional vs oversight.
 
 **Why it happens:**
-The REPL wraps exceptions in `runtimeErr(func, msg)` but parser errors omit function context; many library throws use ad-hoc wording. Maple’s Error Message Guide explicitly structures errors for immediate troubleshooting.
+Quick path to “clean” CI: suppress instead of fix. No governance on when NOLINT is acceptable.
 
-**How to avoid:**
-- Parse errors: include line/column and “expected X” (qseries already does this). Add “(in parser)” or similar for consistency.
-- Runtime errors: always use `runtimeErr(func, msg)` with the top-level function name. Structure messages as: `expects its N-th argument, name, to be X, but received Y` when applicable.
-- Reserve “invalid input” for type/argument errors; use distinct phrasing for “no solution” vs internal errors.
+**Consequences:**
+- Technical debt: genuine bugs hidden
+- Unclear intent: which NOLINTs are interface constraints vs laziness?
+- Version drift: NOLINT behavior can change across clang-tidy versions; NOLINT on first line of file was historically buggy
 
-**Warning signs:**
-- Error text doesn’t mention the function that failed.
-- Users can’t tell which argument is wrong.
-- Messages don’t match Maple’s Error Message Guide style.
+**Prevention:**
+- Prefer fix over suppress. For unused parameters: omit the name, use `/* param */`, or `[[maybe_unused]]`
+- Require a short comment next to each NOLINT: `// NOLINT(misc-unused-parameters) — callback signature must match API`
+- Cap NOLINTs per file in review (e.g. max 2) to force discussion
+- Use `NOLINTBEGIN`/`NOLINTEND` for blocks, but ensure no orphaned markers
 
-**Phase to address:**
-Phase 21 (Error messages). Ensure both parse and runtime paths produce Maple-compatible messages before or alongside other UX work.
+**Phase to address:** Clang-tidy integration phase. Add policy: “fix before NOLINT; NOLINT requires justification comment.”
 
 ---
 
-### Pitfall 4: Help Format Mismatch with Maple
+### Pitfall 4: Fix vs Suppress — Wrong Choice for Unused Parameters
 
 **What goes wrong:**
-Maple supports `?topic` (preferred, no parens) and `help(topic)`. If qseries only supports `help(prodmake)` and Maple users try `?prodmake`, they get a parse error or unexpected behavior. Conversely, if qseries adds `?prodmake` but parses it as something else, it breaks expectations.
+Using pragmas or `(void)x` for every unused parameter when the interface is under your control. Or, changing the interface (removing parameters) when the function must match an external callback signature.
 
-**Why it happens:**
-Implementing only `help(name)` is simpler. The `?` form requires parser support (special token or command).
+**Best practice (from C++ Core Guidelines F.9, GCC workarounds):**
+- **You control the signature:** Omit the parameter name: `void callback(int, void*)` or `void f(int /*param*/)`. Cleanest.
+- **Conditionally unused:** Use `[[maybe_unused]]` (C++17).
+- **Must match external API:** Use `(void)param` or `[[maybe_unused]]`. Avoid pragmas.
+- **Generated / third-party code you cannot edit:** Pragmas with push/pop as last resort.
 
-**How to avoid:**
-- Support both `help` and `help(name)`. If adding `?topic`, ensure the parser treats `?` as a help shortcut and doesn’t conflate it with other operators.
-- Keep help content concise: signature, short description, one example. Maple’s `??topic` (calling sequence only) and `???topic` (examples only) are optional but useful patterns.
-- `help(unknown)` must return “unknown function” or similar, not a confusing parse error.
+**Anti-pattern:** Global `-Wno-unused-parameter` to get a “clean” build. Hides all unused-parameter warnings project-wide.
 
-**Warning signs:**
-- `?etaq` triggers parser error.
-- `help(etaq` (unclosed paren) produces an unhelpful parse error instead of a hint.
-
-**Phase to address:**
-Phase 17 (help + help(func)). If adding `?` syntax, do it in the same phase or a dedicated “Maple-style help” phase.
+**Phase to address:** Warning-cleanup phase (qseries3 already did Phase 34 with `(void)q` and `[[maybe_unused]]` — good pattern).
 
 ---
 
-### Pitfall 5: Tab Completion and History Fight Over the Same Buffer
+### Pitfall 5: Coverage Scope — Headers and Single-TU Blind Spots
 
 **What goes wrong:**
-Tab completion and history (up/down) both manipulate the current line. If Tab inserts into the wrong position, or history restoration overwrites a partial completion, the user sees jumps, duplication, or lost input.
+- **Too narrow:** Only `.cpp` files analyzed; headers (where most logic lives in header-only or template code) are excluded. qseries3 is effectively header-only (main.cpp pulls in headers); analyzing only main.cpp misses almost everything.
+- **Too broad:** Third-party headers, generated code, or system headers get analyzed, producing noise and false positives.
 
 **Why it happens:**
-Tab completion must be cursor-position aware. History restores the full line and sets `pos = line.size()`. If completion logic assumes `pos` is at the end or uses a separate buffer, the two features interfere.
+- Tools default to “compiled files only”; headers are often analyzed only in the context of the TUs that include them
+- Without `compile_commands.json` or equivalent, tools may not know include paths or preprocessor definitions
+- Unincluded headers are never analyzed (SonarQube, clang-tidy)
 
-**How to avoid:**
-- Use a single `(line, pos)` representation. Tab completion: find word at `pos`, replace with completion, set `pos` to end of completed word.
-- History: replace entire line and set `pos = line.size()`. Do not mix in-place completion with history semantics.
-- Ensure `redrawLineRaw` is called after every mutation so display matches state.
+**Prevention:**
+- For qseries3 (single TU): ensure `main.cpp` is the analyzed root; headers will be pulled in. Generate `compile_commands.json` (e.g. via CMake `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`) or use Bear.
+- Set `-header-filter` (clang-tidy) to project sources only: `-header-filter='.*/src/.*'` — exclude system and third-party
+- Document scope explicitly: “src/*.h and src/main.cpp”; “exclude: build/, third_party/”
 
-**Warning signs:**
-- Tab in the middle of a word produces wrong completion.
-- After Up then Down, the line differs from before.
-- Multiple Tab presses behave inconsistently.
-
-**Phase to address:**
-Phase 20 (Tab completion) and Phase 31 (Up-down history). Integration tests should cover: Tab at start, middle, end of word; Up/Down then Tab; Tab then Up.
+**Phase to address:** Static analysis / coverage setup phase. Define scope in the plan before running tools.
 
 ---
 
-### Pitfall 6: Multi-Line Continuation Breaks Script Mode Semantics
+### Pitfall 6: GCC vs Clang Flag Incompatibility
 
 **What goes wrong:**
-Backslash continuation is designed for interactive use. In script mode, a trailing `\` at EOF or a malformed continuation can cause the REPL to block waiting for more input, or to treat the next “command” as part of the same expression.
+Integrating clang-tidy (or other Clang-based tools) with a GCC-built project. GCC-specific flags (e.g. `-Wlogical-op`) in `compile_commands.json` cause clang-tidy to error. Missing defines (e.g. `_GNU_SOURCE`, `_POSIX_SOURCE`) make standard library identifiers unavailable to clang-tidy.
 
-**Why it happens:**
-Continuation logic runs in both interactive and script modes. In script mode, EOF on stdin means “no more lines”; the REPL should not block.
+**Prevention:**
+- Filter or patch `compile_commands.json` to remove GCC-only flags before feeding to clang-tidy
+- Use `-isystem` to point to correct toolchain headers; consider `-nostdinc` if clang-tidy uses incompatible headers
+- Prefer flags supported by both (e.g. `-Wall -Wextra`) when generating compile commands
 
-**How to avoid:**
-- On EOF in script mode, treat it as end of input. If the last line ends with `\`, either (a) treat as error “unexpected EOF in continued line” or (b) strip the backslash and use the line as-is, depending on spec.
-- Cap continuations (e.g. max 100 lines) to avoid runaway loops on corrupt input.
-- Test `echo 'x := etaq(1,50)\' | qseries` and ensure it exits (does not hang).
-
-**Warning signs:**
-- Script with trailing `\` hangs.
-- Pipe from file that ends mid-expression blocks forever.
-
-**Phase to address:**
-Phase 19 (Multi-line input). Verify behavior in script mode and add tests.
+**Phase to address:** Clang-tidy integration phase. Document GCC→Clang flag mapping.
 
 ---
 
-### Pitfall 7: Semicolon Suppression Inconsistency
+### Pitfall 7: Plan Scope Creep — “Fix All” Becomes a Rewrite
 
 **What goes wrong:**
-Maple uses trailing semicolon to suppress output. If qseries implements this but (a) still prints timing when output is suppressed, (b) prints blank lines, or (c) behaves differently for assignments vs expressions, users get inconsistent feedback.
+Phase goal: “Add clang-tidy and achieve clean run.” Execution: 500 diagnostics, team spends weeks “fixing” style, naming, and refactors. The phase never closes; new features stall.
 
 **Why it happens:**
-Semicolon handling is often added late and only for assignments. Expressions and timing logic may not respect the suppress flag.
+- Big-bang adoption: enabling all checks at once on a mature codebase
+- No baseline: every finding treated as must-fix
+- Style vs correctness not distinguished: `readability-identifier-naming` is low-value for a working codebase
 
-**How to avoid:**
-- Define a single “suppress output” flag: when set, do not print result, timing, or extra prompts. Apply to both `x := expr;` and bare `expr;`.
-- Ensure the parser accepts optional semicolon as a terminator without changing expression semantics.
-- Document that `;` suppresses printing (like Maple).
+**Prevention:**
+- **Incremental adoption:** Enable 2–5 high-value checks first (e.g. `bugprone-*`, `performance-*`). Add more over time.
+- **Baseline:** Use `--warnings-as-errors` only for *new* code or specific paths. For existing code, record baseline and fail only on *new* findings.
+- **Phase scope:** Define “Phase N: enable clang-tidy with checks X, Y, Z; fix only findings in files A, B.” Time-box. Defer the rest.
 
-**Warning signs:**
-- `x := etaq(1,50);` still shows timing.
-- `1+1;` prints nothing but a newline appears in a different way than for `1+1`.
-
-**Phase to address:**
-Phase 27 (Suppress output semicolon). Audit all display/timing paths.
+**Phase to address:** Planning phase for code health. Explicit scope: “which checks, which files, what’s in vs out.”
 
 ---
 
-## Technical Debt Patterns
+### Pitfall 8: -Werror Blocking Builds on New Compiler Versions
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Skip TTY check for “simple” feature | Faster implementation | Script mode breaks; hard to debug | Never — always guard |
-| Ad-hoc error strings | Quick to add | Inconsistent style; Maple users confused | Never for user-facing errors |
-| Parser throws without line/column | Fewer parser changes | Users can’t locate error | Never — offsetToLineCol exists |
-| Raw mode without signal handler | One less dependency | Broken terminal on Ctrl+C | Never if raw mode is used |
-| Help only for subset of built-ins | Faster ship | Users hit “unknown” for documented functions | Only in MVP; add incrementally |
+**What goes wrong:**
+CI uses `-Werror`. New GCC/Clang version introduces a new warning or changes behavior; build fails. Team is blocked until someone patches the code or disables the new warning.
 
----
+**Why it happens:**
+Compiler vendors add and refine warnings. Code that was clean under GCC 12 may warn under GCC 13.
 
-## Integration Gotchas
+**Prevention:**
+- Prefer fixing warnings over suppressing; but have a rollback: `-Wno-error=<new-warning>` for a release if needed
+- Pin compiler version in CI for reproducibility; upgrade in a dedicated phase with time to fix new warnings
+- Consider `-Werror` only for a subset of warnings (e.g. `-Werror=return-type`) rather than all
 
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| readLineRaw vs getline | Using readLineRaw when !stdin_is_tty() | Always branch: TTY → readLineRaw, else getline |
-| Raw mode + Ctrl+C | Assuming destructor always runs | Add SIGINT handler that restores termios, then re-raises |
-| Tab + History | Separate buffers or pos-ignorant Tab | Single (line, pos) state; Tab uses pos for word boundary |
-| Error catch + display | Catching but printing raw exception text | Format as Maple-style: Error, (in func) message |
-| Help table | Forgetting new built-ins | Audit after each phase that adds built-ins; add to help table |
+**Phase to address:** CI / build phase. Document compiler version and `-Werror` policy.
 
 ---
 
-## UX Pitfalls (Maple User Expectations)
+## Moderate Pitfalls
 
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Error without function name | “Where did this fail?” | Every runtime error: `(in funcname) message` |
-| Error without “expected X, received Y” | Can’t fix argument mistakes | Use Maple’s “expects its N-th argument, name, to be type X, but received Y” |
-| `?name` not supported | Muscle memory from Maple fails | Support `?topic` or document that only `help(topic)` works |
-| Timing in script output | Demos and CI output are noisy | Only show timing when stdin_is_tty() |
-| Banner in piped/script mode | Pollutes programmatic output | Suppress banner when !stdin_is_tty() |
-| No line/column on parse error | Hard to fix syntax errors | Always include line and column (or offset) |
-| Help(typo) gives parse error | Unhelpful | Return “unknown function: typo” from help built-in |
+### Pitfall 9: Compile Database Wrong or Stale
 
----
+**What goes wrong:**
+`compile_commands.json` is missing, incomplete, or references non-existent paths (e.g. `.modmap` files in non-modules projects). Clang-tidy and similar tools fail or produce wrong results.
 
-## "Looks Done But Isn't" Checklist
+**Prevention:**
+- Regenerate `compile_commands.json` on every configure/build
+- For qseries3 (Makefile): use Bear (`bear -- make`) or a small CMake stub that exports compile commands
+- Verify tool runs on at least one file before full rollout
 
-- [ ] **Raw mode:** Often missing SIGINT handler — verify Ctrl+C restores terminal
-- [ ] **Script mode:** New features often forget stdin_is_tty() — run `qseries < script.qs` after each change
-- [ ] **Error messages:** Often missing “(in func)” — grep for throw and ensure runtimeErr used
-- [ ] **Help:** New built-ins often missing from help table — audit after every built-in addition
-- [ ] **Tab completion:** Often breaks at cursor in middle of word — test with cursor before last char
-- [ ] **Semicolon:** Timing often still prints — verify display and timing both check suppress flag
-- [ ] **Multi-line:** EOF in script with trailing `\` can hang — test with piped input
+### Pitfall 10: Excessive False Positives Leading to Check Disable
+
+**What goes wrong:**
+A check produces many false positives. Team disables the check entirely instead of narrowing scope or fixing the underlying pattern.
+
+**Prevention:**
+- Use `NOLINT` sparingly for genuine false positives, with a comment
+- Use `-header-filter` to limit analysis to project code
+- Disable only the specific sub-check that’s noisy, not the whole category
 
 ---
 
-## Recovery Strategies
+## Minor Pitfalls
 
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Broken terminal (raw mode) | LOW | User runs `reset`; add SIGINT handler in next release |
-| Script mode broken | MEDIUM | Add stdin_is_tty() guards, regression tests |
-| Error format inconsistency | LOW | Refactor to runtimeErr + structured messages; phase 21 |
-| Help gaps | LOW | Add entries to help table; no API change |
-| Tab/history conflict | MEDIUM | Unify (line, pos) handling; add integration tests |
+### Pitfall 11: Performance — Full Analysis on Every Commit
+
+**What goes wrong:**
+Running full-project clang-tidy (or similar) on every commit is slow and blocks feedback.
+
+**Prevention:**
+- Use incremental analysis where supported (e.g. only changed files)
+- Run full analysis in nightly CI; run on changed files in pre-commit or PR
+- Use `-j$(nproc)` for parallelism
+
+### Pitfall 12: Orphaned NOLINTBEGIN / NOLINTEND
+
+**What goes wrong:**
+`NOLINTBEGIN` without matching `NOLINTEND` (or vice versa) can suppress more than intended.
+
+**Prevention:**
+- Keep NOLINT blocks small and paired
+- Grep for unbalanced NOLINTBEGIN/NOLINTEND in review
 
 ---
 
-## Pitfall-to-Phase Mapping
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|----------------|------------|
+| Warning cleanup | Pragmas without push/pop | Require balanced pragmas; prefer fix over suppress |
+| Warning cleanup | Unused params | Use omit name, `[[maybe_unused]]`, or `(void)x`; avoid global -Wno-* |
+| Clang-tidy integration | GCC flag incompatibility | Filter compile_commands.json; document flag mapping |
+| Clang-tidy integration | NOLINT creep | Policy: fix first; NOLINT requires justification |
+| Coverage / scope | Headers not analyzed | Single TU: analyze main.cpp; headers included. Set header-filter. |
+| Coverage / scope | Third-party noise | Exclude via header-filter, sonar.sources, or path config |
+| Plan / scope | Scope creep | Define: which checks, which files, baseline vs new-only. Time-box. |
+| CI / -Werror | Build breaks on compiler upgrade | Pin compiler; have -Wno-error escape hatch |
+| Templates | Pragma doesn’t apply | Wrap call site or fix template; don’t rely on definition-time pragmas |
+
+---
+
+## Pitfall-to-Phase Mapping (for Roadmap)
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Raw mode leaves shell broken | Phase 28 (Arrow keys) or raw-mode phase | Ctrl+C during input, then type; terminal should echo |
-| Script vs interactive divergence | Phases 16, 18, 20, 28 | `qseries < demo.qs` exits 0, no banner/timing in output |
-| Error format | Phase 21 | All errors include “(in X)” and “expects/received” where applicable |
-| Help format | Phase 17 | help(name) works; help(typo) returns “unknown function” |
-| Tab + history conflict | Phases 20, 31 | Tab at various positions; Up/Down then Tab; no corruption |
-| Multi-line EOF hang | Phase 19 | `printf 'x := 1\\' | qseries` exits (does not hang) |
-| Semicolon inconsistency | Phase 27 | `x:=1;` shows no output and no timing line |
-
----
-
-## Phase Ordering Recommendations
-
-1. **Phase 21 (Error messages)** — Do early. Improves every subsequent phase’s failure reporting.
-2. **Phase 17 (Help)** — Can run in parallel with 21. Foundation for discoverability.
-3. **Phase 28 (Arrow keys) / Raw mode** — Must include SIGINT/termios recovery in the same phase.
-4. **Phase 27 (Semicolon)** — Simple but touches display logic; do before heavy ergonomics.
-5. **Phase 19 (Multi-line)** — Add script-mode EOF tests in same phase.
-6. **Phases 20, 31 (Tab, History)** — Integrate together; test Tab + history interactions.
+| Pragmas without push/pop | Code health / warning phase | Grep; no bare `ignored` without push/pop |
+| Template pragma scope | Static analysis phase | Run tool on all TUs; no reappearing warnings |
+| NOLINT / suppression creep | Clang-tidy phase | Policy + comment requirement; cap NOLINTs per file |
+| Wrong fix vs suppress | Warning cleanup | Use omit name / [[maybe_unused]] / (void)x; no global -Wno-* |
+| Coverage scope wrong | Coverage / analysis setup | Document scope; header-filter; single TU includes headers |
+| GCC/Clang flag mismatch | Clang-tidy integration | compile_commands.json works with clang-tidy |
+| Plan scope creep | Code health planning | Explicit phase scope; incremental checks; baseline |
+| -Werror blocks build | CI phase | Pin compiler; document -Werror policy |
+| Stale compile DB | Analysis setup | Regenerate on build; verify tool runs |
 
 ---
 
 ## Sources
 
-- Maple Error Message Guide Overview: https://www.maplesoft.com/support/help/maple/view.aspx?path=ErrorMessageGuideOverview
-- Maple help syntax (?topic vs help(topic)): Maple Help
-- Python termios Ctrl+C / raw mode: cpython#128330, Python tty.setraw docs, Stack Overflow “Restoring terminal settings on exit”
-- REPL line editing and readline pitfalls: Python readline, Julia Evans blog, runebook readline
-- Beginner REPL struggles (editing past entries, state): Joe Politz, https://jpolitz.github.io/notes/2020/07/10/repl-problems.html
-- OhMyREPL error display patterns: color, reverse stack, numbering
-- qseries3 codebase: repl.h (readLineRaw, RawModeGuard, stdin_is_tty), parser.h (offsetToLineCol, throws)
+- GCC Diagnostic Pragmas: https://gcc.gnu.org/onlinedocs/gcc/Diagnostic-Pragmas.html
+- Stack Overflow: GCC pragma push/pop, template instantiation, NOLINT behavior
+- Clang-Tidy: compile_commands.json, header-filter, NOLINT — LLVM docs
+- PVS-Studio: “Grandma’s recipe for mastering regular static analysis” (incremental adoption)
+- C++ Core Guidelines F.9 (unused parameters)
+- iifx.dev: GCC -Wunused-parameter workarounds for callbacks
+- SonarQube: C++ analysis scope, compilation database mode
+- qseries3: Makefile (CXXFLAGS), Phase 34 warning fixes, single-TU structure

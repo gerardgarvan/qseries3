@@ -417,7 +417,177 @@ eta_cusp    theta_ids      modforms       rr_ids
 
 ---
 
+---
+
+# Code Health Tooling Integration
+
+**Domain:** Code health audit, static analysis, sanitizers, formatting  
+**Researched:** 2026-03-06  
+**Milestone Context:** v11.3 — Code health audit and plan. Existing: Makefile, src/*.h, main.cpp, tests/*.sh. Single g++ invocation, header-only, bash acceptance tests.  
+**Confidence:** HIGH
+
+---
+
+## Integration Points: Makefile + Bash Tests
+
+| Integration Point | Purpose | Current State | Code Health Addition |
+|-------------------|---------|---------------|----------------------|
+| **Makefile target** | Run tooling before/after build | `all`, `test`, `acceptance*` | New targets: `lint`, `tidy`, `cppcheck`, `sanitize` |
+| **Build dependency** | Ensure binary exists before tests | `acceptance: dist/qseries.exe` | Static analysis runs on source; no build dep. Tests still need `dist/qseries.exe` |
+| **CI workflow** | Gate release on health checks | Release workflow: build → acceptance | Add lint/tidy step before or parallel to build; extend `.github/workflows/` |
+| **Test scripts** | Assert behavior | `tests/*.sh` pipe to `$BIN` | No change to test logic. Optional: `tests/acceptance-sanitize.sh` for sanitizer build |
+| **Pre-commit / local** | Developer feedback | Manual `make` | Optional: `make check` = lint + tidy + acceptance |
+
+**Key invariant:** Code health tools operate on **source**, not the binary. Acceptance tests require the binary. Order: static analysis (optional, no build) → build → acceptance tests.
+
+---
+
+## Component Mapping: New vs Modified
+
+### New Components (add, do not modify existing)
+
+| Component | Type | Purpose |
+|-----------|------|---------|
+| `make lint` | Makefile target | Run cppcheck on `src/*.cpp src/*.h` (or `src/main.cpp`; headers included) |
+| `make tidy` | Makefile target | Run clang-tidy on `src/main.cpp` |
+| `make sanitize` | Makefile target | Build with `-fsanitize=address,undefined`, run acceptance subset |
+| `make check` | Makefile target | Optional umbrella: lint + tidy + acceptance |
+| `.clang-tidy` | Config file | Checks to enable/disable; format style |
+| `compile_commands.json` | Generated | Required for clang-tidy `-p`; produced by Bear or manual |
+| `.github/workflows/lint.yml` | CI job | Run lint/tidy on push/PR (optional; Release stays tag-triggered) |
+
+### Modified Components
+
+| Component | Current | Modification |
+|-----------|---------|--------------|
+| **Makefile** | `.PHONY` list, targets | Add `lint`, `tidy`, `sanitize`, `check`; extend `.PHONY` |
+| **Makefile `debug`** | Already uses `-fsanitize=address,undefined` | Keep as-is; `sanitize` can wrap `debug` + run tests |
+| **Release workflow** | Build + acceptance (ubuntu) | Optional: add `make lint` before build; keep acceptance as gate |
+
+**Optional modification (for sanitize):** `tests/acceptance.sh` — add `BIN="${BIN:-./dist/qseries.exe}"` at top so `BIN=./qseries_debug make sanitize` runs acceptance against the sanitizer binary. Without this, use `tests/acceptance-sanitize.sh` (new file) instead.
+
+**Unchanged:** Core `tests/*.sh` logic (pipe to $BIN, grep output), `dist/qseries.exe` build rule, `CXXFLAGS`, single-TU structure.
+
+---
+
+## Suggested Build Order (Dependencies)
+
+```
+1. cppcheck (no compile DB)
+   └── Add: make lint
+   └── cppcheck --enable=warning,performance,portability -Isrc src/main.cpp
+   Rationale: Easiest; no Bear, no compile_commands.json. Run immediately.
+
+2. .clang-tidy + make tidy
+   ├── Option A: Bear -- make -B → compile_commands.json; clang-tidy -p . src/main.cpp
+   ├── Option B: clang-tidy src/main.cpp -- -std=c++20 -Isrc (simpler, fewer checks)
+   └── Add: make tidy (with --fix optional)
+   Rationale: More checks than cppcheck; may need Bear on Cygwin. Option B sufficient for single TU.
+
+3. make sanitize
+   └── Reuse: make debug → ./qseries_debug; run acceptance.sh or subset
+   └── Add: make sanitize = debug + bash tests/acceptance.sh
+   Rationale: Existing debug target has sanitizers; wire to acceptance.
+
+4. make check (umbrella)
+   └── Depends on: lint, tidy, acceptance
+   └── Add: make check = make lint && make tidy && make acceptance
+   Rationale: Single command for full health pass.
+
+5. CI lint job (optional)
+   └── New: .github/workflows/lint.yml on push/PR
+   └── Steps: checkout → make lint → make tidy (or skip tidy if Bear unavailable in runner)
+   Rationale: Catches regressions before merge; Release workflow unchanged.
+```
+
+**Build-order rationale:**
+- cppcheck first: zero setup, immediate value
+- clang-tidy second: needs config; Bear may be unavailable on Windows/Cygwin
+- sanitize third: reuses existing `debug` target
+- check fourth: aggregates
+- CI last: optional, depends on runner having tools
+
+---
+
+## Data Flow: Code Health Pipeline
+
+```
+Source (src/main.cpp, src/*.h)
+    │
+    ├──► cppcheck  ──► stdout/stderr (warnings)
+    │
+    ├──► clang-tidy (with compile_commands.json or -- -std=c++20 -Isrc)
+    │         └──► stdout (diagnostics); --fix writes files
+    │
+    └──► g++ -fsanitize  ──► qseries_debug
+                                └──► tests/acceptance.sh  ──► exit 0/1
+```
+
+**Separation:** Static analysis (cppcheck, clang-tidy) does not require building. Sanitizer run requires build + execution of tests. CI can run lint/tidy in parallel with build; acceptance must run after build.
+
+---
+
+## Makefile Integration Pattern
+
+```makefile
+# Add to existing .PHONY
+.PHONY: ... lint tidy sanitize check
+
+# Lint: cppcheck (no DB)
+lint:
+	cppcheck --enable=warning,performance,portability --quiet -Isrc src/main.cpp
+
+# Tidy: clang-tidy (Option B: no Bear)
+tidy:
+	clang-tidy src/main.cpp -- -std=c++20 -Isrc
+
+# Sanitize: build with sanitizers + run acceptance
+sanitize: qseries_debug
+	BIN=./qseries_debug bash tests/acceptance.sh
+# Requires: acceptance.sh honors BIN from env (add BIN="${BIN:-./dist/qseries.exe}" at top)
+
+# Check: full health pass
+check: lint tidy dist/qseries.exe
+	$(MAKE) acceptance
+```
+
+**Dependency rules:** `tidy` and `lint` have no dependencies. `sanitize` depends on `qseries_debug` (from `debug`). `check` depends on `lint`, `tidy`, and `dist/qseries.exe`; runs `acceptance` last.
+
+---
+
+## Bash Test Integration
+
+**No changes to existing test scripts.** Code health tooling does not alter:
+- How tests run: `printf '%s\n' "$@" | "$BIN"`
+- BIN resolution: `./dist/qseries.exe` or `./dist/qseries`
+- PASS/FAIL logic
+
+**Optional addition:** `tests/acceptance-sanitize.sh` — same as `acceptance.sh` but invokes `./qseries_debug` if present, for sanitizer UBSan/ASan validation. Makefile `sanitize` would run this instead of `acceptance.sh` when using the debug binary.
+
+---
+
+## Pitfalls for Code Health Integration
+
+1. **clang-tidy without compile_commands.json:** For single-TU, use `clang-tidy src/main.cpp -- -std=c++20 -Isrc`. Without `-Isrc`, headers in `src/` may not resolve if run from project root.
+2. **Bear on Windows/Cygwin:** Bear intercepts compiler calls; availability on Windows varies. Prefer Option B (no Bear) for cross-platform.
+3. **Sanitizers in CI:** `-fsanitize` can slow tests; consider running a subset (e.g. `acceptance` only) for sanitize in CI.
+4. **cppcheck on headers:** For header-only libs, analyzing `src/main.cpp` pulls in all headers. Analyzing `src/*.h` directly can yield duplicate or noisy diagnostics; prefer single-TU analysis.
+
+---
+
 ## Sources
+
+- Makefile — existing targets, CXXFLAGS, debug
+- `.github/workflows/release.yml` — build, acceptance
+- tests/acceptance.sh, tests/run-all.sh — BIN resolution, test pattern
+- [Clang-Tidy Integrations](https://clang.llvm.org/extra/clang-tidy/Integrations.html) — config, IDE
+- Bear / compiledb — compile_commands.json for Makefile
+- cppcheck — standalone, no compile DB
+- Web search: clang-tidy Makefile, cppcheck integration, Bear compile_commands
+
+---
+
+## Sources (Identity Proving / Gap Closure)
 
 ### Primary (HIGH confidence)
 

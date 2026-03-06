@@ -1,173 +1,223 @@
-# Technology Stack: REPL UX Improvements
+# Technology Stack: Code Health Audit & Remediation
 
-**Project:** qseries REPL — REPL ergonomics, error diagnostics, help/docs, tab completion, multi-line, history  
+**Project:** qseries3 — C++20 single-binary q-series REPL  
 **Researched:** 2026-03-06  
-**Scope:** Stack additions or changes for NEW REPL UX capabilities. Zero-external-dependency constraint enforced.  
-**Target users:** Mathematicians accustomed to Maple.
+**Scope:** Stack additions for code health only — warnings, static analysis, coverage, sanitizers, tech-debt tooling.  
+**Constraint:** Zero runtime dependencies. Dev tools (clang-tidy, cppcheck, lcov, bear) are acceptable; they do not ship with the binary.
 
 ---
 
 ## Executive Summary
 
-The qseries3 REPL already implements a **zero-dependency** line editor: raw termios (Unix/Cygwin) or Windows `SetConsoleMode`, custom `readLineRaw`, ANSI escape sequences, tab completion, history, help, multi-line backslash continuation, and colored error output. For **new** REPL UX improvements (better diagnostics, richer help, enhanced completion, improved ergonomics), **no stack additions are required**. Extend the existing in-house infrastructure. Do **not** add readline, libedit, ncurses, linenoise, or replxx — they violate the zero-deps constraint.
+For a **zero-dependency C++20** project built with GCC and Makefile, code health can be improved without adding runtime dependencies. Use **compiler flags** (extra warnings), **GCC sanitizers** (already in use), **cppcheck** (standalone), **clang-tidy** (optional, via Bear), and **gcov/lcov** for coverage. Do **not** add GTest, CMake, or any libraries — the project stays single-binary, single-TU.
 
-**Recommendation:** Stay with the current stack. Add no new libraries. Implement all REPL UX enhancements by extending `repl.h`, `parser.h`, and the `ansi::` namespace.
-
----
-
-## Current Stack (What Exists)
-
-| Component | Technology | Location | Notes |
-|-----------|------------|----------|-------|
-| **Raw terminal mode** | termios (Unix/Cygwin) or Windows `SetConsoleMode` | `repl.h` RawModeGuard | POSIX / Win32 API only |
-| **Char-by-char input** | `read()`, `ReadFile()` | `readLineRaw`, `readOneChar` | No readline |
-| **Line editor** | Custom in `readLineRaw` | `repl.h` ~2650–2715 | Arrow keys, backspace, tab |
-| **History** | `std::deque<std::string>` | `runRepl`, `loadHistory`, `saveHistory` | Up/down navigation |
-| **Tab completion** | `handleTabCompletion`, `getCompletionCandidates` | `repl.h` ~2592–2650 | Built-ins + env vars |
-| **ANSI styling** | Hardcoded `\033[...m` | `ansi::` namespace | gold, red, dim, bold, reset |
-| **Help** | `getHelpTable()`, `help`, `help(func)` | `repl.h` ~2112–2136 | Per-function sig + desc |
-| **Multi-line** | Backslash continuation | `runRepl` loop | `  > ` secondary prompt |
-| **Error output** | `ansi::red()`, `e.what()` | catch block ~2941–2946 | Prefix "error: " |
-| **Parser diagnostics** | `offsetToLineCol`, `kindToExpected` | `parser.h` | line/col in messages |
-
-**Standard library:** `string`, `vector`, `map`, `set`, `deque`, `optional`, `chrono`, `algorithm`, `sstream`, `fstream`.  
-**Platform headers:** `<termios.h>`, `<unistd.h>` (Unix/Cygwin); `<windows.h>` (native Win32).  
-**Build:** `g++ -std=c++20 -O2` with optional `-static`. Single TU, no `-lreadline` or other libs.
+**Recommendation:** Add `-Wshadow` to the build; adopt cppcheck in CI; add coverage and sanitizer Make targets; optionally add clang-tidy for deeper C++ analysis.
 
 ---
 
-## Stack Additions for New REPL UX Features
+## Recommended Stack
 
-### Verdict: **None**
+### Compiler & Warning Flags
 
-All planned REPL UX improvements can be implemented using the existing stack. No new libraries, no new dependencies.
+| Flag / Option | Version | Purpose | Why |
+|---------------|---------|---------|-----|
+| g++ | 13+ | Compiler | SPEC requires 13.3; C++20 full support |
+| -std=c++20 | — | Language | Project standard |
+| -Wall -Wextra -Wpedantic | — | Base warnings | Already in Makefile; keep |
+| -Wshadow | — | Variable shadowing | Catches subtle bugs from name collisions; not in -Wall |
+| -Wconversion | — | Implicit conversions | Optional; often noisy in math code; add later if feasible |
 
-| New Capability | Stack Implication | Implementation Path |
-|----------------|-------------------|---------------------|
-| **Better error diagnostics** | Extend `ansi::`, use `offsetToLineCol` | Add `ansi::cyan()`, caret/underline; format "line X, col Y" with source line and pointer |
-| **Richer help/docs** | Extend `getHelpTable` | Add examples, usage strings; keep `std::map<std::string, std::pair<std::string, std::string>>` or extend value type |
-| **Argument hints in completion** | Extend `handleTabCompletion` | Add optional sig suffix when completing functions; use `getHelpTable()` |
-| **Improved tab completion** | Same candidates + UX tweaks | Substring/prefix completion, grouping; all via `std::set`, `std::vector` |
-| **Syntax highlighting** | Extend `redrawLineRaw` or post-echo | Inline ANSI escapes; no lexer library — use parser/tokenizer or simple heuristics |
-| **Bracket-aware multi-line** | Extend continuation logic | Count `(`, `[`, `{` vs `)`, `]`, `}`; optional `  > ` until balanced |
-| **Inline hints (e.g. arg count)** | Extend `readLineRaw` / display | Echo hint string after tab; use existing ANSI |
-| **History search (Ctrl+R)** | Extend `readLineRaw` escape handler | Add case for Ctrl+R; iterate `history`; no lib needed |
+**Current Makefile:** `CXXFLAGS = -std=c++20 -O2 -Wall -Wextra -Wpedantic`  
+**Add:** `-Wshadow` (low noise, high value).  
+**Defer:** `-Wconversion` — qseries uses integer/size_t conversions; enable incrementally if desired.
 
----
-
-## What NOT to Add (Zero-Deps)
-
-| Library | Why Not | Use Instead |
-|---------|---------|-------------|
-| **readline** | External dependency; GPL/libreadline licensing | Existing `readLineRaw` |
-| **libedit** | External dependency | Existing `readLineRaw` |
-| **ncurses** | External dependency; overkill for line input | termios + ANSI |
-| **linenoise** | External dependency (even if small) | Existing raw mode + completion |
-| **linenoise-ng** | Same | Same |
-| **cpp-linenoise** | Header-only but still external | Extend in-house |
-| **replxx** | External; UTF-8/highlighting nice but not zero-deps | Extend in-house |
-| **bestline** | External | Extend in-house |
-
-**Rationale:** SPEC and `.cursorrules` mandate "ZERO external dependencies." Vendoring a single-file header (e.g. cpp-linenoise) would add external code and maintenance burden. The existing custom readline already provides: raw mode, history, tab completion, arrow keys. Extending it is simpler than integrating and maintaining a forked/vendored library.
+**Note:** `.github/workflows/release.yml` uses `-Wall -Wextra` but not `-Wpedantic`. Align with Makefile for consistency.
 
 ---
 
-## Integration Points for UX Improvements
+### Static Analysis
 
-| Area | File | Function/Block | Extend How |
-|------|------|----------------|------------|
-| **Error display** | `repl.h` | catch block ~2941 | Add `formatDiagnostic(input, offset, msg)`; print source line + caret |
-| **ANSI colors** | `repl.h` | `ansi::` namespace | Add `cyan()`, `yellow()`, `green()` for diagnostics/hints |
-| **Parser errors** | `parser.h` | `offsetToLineCol`, throws | Add optional "show source line" helper; keep same exception flow |
-| **Tab completion** | `repl.h` | `handleTabCompletion` | Add sig hint from `getHelpTable()`; optionally group by type |
-| **Help** | `repl.h` | `getHelpTable`, `help` | Extend value to `(sig, desc, examples)`; add `help(topic, subtopic)` if needed |
-| **Multi-line** | `repl.h` | Continuation loop ~2855 | Add bracket balance check; auto-continue when unbalanced |
-| **History** | `repl.h` | `readLineRaw` | Add Ctrl+R handling; reuse `history` deque |
-| **Line redraw** | `repl.h` | `redrawLineRaw` | Add optional syntax-highlight pass before output |
+| Tool | Version | Purpose | Integration | Zero-Dep? |
+|------|---------|---------|-------------|-----------|
+| **cppcheck** | 2.x | C++ static analysis | `cppcheck --enable=warning,style,performance src/` | Yes — standalone |
+| **clang-tidy** | 18+ | C++ linter, checks | Needs `compile_commands.json` via Bear | Yes — dev tool only |
+| GCC -fanalyzer | 13+ | Static analyzer | C-focused; weak C++ support | Yes — built-in |
 
----
+**Recommendation:** Use **cppcheck** as primary — no `compile_commands.json`, works directly on `src/`. Add **clang-tidy** only if Bear/compiledb is available (Linux/Cygwin).
 
-## ANSI Escape Sequences (Extend In-House)
-
-The project already uses a minimal set. For richer diagnostics and hints:
-
-| Sequence | Code | Use |
-|----------|------|-----|
-| Red | `\033[31m` | Errors (existing) |
-| Yellow/Gold | `\033[33m` | Prompt (existing) |
-| Dim | `\033[2m` | Timing (existing) |
-| Bold | `\033[1m` | (existing) |
-| Cyan | `\033[36m` | **Add** — file/line references, diagnostics |
-| Green | `\033[32m` | **Add** — success, hints |
-| Underline | `\033[4m` | **Add** — error underline/caret |
-
-All are standard ECMA-48 / ISO 6429. No library needed. Respect `NO_COLOR` (existing check in `ansi::init()`).
+**What NOT to use:** GCC `-fanalyzer` — documented as C-focused; C++ support is limited in GCC 13/14.
 
 ---
 
-## Maple UX Parity (Target Users)
+### Test Coverage
 
-Mathematicians used to Maple expect:
+| Tool | Version | Purpose | Integration | Zero-Dep? |
+|------|---------|---------|-------------|-----------|
+| **gcov** | (GCC) | Coverage instrumentation | `-fprofile-arcs -ftest-coverage -g -O0` | Yes — GCC built-in |
+| **lcov** | 2.x | Report generation | `lcov --capture`, `genhtml` | Yes — dev tool |
 
-| Maple Feature | qseries Status | Stack Impact |
-|---------------|----------------|--------------|
-| `?topic` or `help(topic)` | `help`, `help(func)` | Done; extend with examples |
-| `??topic` (calling sequence only) | — | Add optional `help(func, "sig")`; no new deps |
-| Multi-line input | Backslash continuation | Done; add bracket-aware continuation |
-| Command history | Up/down arrows | Done |
-| Tab completion | Identifiers + built-ins | Done; add argument hints |
-| Colored errors | Red "error:" prefix | Done; add source-line + caret |
-| `readline(terminal)` in scripts | N/A for qseries | — |
+**Workflow:**
+1. Build with `--coverage` (or `-fprofile-arcs -ftest-coverage`) and `-g -O0`
+2. Run acceptance tests (bash scripts)
+3. `lcov --capture --directory . --output-file coverage.info`
+4. `lcov --remove coverage.info '/usr/*'` — filter system headers
+5. `genhtml coverage.info --output-directory coverage-report`
 
-No additional libraries needed to match these patterns.
+**Note:** Single-TU (`src/main.cpp`) means one `.gcno`/`.gcda` pair. Use `-O0` to reduce inlining and get accurate line coverage.
+
+---
+
+### Sanitizers
+
+| Sanitizer | Flag | Purpose | Zero-Dep? |
+|-----------|------|---------|-----------|
+| AddressSanitizer | -fsanitize=address | Use-after-free, buffer overflows | Yes — libasan in GCC |
+| UndefinedBehaviorSanitizer | -fsanitize=undefined | UB (overflow, null-deref) | Yes — libubsan in GCC |
+| LeakSanitizer | -fsanitize=leak | Memory leaks | Yes — part of ASan |
+
+**Current:** Makefile `debug` target already uses `-fsanitize=address,undefined`.
+
+**Recommendation:** Keep as-is. LeakSanitizer can be added: `-fsanitize=address,undefined,leak`. ThreadSanitizer is irrelevant (single-threaded REPL).
+
+**Restriction:** ASan, MSan, TSan are mutually exclusive. Do not combine them.
+
+---
+
+### Compilation Database (for clang-tidy)
+
+| Tool | Version | Purpose | Platform |
+|------|---------|---------|----------|
+| **Bear** | 3.x | Intercepts `make` to generate `compile_commands.json` | Linux, Cygwin |
+| **compiledb** | — | Alternative; parses make output | If Bear unavailable |
+
+**Usage:**
+```bash
+bear -- make clean all
+# Creates compile_commands.json in project root
+clang-tidy -p . src/main.cpp
+```
+
+---
+
+## Installation
+
+```bash
+# Cygwin / Linux — development tools (optional)
+# cppcheck
+apt-get install cppcheck        # Debian/Ubuntu
+# or: Cygwin Setup → cppcheck
+
+# lcov (for coverage)
+apt-get install lcov
+
+# Bear (for clang-tidy)
+apt-get install bear
+
+# clang-tidy (optional)
+apt-get install clang-tidy
+```
+
+No `npm`, `pip`, or package-manager deps for the **binary**. All tools are build-time only.
+
+---
+
+## Integration Points
+
+| Concern | Where | Action |
+|---------|-------|--------|
+| Warnings | Makefile `CXXFLAGS` | Add `-Wshadow` |
+| Release CI | `.github/workflows/release.yml` | Add `-Wpedantic` for parity |
+| Static analysis | Makefile, CI | Add `make cppcheck` target |
+| Coverage | Makefile | Add `make coverage` target; run acceptance tests, then lcov |
+| Sanitizers | Makefile `debug` | Already present; optional: add `-fsanitize=leak` |
+| clang-tidy | Manual / CI | `bear -- make` then `clang-tidy -p . src/main.cpp` |
+
+---
+
+## What NOT to Add
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| GTest, Catch2 | Adds test framework dep; project uses bash acceptance tests | Keep bash scripts; coverage via gcov on instrumented binary |
+| CMake | Project uses Makefile; adds build complexity | Stay with Makefile |
+| Valgrind | External; higher overhead | Sanitizers (ASan, UBSan) are compiler-integrated |
+| GCC -fanalyzer | Weak C++ support | cppcheck, clang-tidy |
+| -Wconversion (initially) | Often very noisy in math/integer code | Add later, with suppressions if needed |
+| Readline, Boost, GMP | Runtime dependencies | Out of scope — already excluded |
+
+---
+
+## Makefile Additions (Suggested)
+
+```makefile
+# Stricter warnings (code health)
+CXXFLAGS_STRICT = $(CXXFLAGS) -Wshadow
+
+# Static analysis
+cppcheck:
+	cppcheck --enable=warning,style,performance --inline-suppr -I src src/
+
+# Coverage build
+coverage: CXXFLAGS_COV = -std=c++20 -g -O0 -Wall -Wextra -Wpedantic -fprofile-arcs -ftest-coverage
+coverage: LDFLAGS_COV = -fprofile-arcs -ftest-coverage -lgcov
+coverage: clean
+	$(CXX) $(CXXFLAGS_COV) $(LDFLAGS_COV) -o qseries_coverage src/main.cpp
+	@echo "Run: ./qseries_coverage < tests/input; then make coverage-report"
+
+coverage-report:
+	lcov --capture --directory . --output-file coverage.info
+	lcov --remove coverage.info '/usr/*' '*/tests/*' --output-file coverage.filtered.info
+	genhtml coverage.filtered.info --output-directory coverage-report
+	@echo "Open coverage-report/index.html"
+```
 
 ---
 
 ## Alternatives Considered
 
-| Instead of | Could Use | Verdict |
-|------------|-----------|---------|
-| Extending in-house readLineRaw | Vendoring cpp-linenoise | **No** — adds external code; existing impl sufficient |
-| Hardcoded ANSI | curses/ncurses | **No** — external dep; ANSI is enough |
-| Plain text errors | Structured diagnostics (JSON, LSP) | **Defer** — overkill for REPL; simple formatted text suffices |
-| In-memory help | External doc files | **Optional** — `getHelpTable` is fine; could load `.md` later without new libs |
+| Instead of | Alternative | Verdict |
+|------------|-------------|---------|
+| cppcheck | clang-tidy | Use cppcheck first (no compile DB); clang-tidy if Bear available |
+| gcov | llvm-cov | llvm-cov requires Clang; project uses GCC — stick with gcov |
+| Sanitizers | Valgrind | Sanitizers are faster and zero-dependency; keep sanitizers |
+| -Werror | — | Optional for CI; project may want warnings-as-errors in a later phase |
 
 ---
 
-## Recommended Approach
+## Version Compatibility
 
-1. **Keep** termios/SetConsoleMode + custom `readLineRaw` — no readline/libedit.
-2. **Extend** `ansi::` with cyan, green, underline for diagnostics.
-3. **Add** `formatParseError(input, offset, msg)` in `repl.h` to print source line + caret.
-4. **Extend** `getHelpTable` value type if examples are added.
-5. **Extend** `handleTabCompletion` to show function signatures as hints.
-6. **Add** bracket-balance check to continuation loop for smarter multi-line.
-7. **Optionally** add Ctrl+R history search in `readLineRaw`.
-
-All of the above use only C++20 standard library and existing platform APIs.
+| Tool | Min Version | Notes |
+|------|-------------|-------|
+| GCC | 13.3 | Per SPEC; gcov, sanitizers included |
+| cppcheck | 2.0+ | 2.12+ preferred for C++20 |
+| clang-tidy | 18+ | Match C++20; 17 may work |
+| lcov | 2.0+ | genhtml for HTML reports |
+| Bear | 3.0+ | compile_commands.json generation |
 
 ---
 
-## Phase-Specific Stack Notes
+## Confidence Assessment
 
-| Phase Topic | Stack Impact | Action |
-|-------------|--------------|--------|
-| Error diagnostics | None | Extend `ansi::`, add format helper |
-| Help/docs | None | Extend `getHelpTable` structure |
-| Tab completion | None | Extend `handleTabCompletion` |
-| Multi-line | None | Extend continuation logic |
-| History search | None | Extend `readLineRaw` escape handler |
-| Syntax highlighting | None | Optional; inline ANSI in `redrawLineRaw` |
+| Area | Confidence | Notes |
+|------|------------|-------|
+| Warnings | HIGH | GCC docs, Stack Overflow consensus |
+| Sanitizers | HIGH | GCC built-in; project already uses them |
+| cppcheck | HIGH | Standalone, well-documented |
+| clang-tidy | MEDIUM | Needs Bear; GCC flags may need filtering |
+| Coverage | HIGH | gcov/lcov standard for GCC projects |
 
 ---
 
 ## Sources
 
-- SPEC.md — Zero external libraries, single static binary
-- .cursorrules — ZERO external dependencies
-- src/repl.h — RawModeGuard, readLineRaw, handleTabCompletion, ansi::, getHelpTable
-- src/parser.h — offsetToLineCol, kindToExpected
-- .planning/phases/20-tab-completion/20-RESEARCH.md — Raw termios, zero readline
-- .planning/phases/31-up-down-arrows-for-history/31-RESEARCH.md — History pattern
-- Maple help: ?topic, help(topic) — maplesoft.com/support/help
-- ANSI escape codes — ECMA-48, ISO 6429; NO_COLOR convention
+- GCC Warning Options: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
+- GCC Static Analyzer: https://gcc.gnu.org/onlinedocs/gcc/Static-Analyzer-Options.html — C-focused, weak C++
+- clang-tidy: https://clang.llvm.org/extra/clang-tidy/
+- cppcheck manual: https://cppcheck.sourceforge.io/manual.html
+- Bear: https://github.com/rizsotto/Bear — compile_commands.json from make
+- gcov/lcov with Makefile: Stack Overflow, svnscha.de, smhk.net (2024)
+- Sanitizers: cppcheatsheet.com, GCC docs — libasan/libubsan in GCC
+
+---
+
+*Stack research for: Code health audit and remediation — zero-dependency C++20 project*

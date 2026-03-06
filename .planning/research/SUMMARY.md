@@ -1,117 +1,144 @@
 # Project Research Summary
 
-**Project:** qseries3
-**Domain:** REPL UX for Maple users — ergonomics, error diagnostics, help, input convenience
+**Project:** Q-Series REPL (qseries3)
+**Domain:** C++20 single-binary REPL; code health audit and remediation
 **Researched:** 2026-03-06
 **Confidence:** HIGH
 
 ## Executive Summary
 
-The qseries3 REPL targets mathematicians transitioning from Maple. Research shows that Maple users expect familiar patterns: `help(topic)` with CALLING SEQUENCE and EXAMPLES, errors that name the function and point to the problem (column + caret), and input convenience (tab completion, history, multi-line). **No stack additions are required** — all enhancements extend the existing in-house infrastructure (`repl.h`, `parser.h`, `ansi::`). Do not add readline, ncurses, or any external line-edit libraries; zero-dependency constraint is non-negotiable.
-
-**Recommended approach:** Implement improvements in this order: (1) error diagnostics with source snippet + caret; (2) help extensions (examples, Maple-style structure); (3) input convenience (argument hints in tab completion, typo suggestions for variables); (4) ergonomics polish. Critical risks: raw terminal mode leaving the shell broken on Ctrl+C (requires SIGINT handler), and script vs interactive path divergence (all TTY features must guard on `stdin_is_tty()`).
+qseries3 is a zero-dependency C++20 REPL for q-series arithmetic and modular forms. Code health improvement should add **compiler flags** (`-Wshadow`), **static analysis** (cppcheck primary; clang-tidy optional), **gcov/lcov** for coverage, and **Makefile targets** for lint, coverage, and sanitizer runs—all without new runtime deps. The recommended approach is incremental: fix warnings before suppressing, align CXXFLAGS across Makefile/CI, add cppcheck first (no compile DB), then coverage/sanitize targets. Key risks: **suppression creep** (pragmas/NOLINT hiding bugs), **scope creep** (“fix all” becoming a rewrite), and **wrong coverage scope** (headers vs single-TU). Mitigation: fix-before-suppress policy, explicit phase scope and time-boxing, and defined analysis boundaries (main.cpp root; `-header-filter` for project sources only).
 
 ---
 
 ## Key Findings
 
-### Recommended Stack
+### Recommended Stack (from STACK.md)
 
-**No additions.** The current stack — termios/SetConsoleMode, custom `readLineRaw`, ANSI escape sequences, `getHelpTable`, `offsetToLineCol` — suffices for all planned REPL UX work. Extend `ansi::` with cyan/green/underline for diagnostics; extend `getHelpTable` with examples; extend `handleTabCompletion` for argument hints; extend continuation logic for bracket-aware multi-line.
+**Compiler flags:**
+- Add `-Wshadow` — catches variable shadowing; not in -Wall; low noise.
+- Keep `-Wall -Wextra -Wpedantic`.
+- Defer `-Wconversion` — noisy in math code; add later if feasible.
+- Align `.github/workflows/release.yml` with Makefile (add `-Wpedantic`).
 
-**Core technologies (unchanged):**
-- Raw terminal (termios / SetConsoleMode) — line editing, arrows, tab
-- Custom readLineRaw — no readline; zero deps
-- ANSI escapes — red, gold, dim; add cyan, green, underline for diagnostics
-- Parser offsetToLineCol — enables source snippet + caret for parse errors
+**Static analysis:**
+- **cppcheck 2.x** — primary; `--enable=warning,style,performance`; standalone, no compile DB.
+- **clang-tidy 18+** — optional; via Bear for `compile_commands.json`; Option B: `clang-tidy src/main.cpp -- -std=c++20 -Isrc` if Bear unavailable.
 
-### Expected Features
+**Coverage:**
+- **gcov** + **lcov 2.x** — `-fprofile-arcs -ftest-coverage -g -O0`; single-TU yields one .gcno/.gcda pair.
 
-**Must have (table stakes) — already present:**
-- `help`, `help(func)` — signature + description ✓
-- Tab completion (identifiers + built-ins) ✓
-- History (up/down), multi-line (backslash), semicolon suppress ✓
-- Runtime errors with function name ✓
+**Sanitizers:**
+- Keep `-fsanitize=address,undefined`; optional: add `-fsanitize=leak`. Do not combine ASan with MSan/TSan.
 
-**Should have for Maple parity (priority gaps):**
-- **P1:** Parse errors with source snippet + caret — GCC/Clang style; high value, medium effort
-- **P1:** Typo suggestions for undefined variable — "Did you mean: y?"; low effort, reuses levenshtein
-- **P2:** Per-function help with 1–2 examples — e.g. Rogers-Ramanujan for `help(prodmake)`
-- **P2:** Richer help structure — SYNOPSIS, SEE ALSO
+**Versions:**
+- GCC 13.3+; cppcheck 2.12+ (C++20); clang-tidy 18+; lcov 2.0+; Bear 3.0+.
+
+### Expected Features (from FEATURES.md)
+
+**Table stakes (must have):**
+- Zero compiler warnings — fix tcore.h, eta_cusp.h; professional baseline
+- Acceptance tests pass — regression baseline; SPEC/ROADMAP gates
+- Single-command build — `make` produces working binary
+- Basic test harness — deterministic pass/fail via Make targets
+- No silent regressions — changes caught by acceptance tests
+
+**Differentiators (should have):**
+- Warning audit report — systematic inventory; per-file remediation plan
+- `-Werror` in CI — block new warnings
+- Test coverage metrics — gcov/lcov; quantify gaps
+- Tech debt inventory — complexity, duplication, hotspots; map to phases
+- Build hygiene audit — reproducible builds, correct incremental deps
+- Sanitizers in debug — already present; keep
+- Static analysis (clang-tidy) — beyond compiler; optional integration
 
 **Defer (v2+):**
-- `??func` (calling sequence only), `???func` (examples only)
-- Help categories / index
-- Delimiter auto-close, 2-D math input
+- Coverage gate at 80%+ — arbitrary for REPL; acceptance coverage matters more
+- SonarQube or heavy SaaS
+- Coverage tooling if ROI low for single-TU
 
-### Architecture Approach
+### Architecture Approach (from ARCHITECTURE.md)
 
-REPL UX changes integrate into the existing read→parse→eval→display pipeline. Error handling funnels through a single catch in `runRepl`; help and completion share `getHelpTable`. New work is all modifications: `formatParseError(input, offset, msg)` in the catch block, extended help table values, and completion logic. No new top-level components.
+**Code health integration:**
+- **Integration points:** Makefile targets (lint, tidy, sanitize, check), CI (optional lint job), no change to test script logic.
+- **New targets:** `make lint` (cppcheck), `make tidy` (clang-tidy), `make sanitize` (debug + acceptance), `make check` (umbrella), `make coverage` (gcov build + lcov report).
 
-**Major components (modified, not new):**
-1. **runRepl catch** — format parse errors with source line + caret; keep script "line N:" prefix
-2. **getHelpTable** — add optional examples field; keep single source of truth for help + completion
-3. **handleTabCompletion** — add function signature hints when completing built-ins
-4. **readLineRaw / continuation loop** — bracket-aware multi-line; optional Ctrl+R history search
+**Build order:**
+1. cppcheck — easiest; no Bear
+2. .clang-tidy + make tidy — Option B if no Bear
+3. make sanitize — reuse `debug` target + acceptance
+4. make check — aggregate
+5. CI lint job — optional; runner must have tools
 
-### Critical Pitfalls
+**Invariant:** Static analysis runs on source; acceptance tests need binary. Order: lint/tidy (optional, no build) → build → acceptance.
 
-1. **Raw terminal leaves shell broken on Ctrl+C** — Register SIGINT handler that restores termios before re-raising. RAII alone fails on crash/kill. Phase 28 or any raw-mode phase must include this.
+**REPL/data-flow (reference):** Single catch in runRepl; parse/eval/dispatch throw; getHelpTable shared by help + tab completion.
 
-2. **Script vs interactive path divergence** — Every TTY feature must guard on `stdin_is_tty()`. Tab, history, banner, timing: all can break or hang when piped. Add CI tests: `qseries < script.qs` must exit 0.
+### Critical Pitfalls (from PITFALLS.md)
 
-3. **Error format breaks Maple expectations** — Use `(in funcname) message`; use "expects its N-th argument, name, to be X, but received Y" for argument errors. Phase 21 must address before other UX polish.
+1. **Pragmas without push/pop** — Suppression leaks to rest of file/headers. Always use balanced `#pragma GCC diagnostic push` / `pop`. Prefer fix over pragma. Never bare `ignored` in headers.
 
-4. **Tab completion and history fight over buffer** — Use single `(line, pos)` state. Tab must be cursor-position aware; history restores full line, `pos = line.size()`. Test: Tab at middle of word, Up/Down then Tab.
+2. **Suppression creep (NOLINT / -Wno-\*)** — Hides bugs; no governance. Prefer fix. If NOLINT: require justification comment. Cap NOLINTs per file. Avoid global `-Wno-unused-parameter`.
 
-5. **Multi-line EOF hang in script mode** — Trailing backslash on last line must not block. Cap continuations; treat EOF as end of input. Test: `printf 'x := 1\\' | qseries` must exit.
+3. **Coverage scope wrong** — Too narrow: only .cpp (misses headers). Too broad: third-party noise. For qseries3: analyze main.cpp (headers pulled in). Set `-header-filter='.*/src/.*'`; document scope up front.
+
+4. **Plan scope creep** — “Fix all” becomes rewrite. Incremental adoption: enable 2–5 high-value checks first. Define baseline; fail only on *new* findings. Phase scope: which checks, which files, time-box.
+
+5. **GCC vs Clang flag incompatibility** — clang-tidy with GCC compile_commands.json can choke. Filter GCC-only flags or use Option B (no Bear).
+
+6. **-Werror blocking on compiler upgrade** — Pin compiler in CI; have `-Wno-error=<new-warning>` escape hatch.
 
 ---
 
 ## Implications for Roadmap
 
-Based on research, suggested phase structure:
+Based on research, suggested phase structure for code health (v11.3):
 
-### Phase 1: Error Diagnostics
-**Rationale:** Errors are cross-cutting; improving them first helps debug all later changes.
-**Delivers:** `formatParseError(input, offset, msg)` with source line + caret; Maple-style runtime messages via `runtimeErr`.
-**Addresses:** Parse errors with column + snippet (P1), error format (PITFALLS #3)
-**Avoids:** Parser throws without location; generic messages
+### Phase 1: Warning audit + remediation
+**Rationale:** Foundation; errors/warnings cross-cutting; helps debug later changes.
+**Delivers:** Zero warnings; fix tcore.h, eta_cusp.h; document any remaining.
+**Addresses:** Zero compiler warnings (table stakes), warning audit report (differentiator).
+**Avoids:** Suppression creep — use omit name, `[[maybe_unused]]`, or `(void)x`; no pragmas without push/pop.
 
-### Phase 2: Help Extensions
-**Rationale:** getHelpTable is shared by help + tab completion; extend once.
-**Delivers:** Per-function examples (1–2 per key built-in); optional richer structure (SYNOPSIS, SEE ALSO).
-**Addresses:** Per-function help with examples (P2), Maple CALLING SEQUENCE + EXAMPLES parity
-**Uses:** Existing getHelpTable; qseriesdoc.md / Garvan examples as content source
+### Phase 2: CXXFLAGS alignment + cppcheck
+**Rationale:** Consistency across build surfaces; cppcheck is easiest static analysis.
+**Delivers:** Same -Wall -Wextra -Wpedantic in Makefile, build.sh, release.yml; `make lint` target.
+**Uses:** cppcheck, -Wshadow.
+**Avoids:** Scope creep — only align flags and add one tool; no “fix all cppcheck findings.”
 
-### Phase 3: Input Convenience
-**Rationale:** Depends on getHelpTable for completion hints; no parser changes.
-**Delivers:** Argument hints in tab completion (signature from getHelpTable); typo suggestions for undefined variable.
-**Addresses:** Typo suggestions for variables (P1), Maple discoverability
-**Avoids:** Tab + history buffer conflict (single line/pos)
+### Phase 3: Coverage target (optional)
+**Rationale:** Quantify gaps; low ROI for single-TU but provides baseline.
+**Delivers:** `make coverage`, `make coverage-report`; gcov/lcov workflow.
+**Uses:** gcov, lcov.
+**Avoids:** Coverage scope wrong — analyze main.cpp; headers included; exclude system/third-party.
 
-### Phase 4: Ergonomics Polish
-**Rationale:** Cosmetic; depends on nothing.
-**Delivers:** Bracket-aware multi-line continuation; optional Ctrl+R history search; continuation prompt consistency.
-**Addresses:** Maple multi-line expectations; input convenience
-**Avoids:** Multi-line EOF hang (script-mode guards)
+### Phase 4: clang-tidy + sanitize targets (optional)
+**Rationale:** Deeper analysis; sanitizer validation in CI.
+**Delivers:** `make tidy`, `make sanitize`; optional `.clang-tidy`.
+**Avoids:** GCC/Clang flag mismatch — use Option B if Bear unavailable; compile DB filtering if using Bear.
 
-### Phase Ordering Rationale
+### Phase 5: Tech debt inventory (lightweight)
+**Rationale:** Informs future phases; attach to phase work, not separate “debt sprint.”
+**Delivers:** One-pass: complexity hotspots, duplication, known brittle areas.
+**Avoids:** Scope creep — inventory only; fixes in context of feature phases.
 
-- **Error diagnostics first** — PITFALLS recommends Phase 21 early; every subsequent phase benefits from better failure reporting.
-- **Help before input** — Tab completion argument hints consume `getHelpTable`; extend help content before completion logic.
-- **Ergonomics last** — Mostly cosmetic; no architectural dependencies.
-- **Raw-mode phases** — Must include SIGINT handler in the same phase that introduces/enhances raw mode.
+### Phase ordering rationale
 
-### Research Flags
+- Warning cleanup first — establishes baseline; other tools report against clean build.
+- CXXFLAGS + cppcheck second — minimal setup; immediate value.
+- Coverage/sanitize next — reuses existing tests and debug target.
+- clang-tidy optional — higher integration cost.
+- Debt inventory last — feeds planning; no build changes.
 
-Phases likely needing deeper research during planning:
-- **Phase 1 (Error diagnostics):** Verify parser exception payload (offset vs line/col) for `formatParseError`; confirm script-mode line-number handling.
-- **Phase 4 (Multi-line):** Bracket-balance rules for edge cases (strings, nested); max continuation cap.
+### Research flags
 
-Phases with standard patterns (skip research-phase):
-- **Phase 2 (Help):** getHelpTable extension is straightforward; content curation from qseriesdoc.md.
-- **Phase 3 (Input):** Typo suggestions reuse existing levenshtein + built-in set; completion hints are data-driven.
+**Phases needing deeper research during planning:**
+- **Phase 3 (coverage):** single-TU line attribution; acceptance vs unit coverage trade-off.
+- **Phase 4 (clang-tidy):** Bear availability on Cygwin/Windows; check selection for incremental adoption.
+
+**Phases with standard patterns (skip research-phase):**
+- **Phase 1 (warnings):** Well-documented; project already uses `[[maybe_unused]]`.
+- **Phase 2 (CXXFLAGS, cppcheck):** Straightforward; cppcheck standalone.
 
 ---
 
@@ -119,33 +146,38 @@ Phases with standard patterns (skip research-phase):
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Explicit "no additions"; STACK.md verified against codebase |
-| Features | HIGH | Maple docs and prodmake.html verified; feature matrix from FEATURES.md |
-| Architecture | HIGH | ARCHITECTURE.md maps components; integration points clear |
-| Pitfalls | HIGH | Maple Error Message Guide, Python termios post-mortems, REPL community reports |
+| Stack | HIGH | GCC/LLVM docs; cppcheck, gcov/lcov standard; sanitizers built-in |
+| Features | HIGH | Clean-as-you-code consensus; FEATURES aligned with codebase |
+| Architecture | HIGH | Existing Makefile, CI, tests; integration points clear |
+| Pitfalls | HIGH | Official docs; community post-mortems; project context |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **`?topic` syntax:** Research recommends keeping `help(topic)`; adding `?topic` would require parser changes. Document clearly for Maple users.
-- **NO_COLOR handling:** ANSI extension (cyan, green, underline) must respect existing `ansi::init()` NO_COLOR check.
-- **Emscripten:** REPL UX enhancements target TTY; WASM path uses `evaluate()` and captures cout/cerr. Ensure error format is useful in both.
+- Bear/clang-tidy on Cygwin/Windows — validate during Phase 4 planning; fallback to Option B.
+- Coverage ROI for single-TU — track trends only; no strict gate.
+- -Wconversion — deferred; revisit if math code cleaned enough.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Maple Help, Error Message Guide Overview — maplesoft.com
-- qseries prodmake.html — qseries.org/fgarvan/qmaple/qseries/functions/prodmake.html
-- src/repl.h, src/parser.h — RawModeGuard, readLineRaw, getHelpTable, offsetToLineCol
-- .planning/research/STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md
+- GCC Warning Options, Diagnostic Pragmas
+- cppcheck manual
+- clang-tidy docs (NOLINT, header-filter, compile_commands)
+- Bear, gcov/lcov
+- C++ Core Guidelines F.9 (unused parameters)
 
 ### Secondary (MEDIUM confidence)
-- Python termios Ctrl+C / raw mode — cpython#128330
-- OhMyREPL error display patterns — color, reverse stack
-- Phase research files — 20-tab-completion, 21-error-messages, 31-up-down-arrows
+- SonarQube clean-as-you-code
+- PVS-Studio incremental adoption
+- Stack Overflow (pragma push/pop, template pragma scope)
+
+### Project context
+- STACK.md, FEATURES.md, ARCHITECTURE.md, PITFALLS.md
+- Makefile, .github/workflows/release.yml, tests/*.sh
 
 ---
 *Research completed: 2026-03-06*
