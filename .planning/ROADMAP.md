@@ -1658,7 +1658,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 106-01-PLAN.md — provemodfuncidBATCH in theta_ids.h; REPL dispatch + help; acceptance-theta-ids Test 9
+- [x] 106-01-PLAN.md — provemodfuncidBATCH in theta_ids.h; REPL dispatch + help; acceptance-theta-ids Test 9
 
 ### Phase 107: RR Identity Search
 **Goal**: findids types 3–10 and acceptance-rr-id verification
@@ -1669,7 +1669,10 @@ Plans:
   2. RRG, RRH, checkid produce expected results
   3. tests/acceptance-rr-id.sh passes
   4. findids discovers identities for at least 2 of types 3–10
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 107-01-PLAN.md — findids types 4 and 5; acceptance-rr-id extended
 
 ### v11.1 Progress
 
@@ -1678,6 +1681,6 @@ Plans:
 | 103. Block 25 fix | 0/? | Complete    | 2026-03-06 |
 | 104. Block 24 N/A rationale | 0/? | Complete    | 2026-03-06 |
 | 105. findlincombomodp | 1/1 | Complete | 2026-03-01 |
-| 106. provemodfuncid extensions | 0/? | Not started | - |
+| 106. provemodfuncid extensions | 1/1 | Complete | 2026-03-06 |
 | 107. RR Identity Search | 0/? | Not started | - |
 
