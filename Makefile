@@ -4,7 +4,7 @@ CXX ?= g++
 CXXFLAGS = -std=c++20 -O2 -Wall -Wextra -Wpedantic
 LDFLAGS ?= 
 
-.PHONY: all clean test acceptance acceptance-all acceptance-maple acceptance-factor acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history acceptance-omega acceptance-exercises integration-eta-theta-modforms demo test-package wasm bench docker-build docker-run
+.PHONY: all clean test acceptance acceptance-all acceptance-maple acceptance-factor acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history acceptance-omega acceptance-exercises acceptance-etamake-format integration-eta-theta-modforms demo test-package wasm bench docker-build docker-run
 
 all: dist/qseries.exe dist-demo
 
@@ -80,6 +80,10 @@ acceptance-factor: dist/qseries.exe
 # Phase 66/94 Exercise solutions (Exercises 4, 9, 10; EX-04 a/b/c/d/e)
 acceptance-exercises: dist/qseries.exe
 	bash tests/acceptance-exercises.sh
+
+# Phase 60 etamake scalar factor and format (theta2/3/4 outputs)
+acceptance-etamake-format: dist/qseries.exe
+	./tests/acceptance-etamake-format.sh
 
 # Run Phase 87 cross-package ETA + theta IDs + modforms integration tests
 integration-eta-theta-modforms: dist/qseries.exe
