@@ -2726,7 +2726,12 @@ inline void handleTabCompletion(std::string& line, size_t& pos, const Environmen
     if (matches.size() == 1) {
         std::string match = matches[0];
         bool isFunc = getHelpTable().count(match) > 0;
-        if (isFunc) match += "(";
+        if (isFunc) {
+            auto it = getHelpTable().find(match);
+            if (it != getHelpTable().end() && !it->second.sig.empty())
+                std::cout << "\n  " << it->second.sig << "\n";
+            match += "(";
+        }
         line = line.substr(0, start) + match + line.substr(end);
         pos = start + match.size();
         redrawLineRaw(line, pos);
