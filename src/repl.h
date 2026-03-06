@@ -2704,18 +2704,25 @@ inline void runRepl() {
 
     constexpr size_t maxContinuations = 100;
 
-    for (;;) {
-        std::string line;
+    auto readLineFn = [&](const std::string& prompt) -> std::optional<std::string> {
         if (stdin_is_tty()) {
-            std::cout << ansi::gold() << "qseries> " << ansi::reset() << std::flush;
+            std::cout << ansi::gold() << prompt << ansi::reset() << std::flush;
             auto opt = readLineRaw(env, history);
             std::cout << std::endl;
-            if (!opt) break;
-            line = *opt;
+            return opt;
         } else {
-            if (!std::getline(std::cin, line)) break;
-            std::cout << "qseries> " << line << std::endl;
+            std::string line;
+            if (!std::getline(std::cin, line)) return std::nullopt;
+            std::cout << prompt << line << std::endl;
+            return line;
         }
+    };
+
+    for (;;) {
+        std::string line;
+        auto opt = readLineFn("qseries> ");
+        if (!opt) break;
+        line = *opt;
 
         // Backslash continuation: while line ends with \, read more lines
         size_t contCount = 0;
@@ -2728,19 +2735,9 @@ inline void runRepl() {
             line.pop_back();  // remove trailing backslash
             if (contCount >= maxContinuations)
                 break;
-            if (stdin_is_tty()) {
-                std::cout << ansi::gold() << "  > " << ansi::reset() << std::flush;
-                auto nextOpt = readLineRaw(env, history);
-                std::cout << std::endl;
-                if (!nextOpt) break;
-                line += " " + *nextOpt;
-            } else {
-                if (std::cin.eof()) break;
-                std::string next;
-                if (!std::getline(std::cin, next)) break;
-                std::cout << "  > " << next << std::endl;
-                line += " " + next;
-            }
+            auto nextOpt = readLineFn("  > ");
+            if (!nextOpt) break;
+            line += " " + *nextOpt;
             ++contCount;
         }
 
@@ -2748,20 +2745,10 @@ inline void runRepl() {
         size_t bracketContCount = 0;
         constexpr size_t maxBracketContinuations = 100;
         while (bracketsUnclosed(line) && bracketContCount < maxBracketContinuations) {
-            if (stdin_is_tty()) {
-                std::cout << ansi::gold() << "  > " << ansi::reset() << std::flush;
-                auto nextOpt = readLineRaw(env, history);
-                std::cout << std::endl;
-                if (!nextOpt) break;
-                line += " " + *nextOpt;
-            } else {
-                if (std::cin.eof()) break;
-                std::string next;
-                if (!std::getline(std::cin, next)) break;
-                if (trim(next).empty()) break;
-                std::cout << "  > " << next << std::endl;
-                line += " " + next;
-            }
+            auto nextOpt = readLineFn("  > ");
+            if (!nextOpt) break;
+            if (trim(*nextOpt).empty()) break;
+            line += " " + *nextOpt;
             ++bracketContCount;
         }
 
