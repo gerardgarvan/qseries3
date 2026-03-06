@@ -524,168 +524,1232 @@ inline void formatHelpEntry([[maybe_unused]] const std::string& name, const Help
     }
 }
 
+// Forward declaration for handlers that call eval (e.g. invphi1)
+inline EvalResult eval(const Expr* e, Environment& env,
+    const std::map<std::string, int64_t>& sumIndices);
+
 inline const std::map<std::string, HelpEntry>& getHelpTable() {
-    static const std::map<std::string, HelpEntry> table = {
-        {"add", {"add(expr, var, lo, hi)", "summation over index var from lo to hi", {}, {}}},
-        {"aqprod", {"aqprod(a,q,n,T)", "rising q-factorial (a;q)_n", {"aqprod(q,q,5,50)"}, {"etaq", "prodmake"}}},
-        {"coeff", {"coeff(f,n)", "coefficient of q^n in series f", {}, {}}},
-        {"coeffs", {"coeffs(f,from,to)", "list coefficients from exponent from to to", {}, {}}},
-        {"conjpart", {"conjpart(ptn)", "conjugate partition", {}, {}}},
-        {"crankgf", {"crankgf(m,T)", "GF for partitions with crank m: \xCE\xA3 M(m,n) q^n", {}, {}}},
-        {"dissect", {"dissect(f,m,T)", "list all m siftings of f: sift(f,m,k,T) for k=0..m-1", {}, {}}},
-        {"dilly", {"dilly(f,d)", "q-dilation: substitute q \u2192 q^d", {}, {}}},
-        {"divisors", {"divisors(n)", "sorted list of positive divisors of n", {}, {}}},
-        {"DELTA12", {"DELTA12(T)", "discriminant cusp form q·η(q)^24", {}, {}}},
-        {"EISENq", {"EISENq(d,T)", "Eisenstein series E_d(q), d even (2,4,6,...)", {}, {}}},
-        {"makebasisM", {"makebasisM(k,T)", "basis of M_k(SL_2(Z)) using E4, E6", {}, {}}},
-        {"makeALTbasisM", {"makeALTbasisM(k,T)", "basis of M_k(SL_2(Z)) using Delta_12 and E6", {}, {}}},
-        {"makebasisPX", {"makebasisPX(k,T)", "basis P*X[k] using partition function P", {}, {}}},
-        {"QP2", {"QP2(num, den)", "second periodic Bernoulli: fpart^2-fpart+1/6", {}, {}}},
-        {"getacuspord", {"getacuspord(n, r, a, c)", "order of η_{n,r} at cusp a/c", {}, {}}},
-        {"cuspmake1", {"cuspmake1(N)", "cusps for Gamma_1(N)", {}, {}}},
-        {"Gamma1ModFunc", {"Gamma1ModFunc(L, N)", "check generalized eta product modular on Gamma_1(N)", {}, {}}},
-        {"eta2jac", {"eta2jac(getalist)", "convert GETA list to Jacobi product", {}, {}}},
-        {"jac2eprod", {"jac2eprod(var)", "convert Jacobi product to GETA form", {}, {}}},
-        {"eisenstein", {"eisenstein(k,T)", "normalized Eisenstein series E_{2k}(q)", {}, {}}},
-        {"etaq", {"etaq(k) or etaq(k,T) or etaq(q,k,T)", "eta product Π(1-q^{kn})", {"etaq(1, 20)"}, {"etamake", "aqprod"}}},
-        {"etamake", {"etamake(f,T)", "identify f as eta product", {"etamake(theta3(100), 100)", "etamake(theta4(100), 100)"}, {"prodmake", "etaq", "jacprodmake"}}},
-        {"euler_phi", {"euler_phi(n)", "Euler's totient φ(n)", {}, {}}},
-        {"findhom", {"findhom(L,n,topshift)", "homogeneous polynomial relations between series in L", {}, {}}},
-        {"findhommodp", {"findhommodp(L,p,n,topshift)", "homogeneous polynomial relations mod p", {}, {}}},
-        {"findlincombomodp", {"findlincombomodp(f,L,p[,topshift])", "express f as linear combination of L mod p", {}, {}}},
-        {"findhomcombo", {"findhomcombo(f,L,n,topshift[,etaopt])", "express f as polynomial in L", {}, {}}},
-        {"agcrank", {"agcrank(ptn)", "Andrews-Garvan crank of a partition", {}, {}}},
-        {"drank", {"drank(ptn)", "Dyson rank: largest part minus number of parts", {}, {}}},
-        {"findnonhom", {"findnonhom(L,n,topshift)", "nonhomogeneous polynomial relations", {}, {}}},
-        {"findnonhomcombo", {"findnonhomcombo(f,L,n_list,topshift[,etaopt])", "express f as polynomial in L (nonhom)", {}, {}}},
-        {"findpoly", {"findpoly(x,y,deg1,deg2[,check])", "polynomial relation between two series", {}, {}}},
-        {"jac2prod", {"jac2prod(var)", "display Jacobi product stored in variable", {}, {}}},
-        {"invphi1", {"invphi1(phi1result,t)", "inverse GSK bijection: [core,quotient] \xe2\x86\x92 partition", {}, {}}},
-        {"istcore", {"istcore(ptn,t)", "test if partition is a t-core (returns 1 or 0)", {}, {}}},
-        {"jacobi", {"jacobi(a,n)", "Jacobi symbol (a/n) for odd positive n", {}, {}}},
-        {"jacprodmake", {"jacprodmake(f,T)", "identify f as Jacobi product", {"rr := sum(q^(n^2)/aqprod(q,q,n,50), n, 0, 8)", "jacprodmake(rr, 40)"}, {"prodmake", "etamake", "jac2prod"}}},
-        {"kapPD", {"kapPD(ptn)", "count of parts > largest even part (distinct-part partition)", {}, {}}},
-        {"kronecker", {"kronecker(a,n)", "Kronecker symbol (a/n) for all integer n", {}, {}}},
-        {"lamPD", {"lamPD(ptn)", "largest part minus smallest part (distinct-part partition)", {}, {}}},
-        {"legendre", {"legendre(a,p)", "Legendre symbol (a/p)", {}, {}}},
-        {"lp", {"lp(ptn)", "largest part of partition", {}, {}}},
-        {"overptncrank", {"overptncrank(dptn,ptn)", "overpartition crank", {}, {}}},
-        {"overptnrank", {"overptnrank(dptn,ptn)", "overpartition rank", {}, {}}},
-        {"overptns", {"overptns(n)", "enumerate all overpartitions of n as [dptn, ptn] pairs", {}, {}}},
-        {"partition", {"partition(n)", "partition number p(n)", {}, {}}},
-        {"partitions", {"partitions(n)", "all partitions of n as list of integer lists", {}, {}}},
-        {"PDP", {"PDP(n)", "count partitions of n into distinct parts", {}, {}}},
-        {"POE", {"POE(n)", "count partitions of n with even parts < odd parts", {}, {}}},
-        {"PRR", {"PRR(n)", "count Rogers-Ramanujan partitions of n (parts differ by ≥2)", {}, {}}},
-        {"PSCHUR", {"PSCHUR(n)", "count Schur partitions of n (distinct, no consecutive)", {}, {}}},
-        {"ptnCC", {"ptnCC(ptn)", "test: parts differ by at least 3", {}, {}}},
-        {"ptnDP", {"ptnDP(ptn)", "test: all parts distinct", {}, {}}},
-        {"ptnOE", {"ptnOE(ptn)", "test: even parts all smaller than odd parts", {}, {}}},
-        {"ptnOP", {"ptnOP(ptn)", "test: all parts odd", {}, {}}},
-        {"ptnRR", {"ptnRR(ptn)", "test: parts differ by at least 2 (Rogers-Ramanujan type)", {}, {}}},
-        {"ptnSCHUR", {"ptnSCHUR(ptn)", "test: distinct parts, no two consecutive", {}, {}}},
-        {"phi1", {"phi1(ptn,t)", "GSK bijection: partition \xe2\x86\x92 [t-core, t-quotient]", {}, {}}},
-        {"GFDM2N", {"GFDM2N(k1,k2,t,r[,T])", "GF for M2N(k1,t,n*t+r)-M2N(k2,t,n*t+r)", {}, {}}},
-        {"M2N", {"M2N(m,n) or M2N(k,r,n)", "count partitions of n (no repeated odd parts) with M2-rank m", {}, {}}},
-        {"MBAR", {"MBAR(m,n) or MBAR(k,r,n)", "overpartition crank count", {}, {}}},
-        {"NS", {"NS(m,n) or NS(k,r,n)", "SPT-crank count", {}, {}}},
-        {"Phiq", {"Phiq(j,T)", "divisor sum GF Σ σ_j(n) q^n", {}, {}}},
-        {"polyfind", {"polyfind(n0,n1,n2,T)", "quadratic p(x) with p(T)=n0, p(T+1)=n1, p(T+2)=n2", {}, {}}},
-        {"prodmake", {"prodmake(f,T)", "Andrews' algorithm: series → infinite product", {"rr := sum(q^(n^2)/aqprod(q,q,n,50), n, 0, 8)", "prodmake(rr, 40)"}, {"etamake", "jacprodmake"}}},
-        {"RootOf", {"RootOf(3) or RootOf([1,1,1])", "primitive cube root of unity omega", {}, {}}},
-        {"RRG", {"RRG(n) or RRG(n,T)", "Rogers-Ramanujan G(n): sum form for n=1, Geta for n>1", {}, {}}},
-        {"RRH", {"RRH(n) or RRH(n,T)", "Rogers-Ramanujan H(n): sum form for n=1, Geta for n>1", {}, {}}},
-        {"RRGstar", {"RRGstar(n) or RRGstar(n,T)", "Göllnitz-Gordon G*(n)", {}, {}}},
-        {"RRHstar", {"RRHstar(n) or RRHstar(n,T)", "Göllnitz-Gordon H*(n)", {}, {}}},
-        {"geta", {"geta(g,d,n,T)", "Geta(g,d,n) = q^(n·QP2(g/d)·d/2)·JAC(ng,nd,∞)/JAC(0,nd,∞)", {}, {}}},
-        {"checkid", {"checkid(expr,T) or checkid(expr,T,acc)", "check if expr is eta/theta product (CHECKRAMIDF)", {}, {}}},
-        {"findids", {"findids(type) or findids(type,T)", "search RR identities: type 1 (G(p)H(a)±G(a)H(p)), type 2 (G(a)G(p)±H(a)H(p)), type 4 (GM(p)HM(a)±GM(a)HM(p)), type 5 (GM(a)GM(p)±HM(a)HM(p))", {}, {}}},
-        {"sieveqcheck", {"sieveqcheck(f,p)", "true if all exponents ≡ same residue mod p", {}, {}}},
-        {"siftfindrange", {"siftfindrange(f,p,T)", "find residue class with fewest terms", {}, {}}},
-        {"sptcrankresnum", {"sptcrankresnum(k,r,n)", "partitions of n with SPT-crank ≡ k mod r", {}, {}}},
-        {"ocrankresnum", {"ocrankresnum(k,r,n)", "overpartitions of n with crank ≡ k mod r", {}, {}}},
-        {"pbar", {"pbar(n)", "overpartition number", {}, {}}},
-        {"betafind", {"betafind(n,T) or betafind(n)", "beta for unit Bailey pair at index n", {}, {}}},
-        {"alphaup", {"alphaup(alpha,T)", "Bailey chain: move alpha right", {}, {}}},
-        {"alphadown", {"alphadown(alpha,T)", "Bailey chain: move alpha left", {}, {}}},
-        {"bailey_sum", {"bailey_sum(pair,N,T)", "sum of beta[0..N]; pair: 0=unit, 1=RR, 2=GG", {}, {}}},
-        {"cuspmake", {"cuspmake(N)", "inequivalent cusps for Gamma_0(N)", {}, {}}},
-        {"cuspord", {"cuspord(GP, cusp)", "Ligozat order of eta-quotient at cusp", {}, {}}},
-        {"gammacheck", {"gammacheck(GP, N)", "Newman's 5 conditions for Gamma_0(N)", {}, {}}},
-        {"etaprodtoqseries", {"etaprodtoqseries(GP, T)", "q-expansion of eta-quotient from GP", {}, {}}},
-        {"vp", {"vp(n, p)", "p-adic valuation", {}, {}}},
-        {"provemodfuncGAMMA0id", {"provemodfuncGAMMA0id(etaid, N)", "prove eta identity on Gamma_0(N) via Sturm", {}, {}}},
-        {"provemodfuncGAMMA0idBATCH", {"provemodfuncGAMMA0idBATCH(etaids, N)", "batch prove multiple eta identities", {}, {}}},
-        {"provemodfuncid", {"provemodfuncid(jacid, N)", "prove Jacobi theta identity on Gamma_1(N) via Sturm", {}, {}}},
-        {"provemodfuncidBATCH", {"provemodfuncidBATCH(jacids, N)", "batch prove multiple Jacobi theta identities on Gamma_1(N)", {}, {}}},
-        {"mod", {"mod(a,b)", "integer remainder a mod b", {}, {}}},
-        {"modp", {"modp(f,p)", "reduce series coefficients modulo prime p", {}, {}}},
-        {"mockdesorder", {"mockdesorder(m)", "list mock theta function names of order m (2,3,5,6,7,8,10)", {}, {}}},
-        {"mockqs", {"mockqs(name, order, T)", "q-series expansion of mock theta function (e.g. mockqs(f3, 3, 20))", {}, {}}},
-        {"newprodmake", {"newprodmake(f,T)", "Andrews' prodmake with arbitrary leading term", {}, {}}},
-        {"mobius", {"mobius(n)", "Möbius function μ(n): 0 if squared factor, (-1)^k otherwise", {}, {}}},
-        {"mprodmake", {"mprodmake(f,T)", "convert series to product (1+q^n1)(1+q^n2)...", {}, {}}},
-        {"makebiw", {"makebiw(ptn,t,m)", "display bi-infinite words W0..W(t-1) for positions -m..m", {}, {}}},
-        {"nep", {"nep(ptn)", "number of even parts", {}, {}}},
-        {"np_parts", {"np_parts(ptn)", "number of parts", {}, {}}},
-        {"nterms", {"nterms(f)", "count non-zero coefficients in series", {}, {}}},
-        {"numLE", {"numLE(ptn)", "count of times largest even part occurs", {}, {}}},
-        {"nvec2alphavec", {"nvec2alphavec(nvec)", "convert n-vector to alpha-vector (t=5 or t=7)", {}, {}}},
-        {"nvec2ptn", {"nvec2ptn(nvec)", "reconstruct t-core from n-vector", {}, {}}},
-        {"ptn2nvec", {"ptn2nvec(ptn,t)", "n-vector of partition (t-core theory)", {}, {}}},
-        {"ptn2rvec", {"ptn2rvec(ptn,t)", "r-vector (residue counts) of partition", {}, {}}},
-        {"ptnnorm", {"ptnnorm(ptn)", "sum of parts of partition", {}, {}}},
-        {"tcrank", {"tcrank(ptn,t)", "t-core crank statistic (mod t, t odd prime)", {}, {}}},
-        {"tresdiag", {"tresdiag(ptn,t)", "display t-residue diagram of partition", {}, {}}},
-        {"checkprod", {"checkprod(f) or checkprod(f,T) or checkprod(f,M,T)", "check if f is a nice product (exponents |a[n]| < M)", {}, {}}},
-        {"checkmult", {"checkmult(f) or checkmult(f,T) or checkmult(f,T,1)", "check if coefficients are multiplicative", {}, {}}},
-        {"clear_cache", {"clear_cache()", "clear memoization caches (etaq)", {}, {}}},
-        {"qbin", {"qbin(m,n,T) or qbin(q,m,n,T)", "Gaussian polynomial [m;n]_q", {}, {}}},
-        {"qfactor", {"qfactor(f) or qfactor(f,T)", "factorize finite q-product", {}, {}}},
-        {"factor", {"factor(f) or factor(f,T)", "factor polynomial in q into cyclotomic form", {}, {}}},
-        {"quinprod", {"quinprod(z,q,T) or quinprod(z,q,prodid) or quinprod(z,q,seriesid)", "quintuple product; T=int returns q-expansion; prodid returns product identity form; seriesid returns series identity form", {}, {}}},
-        {"rankgf", {"rankgf(m,T)", "GF for partitions with rank m: \xCE\xA3 N(m,n) q^n", {}, {}}},
-        {"rvec", {"rvec(ptn,t,k)", "count of nodes colored k in t-residue diagram", {}, {}}},
-        {"series", {"series(f) or series(f,T)", "display series coefficients", {}, {}}},
-        {"set_trunc", {"set_trunc(N)", "set default truncation", {}, {}}},
-        {"sigma", {"sigma(n) or sigma(n,k)", "divisor sum σ_k(n)", {}, {}}},
-        {"sift", {"sift(f,n,k,T)", "extract coefficients a_{ni+k}", {}, {}}},
-        {"subs_q", {"subs_q(f,k)", "substitute q^k for q", {}, {}}},
-        {"sum", {"sum(expr, var, lo, hi)", "summation over index var from lo to hi", {}, {}}},
-        {"T", {"T(r,n) or T(r,n,T)", "finite q-product T_{r,n}", {}, {}}},
-        {"tcoreofptn", {"tcoreofptn(ptn,t)", "compute the t-core of a partition", {}, {}}},
-        {"tcores", {"tcores(t,n)", "list all t-cores of n", {}, {}}},
-        {"tquot", {"tquot(ptn,t)", "t-quotient of partition (list of t partitions)", {}, {}}},
-        {"theta", {"theta(z,T) or theta(z,q,T)", "generalized theta function", {}, {}}},
-        {"theta2", {"theta2(T) or theta2(q,T)", "theta_2", {}, {}}},
-        {"theta3", {"theta3(T) or theta3(q,T)", "theta_3", {"theta3(20)"}, {"etaq", "etamake", "theta", "theta4"}}},
-        {"theta4", {"theta4(T) or theta4(q,T)", "theta_4", {}, {}}},
-        {"tripleprod", {"tripleprod(z,q,T)", "Jacobi triple product", {}, {}}},
-        {"version", {"version", "print package version", {}, {}}},
-        {"winquist", {"winquist(a,b,q,T)", "Winquist identity", {}, {}}},
-        {"qdegree", {"qdegree(f)", "highest exponent with nonzero coefficient", {}, {}}},
-        {"qdiff", {"qdiff(f)", "q-derivative: θ_q f = Σ n·a_n·q^n", {}, {}}},
-        {"lqdegree", {"lqdegree(f)", "lowest exponent with nonzero coefficient", {}, {}}},
-        {"jac2series", {"jac2series(var) or jac2series(var,T)", "convert Jacobi product (in var) to series", {}, {}}},
-        {"findlincombo", {"findlincombo(f,L,topshift)", "express f as linear combination of series in L", {}, {}}},
-        {"findmaxind", {"findmaxind(L) or findmaxind(L, topshift)", "maximal linearly independent subset of q-series in L; returns indices (1-based)", {}, {}}},
-        {"load", {"load(name)", "restore session from name.qsession file", {}, {}}},
-        {"max", {"max(a, b, ...)", "maximum of 2 or more integers", {}, {}}},
-        {"min", {"min(a, b, ...)", "minimum of 2 or more integers", {}, {}}},
-        {"save", {"save(name)", "save current session to name.qsession file", {}, {}}},
-    };
+    static const std::map<std::string, HelpEntry> table = []() {
+        std::map<std::string, HelpEntry> t;
+        for (const auto& [name, entry] : getBuiltinRegistry())
+            t[name] = entry.help;
+        return t;
+    }();
     return table;
 }
 
 inline const std::unordered_map<std::string, BuiltinEntry>& getBuiltinRegistry() {
     static const std::unordered_map<std::string, BuiltinEntry> reg = []() {
         std::unordered_map<std::string, BuiltinEntry> m;
-        HelpEntry he{"aqprod(a,q,n,T)", "rising q-factorial (a;q)_n", {"aqprod(q,q,5,50)"}, {"etaq", "prodmake"}};
-        m["aqprod"] = BuiltinEntry{he, [](DispatchContext& ctx) {
-            if (ctx.args.size() != 4)
-                throw std::runtime_error(runtimeErr(ctx.name, "expects 4 arguments"));
+        auto regBuiltin = [&m](const char* n, HelpEntry h, BuiltinHandler f) {
+            m[n] = BuiltinEntry{std::move(h), std::move(f)};
+        };
+#define H(sig, desc, ex, see) HelpEntry{sig, desc, ex, see}
+
+        regBuiltin("RootOf", H("RootOf(3) or RootOf([1,1,1])", "primitive cube root of unity omega", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            const Expr* a = ctx.args[0].get();
+            if (a->tag == Expr::Tag::IntLit) {
+                if (a->intVal == 3) return EvalResult(Omega3::omega());
+                throw std::runtime_error(runtimeErr(ctx.name, "RootOf(n) only supports n=3 for omega"));
+            }
+            if (a->tag == Expr::Tag::List) {
+                if (a->elements.size() != 3) throw std::runtime_error(runtimeErr(ctx.name, "RootOf([a,b,c]) expects 3 coefficients"));
+                int c0 = static_cast<int>(evalToInt(a->elements[0].get(), ctx.env, ctx.sumIndices));
+                int c1 = static_cast<int>(evalToInt(a->elements[1].get(), ctx.env, ctx.sumIndices));
+                int c2 = static_cast<int>(evalToInt(a->elements[2].get(), ctx.env, ctx.sumIndices));
+                if (c0 == 1 && c1 == 1 && c2 == 1) return EvalResult(Omega3::omega());
+                throw std::runtime_error(runtimeErr(ctx.name, "RootOf([a,b,c]) only supports [1,1,1] for omega"));
+            }
+            throw std::runtime_error(runtimeErr(ctx.name, "expects int or list argument"));
+        });
+
+        regBuiltin("aqprod", H("aqprod(a,q,n,T)", "rising q-factorial (a;q)_n", {"aqprod(q,q,5,50)"}, {"etaq", "prodmake"}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 4) throw std::runtime_error(runtimeErr(ctx.name, "expects 4 arguments"));
             return aqprod(ctx.ev(0), ctx.ev(1), static_cast<int>(ctx.evi(2)), static_cast<int>(ctx.evi(3)));
-        }};
+        });
+
+        regBuiltin("etaq", H("etaq(k) or etaq(k,T) or etaq(q,k,T)", "eta product \u03A0(1-q^{kn})", {"etaq(1, 20)"}, {"etamake", "aqprod"}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 1) return etaq(ctx.q, static_cast<int>(ctx.evi(0)), ctx.T);
+            if (ctx.args.size() == 2) return etaq(ctx.q, static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)));
+            if (ctx.args.size() == 3) return etaq(ctx.ev(0), static_cast<int>(ctx.evi(1)), static_cast<int>(ctx.evi(2)));
+            throw std::runtime_error(runtimeErr(ctx.name, expectArg(1, "arguments", "1, 2, or 3", std::to_string(ctx.args.size()) + " arguments")));
+        });
+
+        regBuiltin("theta2", H("theta2(T) or theta2(q,T)", "theta_2", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 1) return theta2(ctx.q, static_cast<int>(ctx.evi(0)));
+            if (ctx.args.size() == 2) return theta2(ctx.ev(0), static_cast<int>(ctx.evi(1)));
+            throw std::runtime_error(runtimeErr(ctx.name, "expected theta2/3/4(T) or theta2/3/4(q,T)"));
+        });
+        regBuiltin("theta3", H("theta3(T) or theta3(q,T)", "theta_3", {"theta3(20)"}, {"etaq", "etamake", "theta", "theta4"}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 1) return theta3(ctx.q, static_cast<int>(ctx.evi(0)));
+            if (ctx.args.size() == 2) return theta3(ctx.ev(0), static_cast<int>(ctx.evi(1)));
+            throw std::runtime_error(runtimeErr(ctx.name, "expected theta2/3/4(T) or theta2/3/4(q,T)"));
+        });
+        regBuiltin("theta4", H("theta4(T) or theta4(q,T)", "theta_4", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 1) return theta4(ctx.q, static_cast<int>(ctx.evi(0)));
+            if (ctx.args.size() == 2) return theta4(ctx.ev(0), static_cast<int>(ctx.evi(1)));
+            throw std::runtime_error(runtimeErr(ctx.name, "expected theta2/3/4(T) or theta2/3/4(q,T)"));
+        });
+
+        regBuiltin("theta", H("theta(z,T) or theta(z,q,T)", "generalized theta function", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 2) return theta(ctx.ev(0), ctx.q, static_cast<int>(ctx.evi(1)));
+            if (ctx.args.size() == 3) return theta(ctx.ev(0), ctx.ev(1), static_cast<int>(ctx.evi(2)));
+            throw std::runtime_error(runtimeErr(ctx.name, "expected theta(z,T) or theta(z,q,T)"));
+        });
+        regBuiltin("qbin", H("qbin(m,n,T) or qbin(q,m,n,T)", "Gaussian polynomial [m;n]_q", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 3) return qbin(ctx.q, static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)), static_cast<int>(ctx.evi(2)));
+            if (ctx.args.size() == 4) return qbin(ctx.ev(0), static_cast<int>(ctx.evi(1)), static_cast<int>(ctx.evi(2)), static_cast<int>(ctx.evi(3)));
+            throw std::runtime_error(runtimeErr(ctx.name, "expected qbin(m,n,T) or qbin(q,m,n,T)"));
+        });
+        regBuiltin("tripleprod", H("tripleprod(z,q,T)", "Jacobi triple product", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 3) throw std::runtime_error(runtimeErr(ctx.name, "expects 3 arguments"));
+            if (ctx.args[0]->tag == Expr::Tag::Var && ctx.env.env.find(ctx.args[0]->varName) == ctx.env.env.end()) {
+                Series qv = ctx.ev(1);
+                int Tr = static_cast<int>(ctx.evi(2));
+                auto b = tripleprod_symbolic(qv, Tr);
+                std::cout << formatBivariate(b) << std::endl;
+                return EvalResult(DisplayOnly{});
+            }
+            return tripleprod(ctx.ev(0), ctx.ev(1), static_cast<int>(ctx.evi(2)));
+        });
+        regBuiltin("quinprod", H("quinprod(z,q,T) or quinprod(z,q,prodid) or quinprod(z,q,seriesid)", "quintuple product", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 3) throw std::runtime_error(runtimeErr(ctx.name, "expects 3 arguments"));
+            if (ctx.args[2]->tag == Expr::Tag::Var) {
+                const std::string& v = ctx.args[2]->varName;
+                if (v == "prodid") { std::cout << "(-z;q)_\u221E (-q/z;q)_\u221E (z\u00B2q;q\u00B2)_\u221E (q/z\u00B2;q\u00B2)_\u221E (q;q)_\u221E" << std::endl; return DisplayOnly{}; }
+                if (v == "seriesid") { std::cout << "\u03A3 ((-z)^(-3n) - (-z)^(3n+1)) q^(n(3n+1)/2)" << std::endl; return DisplayOnly{}; }
+            }
+            if (ctx.args[0]->tag == Expr::Tag::Var && ctx.env.env.find(ctx.args[0]->varName) == ctx.env.env.end()) {
+                Series qv = ctx.ev(1);
+                int Tr = static_cast<int>(ctx.evi(2));
+                auto b = quinprod_symbolic(qv, Tr);
+                std::cout << formatBivariate(b) << std::endl;
+                return DisplayOnly{};
+            }
+            return quinprod(ctx.ev(0), ctx.ev(1), static_cast<int>(ctx.evi(2)));
+        });
+        regBuiltin("winquist", H("winquist(a,b,q,T)", "Winquist identity", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 4) throw std::runtime_error(runtimeErr(ctx.name, "expects 4 arguments"));
+            return winquist(ctx.ev(0), ctx.ev(1), ctx.ev(2), static_cast<int>(ctx.evi(3)));
+        });
+        regBuiltin("sift", H("sift(f,n,k,T)", "extract coefficients a_{ni+k}", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 4) throw std::runtime_error(runtimeErr(ctx.name, "expects 4 arguments"));
+            return sift(ctx.ev(0), static_cast<int>(ctx.evi(1)), static_cast<int>(ctx.evi(2)), static_cast<int>(ctx.evi(3)));
+        });
+        regBuiltin("T", H("T(r,n) or T(r,n,T)", "finite q-product T_{r,n}", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 2) return T_rn(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)), ctx.T);
+            if (ctx.args.size() == 3) return T_rn(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)), static_cast<int>(ctx.evi(2)));
+            throw std::runtime_error(runtimeErr(ctx.name, "expected T(r,n) or T(r,n,T)"));
+        });
+        regBuiltin("prodmake", H("prodmake(f,T)", "Andrews' algorithm: series \u2192 infinite product", {"rr := sum(q^(n^2)/aqprod(q,q,n,50), n, 0, 8)", "prodmake(rr, 40)"}, {"etamake", "jacprodmake"}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, expectArg(1, "arguments", "2 (f and T)", std::to_string(ctx.args.size()) + " arguments")));
+            return prodmake(ctx.ev(0), static_cast<int>(ctx.evi(1)));
+        });
+        regBuiltin("RRG", H("RRG(n) or RRG(n,T)", "Rogers-Ramanujan G(n)", {}, {}), [](DispatchContext& ctx) {
+            int n = static_cast<int>(ctx.evi(0));
+            int Tr = (ctx.args.size() == 2) ? static_cast<int>(ctx.evi(1)) : ctx.T;
+            return RRG(n, Tr);
+        });
+        regBuiltin("RRH", H("RRH(n) or RRH(n,T)", "Rogers-Ramanujan H(n)", {}, {}), [](DispatchContext& ctx) {
+            int n = static_cast<int>(ctx.evi(0));
+            int Tr = (ctx.args.size() == 2) ? static_cast<int>(ctx.evi(1)) : ctx.T;
+            return RRH(n, Tr);
+        });
+        regBuiltin("RRGstar", H("RRGstar(n) or RRGstar(n,T)", "G\u00F6llnitz-Gordon G*(n)", {}, {}), [](DispatchContext& ctx) {
+            int n = static_cast<int>(ctx.evi(0));
+            int Tr = (ctx.args.size() == 2) ? static_cast<int>(ctx.evi(1)) : ctx.T;
+            return RRGstar(n, Tr);
+        });
+        regBuiltin("RRHstar", H("RRHstar(n) or RRHstar(n,T)", "G\u00F6llnitz-Gordon H*(n)", {}, {}), [](DispatchContext& ctx) {
+            int n = static_cast<int>(ctx.evi(0));
+            int Tr = (ctx.args.size() == 2) ? static_cast<int>(ctx.evi(1)) : ctx.T;
+            return RRHstar(n, Tr);
+        });
+        regBuiltin("geta", H("geta(g,d,n,T)", "Geta(g,d,n)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 4) throw std::runtime_error(runtimeErr(ctx.name, "expects geta(g,d,n,T)"));
+            return geta(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)), static_cast<int>(ctx.evi(2)), static_cast<int>(ctx.evi(3)));
+        });
+        regBuiltin("checkid", H("checkid(expr,T) or checkid(expr,T,acc)", "check if expr is eta/theta product", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() < 2 || ctx.args.size() > 3) throw std::runtime_error(runtimeErr(ctx.name, "expects checkid(expr,T) or checkid(expr,T,acc)"));
+            Series f = ctx.ev(0);
+            int Tr = static_cast<int>(ctx.evi(1));
+            int acc = (ctx.args.size() == 3) ? static_cast<int>(ctx.evi(2)) : 10;
+            auto r = checkid(f, Tr, acc);
+            if (!r.ok) std::cout << "not an eta product" << std::endl;
+            else { std::string prefix = (r.ldq != 0) ? ("q^" + std::to_string(r.ldq) + " * ") : ""; std::cout << prefix << formatEtamake(r.eta) << std::endl; }
+            return DisplayOnly{};
+        });
+        regBuiltin("findids", H("findids(type) or findids(type,T)", "search RR identities", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() < 1 || ctx.args.size() > 2) throw std::runtime_error(runtimeErr(ctx.name, "expects findids(type) or findids(type,T)"));
+            int typeVal = static_cast<int>(ctx.evi(0));
+            int Tr = (ctx.args.size() == 2) ? static_cast<int>(ctx.evi(1)) : ctx.T;
+            auto ids = findids(typeVal, Tr);
+            for (const auto& [a, b, c1] : ids) std::cout << "[" << a << ", " << b << ", " << c1 << "]" << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("newprodmake", H("newprodmake(f,T)", "Andrews' prodmake with arbitrary leading term", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            auto r = newprodmake(ctx.ev(0), static_cast<int>(ctx.evi(1)));
+            std::ostringstream lead;
+            if (r.lead_exp == 0) lead << r.lead_coeff.str();
+            else if (r.lead_coeff == Frac(1)) lead << "q^" << r.lead_exp;
+            else if (r.lead_coeff == Frac(-1)) lead << "-q^" << r.lead_exp;
+            else lead << r.lead_coeff.str() << "*q^" << r.lead_exp;
+            std::cout << lead.str() << " * " << formatProdmake(r.a, true) << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("dilly", H("dilly(f,d)", "q-dilation: substitute q \u2192 q^d", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            return dilly(ctx.ev(0), static_cast<int>(ctx.evi(1)));
+        });
+        regBuiltin("sieveqcheck", H("sieveqcheck(f,p)", "true if all exponents \u2261 same residue mod p", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            return static_cast<int64_t>(sieveqcheck(ctx.ev(0), static_cast<int>(ctx.evi(1))) ? 1 : 0);
+        });
+        regBuiltin("siftfindrange", H("siftfindrange(f,p,T)", "find residue class with fewest terms", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 3) throw std::runtime_error(runtimeErr(ctx.name, "expects 3 arguments"));
+            auto r = siftfindrange(ctx.ev(0), static_cast<int>(ctx.evi(1)), static_cast<int>(ctx.evi(2)));
+            std::cout << "minnops=" << r.min_count << " minres=" << r.min_res << " average=" << r.avg << " maxnops=" << r.max_count << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("polyfind", H("polyfind(n0,n1,n2,T)", "quadratic p(x) with p(T)=n0, p(T+1)=n1, p(T+2)=n2", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 4) throw std::runtime_error(runtimeErr(ctx.name, "expects 4 arguments"));
+            auto r = polyfind(ctx.evi(0), ctx.evi(1), ctx.evi(2), ctx.evi(3));
+            if (!r.ok) { std::cout << "polyfind: no integer quadratic fit" << std::endl; return DisplayOnly{}; }
+            std::cout << "a b c: " << r.a.str() << " " << r.b.str() << " " << r.c.str() << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("mprodmake", H("mprodmake(f,T)", "convert series to product (1+q^n1)(1+q^n2)...", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            return mprodmake(ctx.ev(0), static_cast<int>(ctx.evi(1)));
+        });
+        regBuiltin("checkprod", H("checkprod(f) or checkprod(f,T) or checkprod(f,M,T)", "check if f is a nice product", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 1) return checkprod(ctx.ev(0), ctx.T);
+            if (ctx.args.size() == 2) return checkprod(ctx.ev(0), static_cast<int>(ctx.evi(1)));
+            if (ctx.args.size() == 3) return checkprod(ctx.ev(0), static_cast<int>(ctx.evi(1)), static_cast<int>(ctx.evi(2)));
+            throw std::runtime_error(runtimeErr(ctx.name, "expects 1, 2, or 3 arguments"));
+        });
+        regBuiltin("checkmult", H("checkmult(f) or checkmult(f,T) or checkmult(f,T,1)", "check if coefficients are multiplicative", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 1) return checkmult(ctx.ev(0), ctx.T, false);
+            if (ctx.args.size() == 2) return checkmult(ctx.ev(0), static_cast<int>(ctx.evi(1)), false);
+            if (ctx.args.size() == 3) return checkmult(ctx.ev(0), static_cast<int>(ctx.evi(1)), ctx.evi(2) != 0);
+            throw std::runtime_error(runtimeErr(ctx.name, "expects 1, 2, or 3 arguments"));
+        });
+        regBuiltin("etamake", H("etamake(f,T)", "identify f as eta product", {}, {"prodmake", "etaq", "jacprodmake"}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 2) return etamake(ctx.ev(0), static_cast<int>(ctx.evi(1)));
+            if (ctx.args.size() == 3) return etamake(ctx.ev(0), static_cast<int>(ctx.evi(2)));
+            throw std::runtime_error(runtimeErr(ctx.name, expectArg(1, "arguments", "2 or 3", std::to_string(ctx.args.size()) + " arguments")));
+        });
+        regBuiltin("jacprodmake", H("jacprodmake(f,T)", "identify f as Jacobi product", {}, {"prodmake", "etamake", "jac2prod"}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            return jacprodmake(ctx.ev(0), static_cast<int>(ctx.evi(1)));
+        });
+        regBuiltin("jac2prod", H("jac2prod(var)", "display Jacobi product stored in variable", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            if (ctx.args[0]->tag != Expr::Tag::Var) throw std::runtime_error(runtimeErr(ctx.name, "expects variable name"));
+            auto it = ctx.env.env.find(ctx.args[0]->varName);
+            if (it == ctx.env.env.end()) throw std::runtime_error(runtimeErr(ctx.name, formatUndefinedVariableMsg(ctx.env, ctx.args[0]->varName)));
+            if (std::holds_alternative<std::vector<JacFactor>>(it->second)) { std::cout << jac2prod(std::get<std::vector<JacFactor>>(it->second)) << std::endl; return DisplayOnly{}; }
+            throw std::runtime_error(runtimeErr(ctx.name, "expects jacprodmake result"));
+        });
+        regBuiltin("jac2series", H("jac2series(var) or jac2series(var,T)", "convert Jacobi product to series", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() < 1 || ctx.args.size() > 2) throw std::runtime_error(runtimeErr(ctx.name, "expects jac2series(var) or jac2series(var,T)"));
+            if (ctx.args[0]->tag != Expr::Tag::Var) throw std::runtime_error(runtimeErr(ctx.name, "expects variable name"));
+            auto it = ctx.env.env.find(ctx.args[0]->varName);
+            if (it == ctx.env.env.end()) throw std::runtime_error(runtimeErr(ctx.name, formatUndefinedVariableMsg(ctx.env, ctx.args[0]->varName)));
+            if (!std::holds_alternative<std::vector<JacFactor>>(it->second)) throw std::runtime_error(runtimeErr(ctx.name, "expects jacprodmake result"));
+            int Tr = (ctx.args.size() == 2) ? static_cast<int>(ctx.evi(1)) : ctx.T;
+            return jac2series(std::get<std::vector<JacFactor>>(it->second), Tr);
+        });
+        regBuiltin("qfactor", H("qfactor(f) or qfactor(f,T)", "factorize finite q-product", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 1) return qfactor(ctx.ev(0), ctx.T);
+            if (ctx.args.size() == 2) return qfactor(ctx.ev(0), static_cast<int>(ctx.evi(1)));
+            throw std::runtime_error(runtimeErr(ctx.name, "expected qfactor(f) or qfactor(f,T)"));
+        });
+        regBuiltin("factor", H("factor(f) or factor(f,T)", "factor polynomial in q into cyclotomic form", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 1) return factor(ctx.ev(0), ctx.T);
+            if (ctx.args.size() == 2) return factor(ctx.ev(0), static_cast<int>(ctx.evi(1)));
+            throw std::runtime_error(runtimeErr(ctx.name, "expected factor(f) or factor(f,T)"));
+        });
+        regBuiltin("series", H("series(f) or series(f,T)", "display series coefficients", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 1) { Series f = ctx.ev(0).truncTo(ctx.T); std::cout << f.str(std::min(100, ctx.T)) << std::endl; return DisplayOnly{}; }
+            if (ctx.args.size() == 2) { int Tr = static_cast<int>(ctx.evi(1)); Series f = ctx.ev(0).truncTo(Tr); std::cout << f.str(std::min(Tr, 100)) << std::endl; return DisplayOnly{}; }
+            throw std::runtime_error(runtimeErr(ctx.name, "expected series(f) or series(f,T)"));
+        });
+        regBuiltin("coeffs", H("coeffs(f,from,to)", "list coefficients from exponent from to to", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 3) throw std::runtime_error(runtimeErr(ctx.name, "expects 3 arguments"));
+            Series f = ctx.ev(0);
+            int from = static_cast<int>(ctx.evi(1)), to = static_cast<int>(ctx.evi(2));
+            auto list = f.coeffList(from, to);
+            std::cout << "["; for (size_t i = 0; i < list.size(); ++i) { if (i) std::cout << ", "; std::cout << list[i].str(); } std::cout << "]" << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("coeff", H("coeff(f,n)", "coefficient of q^n in series f", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            std::cout << ctx.ev(0).coeff(static_cast<int>(ctx.evi(1))).str() << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("dissect", H("dissect(f,m,T)", "list all m siftings of f", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 3) throw std::runtime_error(runtimeErr(ctx.name, "expects 3 arguments"));
+            Series f = ctx.ev(0); int m = static_cast<int>(ctx.evi(1)), Td = static_cast<int>(ctx.evi(2));
+            if (m <= 0) throw std::runtime_error(runtimeErr(ctx.name, "m must be positive"));
+            for (int k = 0; k < m; ++k) std::cout << "k=" << k << ": " << sift(f, m, k, Td).str(30) << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("set_trunc", H("set_trunc(N)", "set default truncation", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            int N = static_cast<int>(ctx.evi(0));
+            if (N <= 0) throw std::runtime_error(runtimeErr(ctx.name, "truncation must be positive"));
+            ctx.env.T = N;
+            ctx.env.env["q"] = Series::q(N);
+            clear_etaq_cache();
+            return std::monostate{};
+        });
+        regBuiltin("clear_cache", H("clear_cache()", "clear memoization caches (etaq)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 0) throw std::runtime_error(runtimeErr(ctx.name, "expects no arguments"));
+            clear_etaq_cache();
+            return std::monostate{};
+        });
+        regBuiltin("version", H("version", "print package version", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 0) throw std::runtime_error(runtimeErr(ctx.name, "expects no arguments"));
+            std::cout << "qseries 4.1\n";
+            return DisplayOnly{};
+        });
+        regBuiltin("qdegree", H("qdegree(f)", "highest exponent with nonzero coefficient", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            return static_cast<int64_t>(ctx.ev(0).maxExp());
+        });
+        regBuiltin("lqdegree", H("lqdegree(f)", "lowest exponent with nonzero coefficient", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Series f = ctx.ev(0);
+            return static_cast<int64_t>(f.c.empty() ? 0 : f.minExp());
+        });
+#define H2(sig, desc, ex, see) HelpEntry{sig, desc, ex, see}
+        regBuiltin("findhom", H2("findhom(L,n,topshift)", "homogeneous polynomial relations between series in L", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 3) throw std::runtime_error(runtimeErr(ctx.name, "expects 3 arguments"));
+            auto L = ctx.evalListToSeries(ctx.args[0].get());
+            int n = static_cast<int>(ctx.evi(1)), topshift = static_cast<int>(ctx.evi(2));
+            auto basis = findhom(L, n, topshift);
+            std::vector<std::vector<int>> exps;
+            enumerate_hom_exponents(static_cast<int>(L.size()), n, {}, exps);
+            return RelationKernelResult{std::move(basis), std::move(exps)};
+        });
+        regBuiltin("findhommodp", H2("findhommodp(L,p,n,topshift)", "homogeneous polynomial relations mod p", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 4) throw std::runtime_error(runtimeErr(ctx.name, "expects 4 arguments"));
+            auto L = ctx.evalListToSeries(ctx.args[0].get());
+            int p = static_cast<int>(ctx.evi(1)), n = static_cast<int>(ctx.evi(2)), topshift = static_cast<int>(ctx.evi(3));
+            auto basis = findhommodp(L, p, n, topshift);
+            std::vector<std::vector<int>> exps;
+            enumerate_hom_exponents(static_cast<int>(L.size()), n, {}, exps);
+            std::vector<std::vector<Frac>> frac_basis;
+            for (const auto& v : basis) { std::vector<Frac> fv; for (int64_t x : v) fv.push_back(Frac(x)); frac_basis.push_back(std::move(fv)); }
+            return RelationKernelResult{std::move(frac_basis), std::move(exps)};
+        });
+        regBuiltin("findnonhom", H2("findnonhom(L,n,topshift)", "nonhomogeneous polynomial relations", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 3) throw std::runtime_error(runtimeErr(ctx.name, "expects 3 arguments"));
+            auto L = ctx.evalListToSeries(ctx.args[0].get());
+            int n = static_cast<int>(ctx.evi(1)), topshift = static_cast<int>(ctx.evi(2));
+            auto basis = findnonhom(L, n, topshift);
+            std::vector<std::vector<int>> exps;
+            enumerate_nonhom_exponents(static_cast<int>(L.size()), n, exps);
+            return RelationKernelResult{std::move(basis), std::move(exps)};
+        });
+        regBuiltin("findhomcombo", H2("findhomcombo(f,L,n,topshift[,etaopt])", "express f as polynomial in L", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() < 4 || ctx.args.size() > 5) throw std::runtime_error(runtimeErr(ctx.name, "expects 4 or 5 arguments"));
+            Series f = ctx.ev(0); auto L = ctx.evalListToSeries(ctx.args[1].get());
+            int n = static_cast<int>(ctx.evi(2)), topshift = static_cast<int>(ctx.evi(3));
+            auto coeffs = findhomcombo(f, L, n, topshift, false);
+            std::vector<std::vector<int>> exps;
+            enumerate_hom_exponents(static_cast<int>(L.size()), n, {}, exps);
+            return RelationComboResult{std::move(coeffs), std::move(exps)};
+        });
+        regBuiltin("findlincombo", H2("findlincombo(f,L,topshift)", "express f as linear combination of series in L", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 3) throw std::runtime_error(runtimeErr(ctx.name, "expects 3 arguments: findlincombo(f,L,topshift)"));
+            Series f = ctx.ev(0); auto L = ctx.evalListToSeries(ctx.args[1].get());
+            int topshift = static_cast<int>(ctx.evi(2));
+            auto coeffs = findhomcombo(f, L, 1, topshift, false);
+            std::vector<std::vector<int>> exps;
+            enumerate_hom_exponents(static_cast<int>(L.size()), 1, {}, exps);
+            return RelationComboResult{std::move(coeffs), std::move(exps)};
+        });
+        regBuiltin("findlincombomodp", H2("findlincombomodp(f,L,p[,topshift])", "express f as linear combination of L mod p", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 3 && ctx.args.size() != 4) throw std::runtime_error(runtimeErr(ctx.name, "expects 3 or 4 arguments"));
+            Series f = ctx.ev(0); auto L = ctx.evalListToSeries(ctx.args[1].get());
+            int p = static_cast<int>(ctx.evi(2));
+            int topshift = (ctx.args.size() == 4) ? static_cast<int>(ctx.evi(3)) : 0;
+            auto coeffs = findlincombomodp(f, L, p, topshift);
+            return FindlincombomodpResult{std::move(coeffs), p, L.size()};
+        });
+        regBuiltin("findnonhomcombo", H2("findnonhomcombo(f,L,n_list,topshift[,etaopt])", "express f as polynomial in L (nonhom)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() < 4 || ctx.args.size() > 5) throw std::runtime_error(runtimeErr(ctx.name, "expects 4 or 5 arguments"));
+            Series f = ctx.ev(0); auto L = ctx.evalListToSeries(ctx.args[1].get());
+            auto n_list = ctx.evalListToInt(ctx.args[2].get());
+            int topshift = static_cast<int>(ctx.evi(3));
+            auto coeffs = findnonhomcombo(f, L, n_list, topshift, false);
+            std::vector<std::vector<int>> exps;
+            enumerate_nlist_exponents(n_list, {}, 0, exps);
+            return RelationComboResult{std::move(coeffs), std::move(exps)};
+        });
+        regBuiltin("findmaxind", H2("findmaxind(L) or findmaxind(L, topshift)", "maximal linearly independent subset", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 1) return findmaxind(ctx.evalListToSeries(ctx.args[0].get()), 0);
+            if (ctx.args.size() == 2) return findmaxind(ctx.evalListToSeries(ctx.args[0].get()), static_cast<int>(ctx.evi(1)));
+            throw std::runtime_error(runtimeErr(ctx.name, "expects 1 or 2 arguments"));
+        });
+        regBuiltin("findpoly", H2("findpoly(x,y,deg1,deg2[,check])", "polynomial relation between two series", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() < 4 || ctx.args.size() > 5) throw std::runtime_error(runtimeErr(ctx.name, "expects 4 or 5 arguments"));
+            Series x = ctx.ev(0), y = ctx.ev(1);
+            int deg1 = static_cast<int>(ctx.evi(2)), deg2 = static_cast<int>(ctx.evi(3));
+            std::optional<int> check; if (ctx.args.size() == 5) check = static_cast<int>(ctx.evi(4));
+            auto basis = findpoly(x, y, deg1, deg2, check);
+            std::vector<std::vector<int>> exps;
+            for (int j = 0; j <= deg2; ++j) for (int i = 0; i <= deg1; ++i) exps.push_back({i, j});
+            return RelationKernelResult{std::move(basis), std::move(exps)};
+        });
+        regBuiltin("legendre", H2("legendre(a,p)", "Legendre symbol (a/p)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            return static_cast<int64_t>(legendre(ctx.evi(0), ctx.evi(1)));
+        });
+        regBuiltin("jacobi", H2("jacobi(a,n)", "Jacobi symbol (a/n)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            return static_cast<int64_t>(jacobi(ctx.evi(0), ctx.evi(1)));
+        });
+        regBuiltin("kronecker", H2("kronecker(a,n)", "Kronecker symbol (a/n)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            return static_cast<int64_t>(kronecker(ctx.evi(0), ctx.evi(1)));
+        });
+        regBuiltin("sigma", H2("sigma(n) or sigma(n,k)", "divisor sum \u03C3_k(n)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 1) return sigma(static_cast<int>(ctx.evi(0)), 1);
+            if (ctx.args.size() == 2) return sigma(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)));
+            throw std::runtime_error(runtimeErr(ctx.name, "expected sigma(n) or sigma(n,k)"));
+        });
+        regBuiltin("divisors", H2("divisors(n)", "sorted list of positive divisors of n", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            auto d = divisors(static_cast<int>(ctx.evi(0)));
+            std::cout << "["; for (size_t i = 0; i < d.size(); ++i) { if (i) std::cout << ", "; std::cout << d[i]; } std::cout << "]" << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("modp", H2("modp(f,p)", "reduce series coefficients modulo prime p", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            return ctx.ev(0).modp(static_cast<int>(ctx.evi(1)));
+        });
+        regBuiltin("nterms", H2("nterms(f)", "count non-zero coefficients in series", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            return static_cast<int64_t>(ctx.ev(0).c.size());
+        });
+        regBuiltin("mod", H2("mod(a,b)", "integer remainder a mod b", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            int64_t a = ctx.evi(0), b = ctx.evi(1);
+            if (b == 0) throw std::runtime_error(runtimeErr(ctx.name, "modulus cannot be zero"));
+            int64_t r = a % b;
+            if (r < 0) r += (b < 0 ? -b : b);
+            return r;
+        });
+        regBuiltin("mobius", H2("mobius(n)", "M\u00F6bius function \u03BC(n)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            return static_cast<int64_t>(mobius(static_cast<int>(ctx.evi(0))));
+        });
+        regBuiltin("mockqs", H2("mockqs(name, order, T)", "q-series expansion of mock theta function", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 3) throw std::runtime_error(runtimeErr(ctx.name, "expects 3 arguments: mockqs(name, order, T)"));
+            if (ctx.args[0]->tag != Expr::Tag::Var) throw std::runtime_error(runtimeErr(ctx.name, "first argument must be a mock theta function name"));
+            std::string fn = ctx.args[0]->varName;
+            int ord = static_cast<int>(ctx.evi(1)), Tr = static_cast<int>(ctx.evi(2));
+            if (!mock_valid(fn, ord)) throw std::runtime_error(runtimeErr(ctx.name, "unknown mock theta function " + fn + " of order " + std::to_string(ord)));
+            return mockqs(fn, ord, Tr);
+        });
+        regBuiltin("mockdesorder", H2("mockdesorder(m)", "list mock theta function names of order m", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            int m = static_cast<int>(ctx.evi(0));
+            auto list = mockdesorder(m);
+            if (list.empty()) throw std::runtime_error(runtimeErr(ctx.name, "order must be 2, 3, 5, 6, 7, 8, or 10"));
+            std::cout << "There are " << list.size() << " mock theta functions of order " << m << ":" << std::endl;
+            for (size_t i = 0; i < list.size(); ++i) std::cout << (i ? ", " : "") << list[i];
+            std::cout << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("euler_phi", H2("euler_phi(n)", "Euler's totient \u03C6(n)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            return static_cast<int64_t>(euler_phi(static_cast<int>(ctx.evi(0))));
+        });
+        regBuiltin("min", H2("min(a, b, ...)", "minimum of 2 or more integers", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() < 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 or more arguments"));
+            int64_t result = ctx.evi(0);
+            for (size_t i = 1; i < ctx.args.size(); ++i) result = std::min(result, ctx.evi(i));
+            return result;
+        });
+        regBuiltin("max", H2("max(a, b, ...)", "maximum of 2 or more integers", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() < 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 or more arguments"));
+            int64_t result = ctx.evi(0);
+            for (size_t i = 1; i < ctx.args.size(); ++i) result = std::max(result, ctx.evi(i));
+            return result;
+        });
+        regBuiltin("add", H2("add(expr, var, lo, hi)", "summation (use sum)", {}, {}), [](DispatchContext&) {
+            throw std::runtime_error("add and sum use special syntax sum(expr, var, lo, hi); they are not called as regular functions");
+        });
+        regBuiltin("sum", H2("sum(expr, var, lo, hi)", "summation over index var from lo to hi", {}, {}), [](DispatchContext&) {
+            throw std::runtime_error("sum uses special syntax sum(expr, var, lo, hi); it is not called as a regular function");
+        });
+        regBuiltin("load", H2("load(name)", "restore session from name.qsession file", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            std::string nm;
+            if (ctx.args[0]->tag == Expr::Tag::Var) nm = ctx.args[0]->varName;
+            else if (ctx.args[0]->tag == Expr::Tag::IntLit) nm = std::to_string(ctx.args[0]->intVal);
+            else throw std::runtime_error(runtimeErr(ctx.name, "load expects variable or integer name"));
+            loadSession(nm, ctx.env);
+            return DisplayOnly{};
+        });
+        regBuiltin("save", H2("save(name)", "save current session to name.qsession file", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            std::string nm;
+            if (ctx.args[0]->tag == Expr::Tag::Var) nm = ctx.args[0]->varName;
+            else if (ctx.args[0]->tag == Expr::Tag::IntLit) nm = std::to_string(ctx.args[0]->intVal);
+            else throw std::runtime_error(runtimeErr(ctx.name, "save expects variable or integer name"));
+            saveSession(nm, ctx.env);
+            return DisplayOnly{};
+        });
+        regBuiltin("eisenstein", H2("eisenstein(k,T)", "normalized Eisenstein series", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            return eisenstein(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)));
+        });
+        regBuiltin("DELTA12", H2("DELTA12(T)", "discriminant cusp form q*\u03B7(q)^24", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects DELTA12(T)"));
+            return DELTA12(static_cast<int>(ctx.evi(0)));
+        });
+        regBuiltin("EISENq", H2("EISENq(d,T)", "Eisenstein series E_d(q)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            return EISENq(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)));
+        });
+        regBuiltin("Phiq", H2("Phiq(j,T)", "divisor sum GF", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            return Phiq(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)));
+        });
+        regBuiltin("rankgf", H2("rankgf(m,T)", "GF for partitions with rank m", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            return rankgf(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)));
+        });
+        regBuiltin("crankgf", H2("crankgf(m,T)", "GF for partitions with crank m", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            return crankgf(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)));
+        });
+        regBuiltin("vp", H2("vp(n, p)", "p-adic valuation", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects vp(n, p)"));
+            return static_cast<int64_t>(vp(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1))));
+        });
+        regBuiltin("qdiff", H2("qdiff(f)", "q-derivative", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            return qdiff(ctx.ev(0));
+        });
+        regBuiltin("subs_q", H2("subs_q(f,k)", "substitute q^k for q", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            return ctx.ev(0).subs_q(static_cast<int>(ctx.evi(1)));
+        });
+
+        regBuiltin("makebasisM", H2("makebasisM(k,T)", "basis of M_k(SL_2(Z))", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects makebasisM(k, T)"));
+            auto basis = makebasisM(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)));
+            std::cout << "[" << basis.size() << " basis elements]" << std::endl;
+            for (size_t i = 0; i < basis.size(); ++i)
+                std::cout << "  " << (i + 1) << ": " << basis[i].str() << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("makeALTbasisM", H2("makeALTbasisM(k,T)", "alternate basis of M_k(SL_2(Z))", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects makeALTbasisM(k, T)"));
+            auto basis = makeALTbasisM(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)));
+            std::cout << "[" << basis.size() << " basis elements]" << std::endl;
+            for (size_t i = 0; i < basis.size(); ++i)
+                std::cout << "  " << (i + 1) << ": " << basis[i].str() << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("makebasisPX", H2("makebasisPX(k,T)", "basis P*X[k]", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects makebasisPX(k, T)"));
+            auto basis = makebasisPX(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)));
+            std::cout << "[" << basis.size() << " basis elements]" << std::endl;
+            for (size_t i = 0; i < basis.size(); ++i)
+                std::cout << "  " << (i + 1) << ": " << basis[i].str() << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("QP2", H2("QP2(num, den)", "second periodic Bernoulli", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects QP2(num, den)"));
+            Frac x(static_cast<int64_t>(ctx.evi(0)), static_cast<int64_t>(ctx.evi(1)));
+            std::cout << QP2(x).str() << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("getacuspord", H2("getacuspord(n,r,a,c)", "order of eta at cusp", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 4) throw std::runtime_error(runtimeErr(ctx.name, "expects getacuspord(n, r, a, c)"));
+            Frac ord = getacuspord(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)),
+                                  static_cast<int>(ctx.evi(2)), static_cast<int>(ctx.evi(3)));
+            std::cout << ord.str() << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("cuspmake1", H2("cuspmake1(N)", "cusps for Gamma_1(N)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects cuspmake1(N)"));
+            auto cusps = cuspmake1(static_cast<int>(ctx.evi(0)));
+            std::cout << "{";
+            bool first = true;
+            for (const auto& [a, c] : cusps) {
+                if (!first) std::cout << ", ";
+                if (c == 0) std::cout << "oo";
+                else std::cout << a << "/" << c;
+                first = false;
+            }
+            std::cout << "}" << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("Gamma1ModFunc", H2("Gamma1ModFunc(L,N)", "check generalized eta product modular on Gamma_1(N)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects Gamma1ModFunc(L, N)"));
+            const Expr* listExpr = ctx.args[0].get();
+            if (!listExpr || listExpr->tag != Expr::Tag::List)
+                throw std::runtime_error(runtimeErr(ctx.name, "L must be list of [n,a,c]"));
+            std::vector<std::vector<int>> L;
+            for (const auto& elem : listExpr->elements) {
+                if (!elem || elem->tag != Expr::Tag::List || elem->elements.size() < 3)
+                    throw std::runtime_error(runtimeErr(ctx.name, "each element must be [n,a,c]"));
+                L.push_back({static_cast<int>(evalToInt(elem->elements[0].get(), ctx.env, ctx.sumIndices)),
+                             static_cast<int>(evalToInt(elem->elements[1].get(), ctx.env, ctx.sumIndices)),
+                             static_cast<int>(evalToInt(elem->elements[2].get(), ctx.env, ctx.sumIndices))});
+            }
+            int N = static_cast<int>(ctx.evi(1));
+            int r = Gamma1ModFunc(L, N);
+            std::cout << (r ? "1" : "0") << std::endl;
+            return static_cast<int64_t>(r);
+        });
+        regBuiltin("jac2eprod", H2("jac2eprod(var)", "convert Jacobi product to GETA form", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects jac2eprod(var)"));
+            std::string vname = ctx.args[0]->tag == Expr::Tag::Var ? ctx.args[0]->varName : "";
+            if (vname.empty()) throw std::runtime_error(runtimeErr(ctx.name, "argument must be variable name"));
+            auto it = ctx.env.env.find(vname);
+            if (it == ctx.env.env.end()) throw std::runtime_error(formatUndefinedVariableMsg(ctx.env, vname));
+            if (!std::holds_alternative<std::vector<JacFactor>>(it->second))
+                throw std::runtime_error(vname + " must hold Jacobi product (from jacprodmake)");
+            auto geta = jac2eprod(std::get<std::vector<JacFactor>>(it->second));
+            std::ostringstream os;
+            for (size_t i = 0; i < geta.size(); ++i) {
+                auto [n, a, c] = geta[i];
+                if (i) os << " ";
+                if (a == 0) os << "EETA(" << n << ")^" << c.str();
+                else os << "GETA(" << n << "," << a << ")^" << c.str();
+            }
+            std::cout << os.str() << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("eta2jac", H2("eta2jac(getalist)", "convert GETA list to Jacobi product", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects eta2jac(getalist)"));
+            const Expr* listExpr = ctx.args[0].get();
+            if (!listExpr || listExpr->tag != Expr::Tag::List)
+                throw std::runtime_error(runtimeErr(ctx.name, "getalist must be list of [n,a,c]"));
+            std::vector<std::tuple<int, int, Frac>> geta;
+            for (const auto& elem : listExpr->elements) {
+                if (!elem || elem->tag != Expr::Tag::List || elem->elements.size() < 3)
+                    throw std::runtime_error(runtimeErr(ctx.name, "each element must be [n,a,c]"));
+                int n = static_cast<int>(evalToInt(elem->elements[0].get(), ctx.env, ctx.sumIndices));
+                int a = static_cast<int>(evalToInt(elem->elements[1].get(), ctx.env, ctx.sumIndices));
+                Frac c(static_cast<int64_t>(evalToInt(elem->elements[2].get(), ctx.env, ctx.sumIndices)));
+                geta.push_back({n, a, c});
+            }
+            std::vector<JacFactor> jac = eta2jac(geta);
+            std::cout << jac2prod(jac) << std::endl;
+            return jac;
+        });
+        regBuiltin("NS", H2("NS(m,n) or NS(k,r,n)", "spt crank rank multiplicity", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 2)
+                return static_cast<int64_t>(NS(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1))));
+            if (ctx.args.size() == 3)
+                return static_cast<int64_t>(sptcrankresnum(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)), static_cast<int>(ctx.evi(2))));
+            throw std::runtime_error(runtimeErr(ctx.name, "expects NS(m,n) or NS(k,r,n)"));
+        });
+        regBuiltin("MBAR", H2("MBAR(m,n) or MBAR(k,r,n)", "overcrank multiplicity", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 2)
+                return static_cast<int64_t>(MBAR(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1))));
+            if (ctx.args.size() == 3)
+                return static_cast<int64_t>(ocrankresnum(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)), static_cast<int>(ctx.evi(2))));
+            throw std::runtime_error(runtimeErr(ctx.name, "expects MBAR(m,n) or MBAR(k,r,n)"));
+        });
+        regBuiltin("M2N", H2("M2N(m,n) or M2N(k,r,n)", "M2-rank multiplicity", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() == 2)
+                return static_cast<int64_t>(M2N(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1))));
+            if (ctx.args.size() == 3)
+                return static_cast<int64_t>(m2rankresnum(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)), static_cast<int>(ctx.evi(2))));
+            throw std::runtime_error(runtimeErr(ctx.name, "expects M2N(m,n) or M2N(k,r,n)"));
+        });
+        regBuiltin("GFDM2N", H2("GFDM2N(k1,k2,t,r[,T])", "GF for M2-rank", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() < 4 || ctx.args.size() > 5)
+                throw std::runtime_error(runtimeErr(ctx.name, "expects GFDM2N(k1,k2,t,r) or GFDM2N(k1,k2,t,r,T)"));
+            int k1 = static_cast<int>(ctx.evi(0)), k2 = static_cast<int>(ctx.evi(1));
+            int t = static_cast<int>(ctx.evi(2)), r = static_cast<int>(ctx.evi(3));
+            int Tr = (ctx.args.size() == 5) ? static_cast<int>(ctx.evi(4)) : 50;
+            return GFDM2N(k1, k2, t, r, Tr);
+        });
+        regBuiltin("sptcrankresnum", H2("sptcrankresnum(k,r,n)", "spt crank residue number", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 3) throw std::runtime_error(runtimeErr(ctx.name, "expects 3 arguments"));
+            return static_cast<int64_t>(sptcrankresnum(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)), static_cast<int>(ctx.evi(2))));
+        });
+        regBuiltin("ocrankresnum", H2("ocrankresnum(k,r,n)", "overcrank residue number", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 3) throw std::runtime_error(runtimeErr(ctx.name, "expects 3 arguments"));
+            return static_cast<int64_t>(ocrankresnum(static_cast<int>(ctx.evi(0)), static_cast<int>(ctx.evi(1)), static_cast<int>(ctx.evi(2))));
+        });
+        regBuiltin("pbar", H2("pbar(n)", "overpartition count", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            return static_cast<int64_t>(pbar(static_cast<int>(ctx.evi(0))));
+        });
+        regBuiltin("betafind", H2("betafind(n[,T])", "find beta from unit alpha", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() < 1 || ctx.args.size() > 2) throw std::runtime_error(runtimeErr(ctx.name, "expects betafind(n) or betafind(n,T)"));
+            int n = static_cast<int>(ctx.evi(0));
+            int Tr = (ctx.args.size() >= 2) ? static_cast<int>(ctx.evi(1)) : ctx.T;
+            Series a = Series::one(Tr);
+            return betafind(unit_alpha, a, ctx.q, n, Tr);
+        });
+        regBuiltin("alphaup", H2("alphaup(alpha,T)", "Bailey alpha up", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects alphaup(alpha,T)"));
+            Series alpha = ctx.ev(0);
+            int Tr = static_cast<int>(ctx.evi(1));
+            Series a = Series::one(Tr);
+            return alphaup(alpha, a, ctx.q, Tr);
+        });
+        regBuiltin("alphadown", H2("alphadown(alpha,T)", "Bailey alpha down", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects alphadown(alpha,T)"));
+            Series alpha = ctx.ev(0);
+            int Tr = static_cast<int>(ctx.evi(1));
+            Series a = Series::one(Tr);
+            return alphadown(alpha, a, ctx.q, Tr);
+        });
+        regBuiltin("bailey_sum", H2("bailey_sum(pair,N,T)", "Bailey pair sum", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 3) throw std::runtime_error(runtimeErr(ctx.name, "expects bailey_sum(pair,N,T)"));
+            int pair = static_cast<int>(ctx.evi(0));
+            int N = static_cast<int>(ctx.evi(1));
+            int Tr = static_cast<int>(ctx.evi(2));
+            Series a = Series::one(Tr);
+            BetaFunc bf = (pair == 1) ? rr_beta : (pair == 2) ? gg_beta : unit_beta;
+            return bailey_sum(bf, a, ctx.q, N, Tr);
+        });
+        regBuiltin("cuspmake", H2("cuspmake(N)", "cusps for Gamma_0(N)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects cuspmake(N)"));
+            int N = static_cast<int>(ctx.evi(0));
+            auto cusps = cuspmake(N);
+            std::cout << "{";
+            bool first = true;
+            for (const auto& [d, c] : cusps) {
+                if (!first) std::cout << ", ";
+                if (c == 1) std::cout << d; else std::cout << d << "/" << c;
+                first = false;
+            }
+            std::cout << "}" << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("cuspord", H2("cuspord(GP,cusp)", "order of cusp", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects cuspord(GP, cusp)"));
+            std::vector<int> GP = ctx.evalListToInt(ctx.args[0].get());
+            std::vector<int> cusp = ctx.evalListToInt(ctx.args[1].get());
+            if (cusp.size() < 2) throw std::runtime_error(runtimeErr(ctx.name, "cusp must be [num,den]"));
+            Frac ord = cuspord(GP, cusp[0], cusp[1]);
+            std::cout << ord.str() << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("gammacheck", H2("gammacheck(GP,N)", "check modularity on Gamma", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects gammacheck(GP, N)"));
+            std::vector<int> GP = ctx.evalListToInt(ctx.args[0].get());
+            int N = static_cast<int>(ctx.evi(1));
+            return static_cast<int64_t>(gammacheck(GP, N));
+        });
+        regBuiltin("etaprodtoqseries", H2("etaprodtoqseries(GP,T)", "eta product to q-series", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects etaprodtoqseries(GP, T)"));
+            std::vector<int> GP = ctx.evalListToInt(ctx.args[0].get());
+            int Tr = static_cast<int>(ctx.evi(1));
+            return etaprodtoqseries(GP, Tr);
+        });
+        regBuiltin("provemodfuncGAMMA0id", H2("provemodfuncGAMMA0id(etaid,N)", "prove eta product identity on Gamma_0(N)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects provemodfuncGAMMA0id(etaid, N)"));
+            const Expr* listExpr = ctx.args[0].get();
+            if (!listExpr || listExpr->tag != Expr::Tag::List)
+                throw std::runtime_error(runtimeErr(ctx.name, "etaid must be list of [c, GP] terms"));
+            std::vector<std::pair<Frac, std::vector<int>>> etaid;
+            for (const auto& term : listExpr->elements) {
+                if (!term || term->tag != Expr::Tag::List || term->elements.size() < 1)
+                    throw std::runtime_error(runtimeErr(ctx.name, "each term must be [c] or [c, t1, r1, ...]"));
+                Frac c = Frac(static_cast<int64_t>(evalToInt(term->elements[0].get(), ctx.env, ctx.sumIndices)));
+                std::vector<int> GP;
+                if (term->elements.size() >= 2) {
+                    for (size_t i = 1; i < term->elements.size(); ++i)
+                        GP.push_back(static_cast<int>(evalToInt(term->elements[i].get(), ctx.env, ctx.sumIndices)));
+                }
+                etaid.push_back({c, GP});
+            }
+            int N = static_cast<int>(ctx.evi(1));
+            ProveModfuncResult res = provemodfuncGAMMA0id(etaid, N);
+            std::cout << "sturm_bound=" << res.sturm_bound << " proven=" << res.proven << " " << res.message << std::endl;
+            return static_cast<int64_t>(res.proven);
+        });
+        regBuiltin("provemodfuncGAMMA0idBATCH", H2("provemodfuncGAMMA0idBATCH(etaids,N)", "batch prove eta identities", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects provemodfuncGAMMA0idBATCH(etaids, N)"));
+            const Expr* listExpr = ctx.args[0].get();
+            if (!listExpr || listExpr->tag != Expr::Tag::List)
+                throw std::runtime_error(runtimeErr(ctx.name, "etaids must be list of etaid terms"));
+            std::vector<std::vector<std::pair<Frac, std::vector<int>>>> etaids;
+            for (const auto& etaidExpr : listExpr->elements) {
+                if (!etaidExpr || etaidExpr->tag != Expr::Tag::List)
+                    throw std::runtime_error(runtimeErr(ctx.name, "each etaid must be list of [c, GP] terms"));
+                std::vector<std::pair<Frac, std::vector<int>>> etaid;
+                for (const auto& term : etaidExpr->elements) {
+                    if (!term || term->tag != Expr::Tag::List || term->elements.size() < 1)
+                        throw std::runtime_error(runtimeErr(ctx.name, "each term must be [c] or [c, t1, r1, ...]"));
+                    Frac c = Frac(static_cast<int64_t>(evalToInt(term->elements[0].get(), ctx.env, ctx.sumIndices)));
+                    std::vector<int> GP;
+                    if (term->elements.size() >= 2) {
+                        for (size_t i = 1; i < term->elements.size(); ++i)
+                            GP.push_back(static_cast<int>(evalToInt(term->elements[i].get(), ctx.env, ctx.sumIndices)));
+                    }
+                    etaid.push_back({c, GP});
+                }
+                etaids.push_back(std::move(etaid));
+            }
+            int N = static_cast<int>(ctx.evi(1));
+            auto results = provemodfuncGAMMA0idBATCH(etaids, N);
+            int all_proven = 1;
+            for (size_t i = 0; i < results.size(); ++i) {
+                std::cout << "id[" << (i+1) << "] sturm_bound=" << results[i].sturm_bound
+                          << " proven=" << results[i].proven << " " << results[i].message << std::endl;
+                if (results[i].proven != 1) all_proven = 0;
+            }
+            return static_cast<int64_t>(all_proven);
+        });
+        regBuiltin("provemodfuncid", H2("provemodfuncid(jacid,N)", "prove Jacobi product identity", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects provemodfuncid(jacid, N)"));
+            const Expr* listExpr = ctx.args[0].get();
+            if (!listExpr || listExpr->tag != Expr::Tag::List)
+                throw std::runtime_error(runtimeErr(ctx.name, "jacid must be list of [coeff, jaclist] terms"));
+            std::vector<std::pair<Frac, std::vector<JacFactor>>> jacid;
+            for (const auto& term : listExpr->elements) {
+                if (!term || term->tag != Expr::Tag::List || term->elements.size() < 1)
+                    throw std::runtime_error(runtimeErr(ctx.name, "each term must be [coeff] or [coeff, [a,b,exp], ...]"));
+                Frac c = Frac(static_cast<int64_t>(evalToInt(term->elements[0].get(), ctx.env, ctx.sumIndices)));
+                std::vector<JacFactor> jac;
+                if (term->elements.size() >= 2) {
+                    for (size_t i = 1; i < term->elements.size(); ++i) {
+                        const Expr* fac = term->elements[i].get();
+                        if (!fac || fac->tag != Expr::Tag::List || fac->elements.size() < 3)
+                            throw std::runtime_error(runtimeErr(ctx.name, "each JacFactor must be [a, b, exp]"));
+                        int a = static_cast<int>(evalToInt(fac->elements[0].get(), ctx.env, ctx.sumIndices));
+                        int b = static_cast<int>(evalToInt(fac->elements[1].get(), ctx.env, ctx.sumIndices));
+                        Frac e = Frac(static_cast<int64_t>(evalToInt(fac->elements[2].get(), ctx.env, ctx.sumIndices)));
+                        jac.push_back({a, b, e});
+                    }
+                }
+                jacid.push_back({c, jac});
+            }
+            int N = static_cast<int>(ctx.evi(1));
+            ProveModfuncIdResult res = provemodfuncid(jacid, N);
+            std::cout << "sturm_bound=" << res.sturm_bound << " proven=" << res.proven << " " << res.message << std::endl;
+            return static_cast<int64_t>(res.proven);
+        });
+        regBuiltin("provemodfuncidBATCH", H2("provemodfuncidBATCH(jacids,N)", "batch prove Jacobi identities", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects provemodfuncidBATCH(jacids, N)"));
+            const Expr* listExpr = ctx.args[0].get();
+            if (!listExpr || listExpr->tag != Expr::Tag::List)
+                throw std::runtime_error(runtimeErr(ctx.name, "jacids must be list of jacid"));
+            std::vector<std::vector<std::pair<Frac, std::vector<JacFactor>>>> jacids;
+            for (const auto& jacidExpr : listExpr->elements) {
+                if (!jacidExpr || jacidExpr->tag != Expr::Tag::List)
+                    throw std::runtime_error(runtimeErr(ctx.name, "each jacid must be list of [coeff, jaclist] terms"));
+                std::vector<std::pair<Frac, std::vector<JacFactor>>> jacid;
+                for (const auto& term : jacidExpr->elements) {
+                    if (!term || term->tag != Expr::Tag::List || term->elements.size() < 1)
+                        throw std::runtime_error(runtimeErr(ctx.name, "each term must be [coeff] or [coeff, [a,b,exp], ...]"));
+                    Frac c = Frac(static_cast<int64_t>(evalToInt(term->elements[0].get(), ctx.env, ctx.sumIndices)));
+                    std::vector<JacFactor> jac;
+                    if (term->elements.size() >= 2) {
+                        for (size_t i = 1; i < term->elements.size(); ++i) {
+                            const Expr* fac = term->elements[i].get();
+                            if (!fac || fac->tag != Expr::Tag::List || fac->elements.size() < 3)
+                                throw std::runtime_error(runtimeErr(ctx.name, "each JacFactor must be [a, b, exp]"));
+                            int a = static_cast<int>(evalToInt(fac->elements[0].get(), ctx.env, ctx.sumIndices));
+                            int b = static_cast<int>(evalToInt(fac->elements[1].get(), ctx.env, ctx.sumIndices));
+                            Frac e = Frac(static_cast<int64_t>(evalToInt(fac->elements[2].get(), ctx.env, ctx.sumIndices)));
+                            jac.push_back({a, b, e});
+                        }
+                    }
+                    jacid.push_back({c, jac});
+                }
+                jacids.push_back(std::move(jacid));
+            }
+            int N = static_cast<int>(ctx.evi(1));
+            auto results = provemodfuncidBATCH(jacids, N);
+            int all_proven = 1;
+            for (size_t i = 0; i < results.size(); ++i) {
+                std::cout << "id[" << (i+1) << "] sturm_bound=" << results[i].sturm_bound
+                          << " proven=" << results[i].proven << " " << results[i].message << std::endl;
+                if (results[i].proven != 1) all_proven = 0;
+            }
+            return static_cast<int64_t>(all_proven);
+        });
+        regBuiltin("partition", H2("partition(n)", "partition number p(n)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Frac p = partition_number(static_cast<int>(ctx.evi(0)));
+            std::cout << p.str() << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("partitions", H2("partitions(n)", "list all partitions of n", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            int n = static_cast<int>(ctx.evi(0));
+            if (n > 100) throw std::runtime_error(runtimeErr(ctx.name, "n too large (limit 100)"));
+            auto raw = enumerate_partitions(n);
+            std::vector<Partition> result;
+            result.reserve(raw.size());
+            for (auto& v : raw) {
+                Partition ptn;
+                ptn.parts = std::move(v);
+                result.push_back(std::move(ptn));
+            }
+            return result;
+        });
+        regBuiltin("conjpart", H2("conjpart(ptn)", "conjugate partition", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            Partition conj;
+            conj.parts = conjugate_partition(ptn.parts);
+            return conj;
+        });
+        regBuiltin("lp", H2("lp(ptn)", "largest part", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            if (ptn.parts.empty()) return static_cast<int64_t>(0);
+            return *std::max_element(ptn.parts.begin(), ptn.parts.end());
+        });
+        regBuiltin("np_parts", H2("np_parts(ptn)", "number of parts", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            return static_cast<int64_t>(ptn.parts.size());
+        });
+        regBuiltin("nep", H2("nep(ptn)", "number of even parts", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            int64_t count = 0;
+            for (int64_t p : ptn.parts)
+                if (p % 2 == 0) ++count;
+            return count;
+        });
+        regBuiltin("ptnnorm", H2("ptnnorm(ptn)", "sum of parts", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            int64_t sum = 0;
+            for (int64_t p : ptn.parts) sum += p;
+            return sum;
+        });
+        regBuiltin("drank", H2("drank(ptn)", "Dyson rank", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            return ptn_drank(ptn.parts);
+        });
+        regBuiltin("agcrank", H2("agcrank(ptn)", "Andrews-Garvan crank", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            return ptn_agcrank(ptn.parts);
+        });
+        regBuiltin("kapPD", H2("kapPD(ptn)", "kappa for distinct parts", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            return ptn_kapPD(ptn.parts);
+        });
+        regBuiltin("lamPD", H2("lamPD(ptn)", "lambda for distinct parts", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            return ptn_lamPD(ptn.parts);
+        });
+        regBuiltin("numLE", H2("numLE(ptn)", "number of parts <= something", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            return ptn_numLE(ptn.parts);
+        });
+        regBuiltin("ptnDP", H2("ptnDP(ptn)", "is distinct parts", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            return static_cast<int64_t>(ptn_is_distinct(ptn.parts) ? 1 : 0);
+        });
+        regBuiltin("ptnOP", H2("ptnOP(ptn)", "is odd parts", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            return static_cast<int64_t>(ptn_is_odd_parts(ptn.parts) ? 1 : 0);
+        });
+        regBuiltin("ptnRR", H2("ptnRR(ptn)", "is Rogers-Ramanujan", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            return static_cast<int64_t>(ptn_is_RR(ptn.parts) ? 1 : 0);
+        });
+        regBuiltin("ptnCC", H2("ptnCC(ptn)", "is Capparelli", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            return static_cast<int64_t>(ptn_is_CC(ptn.parts) ? 1 : 0);
+        });
+        regBuiltin("ptnSCHUR", H2("ptnSCHUR(ptn)", "is Schur", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            return static_cast<int64_t>(ptn_is_SCHUR(ptn.parts) ? 1 : 0);
+        });
+        regBuiltin("ptnOE", H2("ptnOE(ptn)", "is odd-equal", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            return static_cast<int64_t>(ptn_is_OE(ptn.parts) ? 1 : 0);
+        });
+        regBuiltin("PDP", H2("PDP(n)", "count distinct parts partitions", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            return count_PDP(static_cast<int>(ctx.evi(0)));
+        });
+        regBuiltin("POE", H2("POE(n)", "count odd parts partitions", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            return count_POE(static_cast<int>(ctx.evi(0)));
+        });
+        regBuiltin("PRR", H2("PRR(n)", "count RR partitions", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            return count_PRR(static_cast<int>(ctx.evi(0)));
+        });
+        regBuiltin("PSCHUR", H2("PSCHUR(n)", "count Schur partitions", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            return count_PSCHUR(static_cast<int>(ctx.evi(0)));
+        });
+        regBuiltin("overptns", H2("overptns(n)", "list overpartitions", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument"));
+            int n = static_cast<int>(ctx.evi(0));
+            auto ops = enumerate_overpartitions(n);
+            for (const auto& [dp, p] : ops) {
+                std::cout << "[" << formatPartition(Partition{dp}) << ", " << formatPartition(Partition{p}) << "]" << std::endl;
+            }
+            std::cout << "Total: " << ops.size() << " overpartitions" << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("overptnrank", H2("overptnrank(dptn,ptn)", "overpartition rank", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            Partition dptn = ctx.evalToPartition(ctx.args[0].get());
+            Partition ptn = ctx.evalToPartition(ctx.args[1].get());
+            return overptn_rank(dptn.parts, ptn.parts);
+        });
+        regBuiltin("overptncrank", H2("overptncrank(dptn,ptn)", "overpartition crank", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments"));
+            Partition dptn = ctx.evalToPartition(ctx.args[0].get());
+            Partition ptn = ctx.evalToPartition(ctx.args[1].get());
+            return overptn_crank(dptn.parts, ptn.parts);
+        });
+        regBuiltin("rvec", H2("rvec(ptn,t,k)", "t-core r-vector component", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 3) throw std::runtime_error(runtimeErr(ctx.name, "expects 3 arguments: rvec(ptn, t, k)"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            int t = static_cast<int>(ctx.evi(1));
+            int k = static_cast<int>(ctx.evi(2));
+            if (t <= 0) throw std::runtime_error(runtimeErr(ctx.name, "t must be positive"));
+            return tcore_rvec(ptn.parts, t, k);
+        });
+        regBuiltin("istcore", H2("istcore(ptn,t)", "is t-core", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments: istcore(ptn, t)"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            int t = static_cast<int>(ctx.evi(1));
+            if (t <= 0) throw std::runtime_error(runtimeErr(ctx.name, "t must be positive"));
+            return static_cast<int64_t>(tcore_istcore(ptn.parts, t) ? 1 : 0);
+        });
+        regBuiltin("tcoreofptn", H2("tcoreofptn(ptn,t)", "t-core of partition", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments: tcoreofptn(ptn, t)"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            int t = static_cast<int>(ctx.evi(1));
+            if (t <= 0) throw std::runtime_error(runtimeErr(ctx.name, "t must be positive"));
+            Partition core;
+            core.parts = tcore_tcoreofptn(ptn.parts, t);
+            return core;
+        });
+        regBuiltin("tcores", H2("tcores(t,n)", "list t-cores of n", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments: tcores(t, n)"));
+            int t = static_cast<int>(ctx.evi(0));
+            int n = static_cast<int>(ctx.evi(1));
+            if (t <= 0) throw std::runtime_error(runtimeErr(ctx.name, "t must be positive"));
+            if (n > 100) throw std::runtime_error(runtimeErr(ctx.name, "n too large (limit 100)"));
+            auto all = enumerate_partitions(n);
+            auto cores = tcore_tcores(t, n, all);
+            std::vector<Partition> result;
+            result.reserve(cores.size());
+            for (auto& v : cores) {
+                Partition p;
+                p.parts = std::move(v);
+                result.push_back(std::move(p));
+            }
+            return result;
+        });
+        regBuiltin("ptn2nvec", H2("ptn2nvec(ptn,t)", "partition to n-vector", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments: ptn2nvec(ptn, t)"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            int t = static_cast<int>(ctx.evi(1));
+            if (t <= 0) throw std::runtime_error(runtimeErr(ctx.name, "t must be positive"));
+            Partition nvec;
+            nvec.parts = tcore_ptn2nvec(ptn.parts, t);
+            return nvec;
+        });
+        regBuiltin("ptn2rvec", H2("ptn2rvec(ptn,t)", "partition to r-vector", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments: ptn2rvec(ptn, t)"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            int t = static_cast<int>(ctx.evi(1));
+            if (t <= 0) throw std::runtime_error(runtimeErr(ctx.name, "t must be positive"));
+            Partition rvec;
+            rvec.parts = tcore_ptn2rvec(ptn.parts, t);
+            return rvec;
+        });
+        regBuiltin("nvec2ptn", H2("nvec2ptn(nvec)", "n-vector to partition", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument: nvec2ptn(nvec)"));
+            Partition nvec = ctx.evalToPartition(ctx.args[0].get());
+            Partition result;
+            result.parts = tcore_nvec2ptn(nvec.parts);
+            return result;
+        });
+        regBuiltin("nvec2alphavec", H2("nvec2alphavec(nvec)", "n-vector to alpha (t=5,7)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 1) throw std::runtime_error(runtimeErr(ctx.name, "expects 1 argument: nvec2alphavec(nvec)"));
+            Partition nvec = ctx.evalToPartition(ctx.args[0].get());
+            int t = static_cast<int>(nvec.parts.size());
+            if (t == 5) {
+                int64_t n0 = nvec.parts[0], n1 = nvec.parts[1], n2 = nvec.parts[2], n3 = nvec.parts[3];
+                Frac a3 = Frac(1,5)*Frac(n0) + Frac(1,5) + Frac(3,5)*Frac(n2) + Frac(2,5)*Frac(n1) + Frac(4,5)*Frac(n3);
+                Frac a0 = Frac(-1,5)*Frac(n3) + Frac(1,5)*Frac(n0) + Frac(1,5) - Frac(2,5)*Frac(n2) - Frac(3,5)*Frac(n1);
+                Frac a2 = Frac(-1,5)*Frac(n1) - Frac(2,5)*Frac(n3) - Frac(3,5)*Frac(n0) + Frac(2,5) + Frac(1,5)*Frac(n2);
+                Frac a1 = Frac(-4,5)*Frac(n2) - Frac(1,5)*Frac(n1) - Frac(2,5)*Frac(n3) - Frac(3,5)*Frac(n0) + Frac(2,5);
+                Frac a4 = Frac(1) - a0 - a1 - a2 - a3;
+                std::cout << "[" << a0.str() << ", " << a1.str() << ", " << a2.str() << ", " << a3.str() << ", " << a4.str() << "]" << std::endl;
+                return DisplayOnly{};
+            }
+            if (t == 7) {
+                int64_t n0 = nvec.parts[0], n1 = nvec.parts[1], n2 = nvec.parts[2], n3 = nvec.parts[3], n4 = nvec.parts[4], n5 = nvec.parts[5];
+                Frac a3 = Frac(6,7)*Frac(n1) + Frac(5,7)*Frac(n3) + Frac(1,7)*Frac(n4) + Frac(3,7)*Frac(n0) - Frac(1,7) + Frac(2,7)*Frac(n2) + Frac(4,7)*Frac(n5);
+                Frac a4 = Frac(-1,7)*Frac(n4) - Frac(3,7)*Frac(n0) + Frac(1,7) - Frac(2,7)*Frac(n2) - Frac(4,7)*Frac(n5) + Frac(2,7)*Frac(n3) + Frac(1,7)*Frac(n1);
+                Frac a0 = Frac(-1,7)*Frac(n5) + Frac(1,7)*Frac(n0) - Frac(2,7)*Frac(n4) + Frac(2,7) - Frac(4,7)*Frac(n2) - Frac(3,7)*Frac(n3) - Frac(5,7)*Frac(n1);
+                Frac a2 = Frac(3,7)*Frac(n2) + Frac(6,7)*Frac(n5) + Frac(1,7)*Frac(n0) + Frac(5,7)*Frac(n4) + Frac(2,7) + Frac(4,7)*Frac(n3) + Frac(2,7)*Frac(n1);
+                Frac a1 = Frac(-2,7)*Frac(n0) + Frac(3,7) + Frac(1,7)*Frac(n2) + Frac(2,7)*Frac(n5) - Frac(3,7)*Frac(n4) - Frac(1,7)*Frac(n3) - Frac(4,7)*Frac(n1);
+                Frac a5 = Frac(-5,7)*Frac(n3) - Frac(1,7)*Frac(n4) - Frac(3,7)*Frac(n0) + Frac(1,7) - Frac(2,7)*Frac(n2) - Frac(4,7)*Frac(n5) + Frac(1,7)*Frac(n1);
+                Frac a6 = Frac(1) - a0 - a1 - a2 - a3 - a4 - a5;
+                std::cout << "[" << a0.str() << ", " << a1.str() << ", " << a2.str() << ", " << a3.str() << ", " << a4.str() << ", " << a5.str() << ", " << a6.str() << "]" << std::endl;
+                return DisplayOnly{};
+            }
+            throw std::runtime_error(runtimeErr(ctx.name, "only implemented for t=5 and t=7"));
+        });
+        regBuiltin("tquot", H2("tquot(ptn,t)", "t-quotient", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments: tquot(ptn, t)"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            int t = static_cast<int>(ctx.evi(1));
+            if (t <= 0) throw std::runtime_error(runtimeErr(ctx.name, "t must be positive"));
+            auto raw = tcore_tquot(ptn.parts, t);
+            std::vector<Partition> result;
+            for (auto& v : raw) {
+                Partition p;
+                p.parts = std::move(v);
+                result.push_back(std::move(p));
+            }
+            return result;
+        });
+        regBuiltin("phi1", H2("phi1(ptn,t)", "GSK bijection: core + quotient", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments: phi1(ptn, t)"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            int t = static_cast<int>(ctx.evi(1));
+            if (t <= 0) throw std::runtime_error(runtimeErr(ctx.name, "t must be positive"));
+            Phi1Result res;
+            res.core.parts = tcore_tcoreofptn(ptn.parts, t);
+            auto raw_quot = tcore_tquot(ptn.parts, t);
+            for (auto& v : raw_quot) {
+                Partition p;
+                p.parts = std::move(v);
+                res.quotient.push_back(std::move(p));
+            }
+            return res;
+        });
+        regBuiltin("invphi1", H2("invphi1(phi1result,t)", "inverse GSK bijection", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments: invphi1(phi1result, t)"));
+            int t = static_cast<int>(ctx.evi(1));
+            if (t <= 0) throw std::runtime_error(runtimeErr(ctx.name, "t must be positive"));
+            EvalResult r = eval(ctx.args[0].get(), ctx.env, ctx.sumIndices);
+            if (!std::holds_alternative<Phi1Result>(r))
+                throw std::runtime_error(runtimeErr(ctx.name, "first argument must be a phi1 result"));
+            const auto& phi1r = std::get<Phi1Result>(r);
+            std::vector<std::vector<int64_t>> quot_raw;
+            for (const auto& p : phi1r.quotient)
+                quot_raw.push_back(p.parts);
+            Partition result;
+            result.parts = tcore_invphi1(phi1r.core.parts, quot_raw, t);
+            return result;
+        });
+        regBuiltin("tcrank", H2("tcrank(ptn,t)", "t-crank (t odd prime)", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments: tcrank(ptn, t)"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            int64_t t = ctx.evi(1);
+            if (t < 3 || t % 2 == 0) throw std::runtime_error(runtimeErr(ctx.name, "t must be an odd prime >= 3"));
+            int64_t val = tcore_tcrank(ptn.parts, t);
+            std::cout << val << std::endl;
+            return DisplayOnly{};
+        });
+        regBuiltin("tresdiag", H2("tresdiag(ptn,t)", "t-residue diagram", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 2) throw std::runtime_error(runtimeErr(ctx.name, "expects 2 arguments: tresdiag(ptn, t)"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            int t = static_cast<int>(ctx.evi(1));
+            if (t <= 0) throw std::runtime_error(runtimeErr(ctx.name, "t must be positive"));
+            for (size_t row = 0; row < ptn.parts.size(); ++row) {
+                for (int64_t col = 1; col <= ptn.parts[row]; ++col) {
+                    if (col > 1) std::cout << " ";
+                    std::cout << safe_mod(col - static_cast<int64_t>(row) - 1, t);
+                }
+                std::cout << "\n";
+            }
+            return DisplayOnly{};
+        });
+        regBuiltin("makebiw", H2("makebiw(ptn,t,m)", "bivalent word from partition", {}, {}), [](DispatchContext& ctx) {
+            if (ctx.args.size() != 3) throw std::runtime_error(runtimeErr(ctx.name, "expects 3 arguments: makebiw(ptn, t, m)"));
+            Partition ptn = ctx.evalToPartition(ctx.args[0].get());
+            int t = static_cast<int>(ctx.evi(1));
+            int mj = static_cast<int>(ctx.evi(2));
+            if (t <= 0) throw std::runtime_error(runtimeErr(ctx.name, "t must be positive"));
+            if (mj <= 0) throw std::runtime_error(runtimeErr(ctx.name, "m must be positive"));
+            int np = static_cast<int>(ptn.parts.size());
+            int pad = (mj + 1) * t;
+            std::vector<int64_t> ip;
+            for (int k = 0; k < np; ++k) ip.push_back(ptn.parts[k]);
+            for (int k = 0; k < pad; ++k) ip.push_back(0);
+            std::map<std::pair<int,int>, char> reg;
+            for (int i = -100; i <= 100; ++i)
+                for (int k = 0; k < t; ++k)
+                    reg[{i, k}] = 'N';
+            for (size_t j = 0; j < ip.size(); ++j) {
+                int64_t a = ip[j];
+                int64_t maple_j = static_cast<int64_t>(j) + 1;
+                int b = static_cast<int>(safe_mod(a - maple_j, t));
+                int r = static_cast<int>(floor_div(a - maple_j, t)) + 1;
+                if (r >= -100 && r <= 100) reg[{r, b}] = 'E';
+            }
+            std::cout << "   ";
+            for (int r = -mj; r <= mj; ++r) {
+                if (r < 0) std::cout << r;
+                else std::cout << " " << r;
+            }
+            std::cout << "\n";
+            for (int i = 0; i < t; ++i) {
+                std::cout << "W" << i << " ";
+                for (int r = -mj; r <= mj; ++r) {
+                    std::cout << " " << reg[{r, i}];
+                }
+                std::cout << "\n";
+            }
+            return DisplayOnly{};
+        });
+
+        regBuiltin("help", H2("help or help(func)", "list built-ins or show help for func", {}, {}), [](DispatchContext& ctx) {
+            const auto& reg = getBuiltinRegistry();
+            if (ctx.args.size() == 0) {
+                std::cout << "q-series REPL. Commands: expr, var := expr, help, help(func).\nBuilt-ins: ";
+                bool first = true;
+                for (const auto& [n, e] : reg) {
+                    if (!first) std::cout << ", ";
+                    std::cout << ansi::gold() << n << ansi::reset();
+                    first = false;
+                }
+                std::cout << std::endl;
+                return DisplayOnly{};
+            }
+            if (ctx.args.size() == 1 && ctx.args[0]->tag == Expr::Tag::Var) {
+                const std::string& fn = ctx.args[0]->varName;
+                auto it = reg.find(fn);
+                if (it != reg.end()) formatHelpEntry(fn, it->second.help);
+                else std::cout << "unknown function: " << fn << std::endl;
+                return DisplayOnly{};
+            }
+            throw std::runtime_error(runtimeErr(ctx.name, "expects 0 or 1 argument"));
+        });
+
+#undef H2
         return m;
     }();
     return reg;
@@ -820,396 +1884,6 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         catch (const std::exception& e) { throw std::runtime_error(runtimeErr(name, e.what())); }
     };
 
-    if (name == "RootOf") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        const Expr* a = args[0].get();
-        if (a->tag == Expr::Tag::IntLit) {
-            if (a->intVal == 3)
-                return Omega3::omega();
-            throw std::runtime_error(runtimeErr(name, "RootOf(n) only supports n=3 for omega"));
-        }
-        if (a->tag == Expr::Tag::List) {
-            if (a->elements.size() != 3)
-                throw std::runtime_error(runtimeErr(name, "RootOf([a,b,c]) expects 3 coefficients"));
-            int c0 = static_cast<int>(evalToInt(a->elements[0].get(), env, sumIndices));
-            int c1 = static_cast<int>(evalToInt(a->elements[1].get(), env, sumIndices));
-            int c2 = static_cast<int>(evalToInt(a->elements[2].get(), env, sumIndices));
-            if (c0 == 1 && c1 == 1 && c2 == 1)
-                return Omega3::omega();
-            throw std::runtime_error(runtimeErr(name, "RootOf([a,b,c]) only supports [1,1,1] for omega"));
-        }
-        throw std::runtime_error(runtimeErr(name, "expects int or list argument"));
-    }
-    if (name == "aqprod") {
-        if (args.size() != 4)
-            throw std::runtime_error(runtimeErr(name, "expects 4 arguments"));
-        return aqprod(ev(0), ev(1), static_cast<int>(evi(2)), static_cast<int>(evi(3)));
-    }
-    if (name == "etaq") {
-        if (args.size() == 1) {
-            int k = static_cast<int>(evi(0));
-            return etaq(q, k, T);
-        }
-        if (args.size() == 2) {
-            int k = static_cast<int>(evi(0));
-            int Tr = static_cast<int>(evi(1));
-            return etaq(q, k, Tr);
-        }
-        if (args.size() == 3)
-            return etaq(ev(0), static_cast<int>(evi(1)), static_cast<int>(evi(2)));
-        throw std::runtime_error(runtimeErr(name, expectArg(1, "arguments", "1, 2, or 3", std::to_string(args.size()) + " arguments")));
-    }
-    if (name == "theta2" || name == "theta3" || name == "theta4") {
-        if (args.size() == 1) {
-            int Tr = static_cast<int>(evi(0));
-            if (name == "theta2") return theta2(q, Tr);
-            if (name == "theta3") return theta3(q, Tr);
-            return theta4(q, Tr);
-        }
-        if (args.size() == 2) {
-            int Tr = static_cast<int>(evi(1));
-            if (name == "theta2") return theta2(ev(0), Tr);
-            if (name == "theta3") return theta3(ev(0), Tr);
-            return theta4(ev(0), Tr);
-        }
-        throw std::runtime_error(runtimeErr(name, "expected theta2/3/4(T) or theta2/3/4(q,T)"));
-    }
-    if (name == "theta") {
-        if (args.size() == 2)
-            return theta(ev(0), q, static_cast<int>(evi(1)));
-        if (args.size() == 3)
-            return theta(ev(0), ev(1), static_cast<int>(evi(2)));
-        throw std::runtime_error(runtimeErr(name, "expected theta(z,T) or theta(z,q,T)"));
-    }
-    if (name == "qbin") {
-        if (args.size() == 3)
-            return qbin(q, static_cast<int>(evi(0)), static_cast<int>(evi(1)), static_cast<int>(evi(2)));
-        if (args.size() == 4)
-            return qbin(ev(0), static_cast<int>(evi(1)), static_cast<int>(evi(2)), static_cast<int>(evi(3)));
-        throw std::runtime_error(runtimeErr(name, "expected qbin(m,n,T) or qbin(q,m,n,T)"));
-    }
-    if (name == "tripleprod") {
-        if (args.size() != 3)
-            throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
-        if (args[0]->tag == Expr::Tag::Var && env.env.find(args[0]->varName) == env.env.end()) {
-            Series q = ev(1);
-            int Tr = static_cast<int>(evi(2));
-            auto b = tripleprod_symbolic(q, Tr);
-            std::cout << formatBivariate(b) << std::endl;
-            return DisplayOnly{};
-        }
-        return tripleprod(ev(0), ev(1), static_cast<int>(evi(2)));
-    }
-    if (name == "quinprod") {
-        if (args.size() != 3)
-            throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
-        if (args[2]->tag == Expr::Tag::Var) {
-            const std::string& v = args[2]->varName;
-            if (v == "prodid") {
-                std::cout << "(-z;q)_\xE2\x88\x9E (-q/z;q)_\xE2\x88\x9E (z\xC2\xB2q;q\xC2\xB2)_\xE2\x88\x9E (q/z\xC2\xB2;q\xC2\xB2)_\xE2\x88\x9E (q;q)_\xE2\x88\x9E" << std::endl;
-                return DisplayOnly{};
-            }
-            if (v == "seriesid") {
-                std::cout << "\xCE\xA3 ((-z)^(-3n) - (-z)^(3n+1)) q^(n(3n+1)/2)" << std::endl;
-                return DisplayOnly{};
-            }
-        }
-        if (args[0]->tag == Expr::Tag::Var && env.env.find(args[0]->varName) == env.env.end()) {
-            Series q = ev(1);
-            int Tr = static_cast<int>(evi(2));
-            auto b = quinprod_symbolic(q, Tr);
-            std::cout << formatBivariate(b) << std::endl;
-            return DisplayOnly{};
-        }
-        return quinprod(ev(0), ev(1), static_cast<int>(evi(2)));
-    }
-    if (name == "winquist") {
-        if (args.size() != 4)
-            throw std::runtime_error(runtimeErr(name, "expects 4 arguments"));
-        return winquist(ev(0), ev(1), ev(2), static_cast<int>(evi(3)));
-    }
-    if (name == "sift") {
-        if (args.size() != 4)
-            throw std::runtime_error(runtimeErr(name, "expects 4 arguments"));
-        return sift(ev(0), static_cast<int>(evi(1)), static_cast<int>(evi(2)), static_cast<int>(evi(3)));
-    }
-    if (name == "T") {
-        if (args.size() == 2)
-            return T_rn(static_cast<int>(evi(0)), static_cast<int>(evi(1)), T);
-        if (args.size() == 3)
-            return T_rn(static_cast<int>(evi(0)), static_cast<int>(evi(1)), static_cast<int>(evi(2)));
-        throw std::runtime_error(runtimeErr(name, "expected T(r,n) or T(r,n,T)"));
-    }
-    if (name == "prodmake") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, expectArg(1, "arguments", "2 (f and T)", std::to_string(args.size()) + " arguments")));
-        return prodmake(ev(0), static_cast<int>(evi(1)));
-    }
-    if (name == "RRG") {
-        int n = static_cast<int>(evi(0));
-        int Tr = (args.size() == 2) ? static_cast<int>(evi(1)) : T;
-        return RRG(n, Tr);
-    }
-    if (name == "RRH") {
-        int n = static_cast<int>(evi(0));
-        int Tr = (args.size() == 2) ? static_cast<int>(evi(1)) : T;
-        return RRH(n, Tr);
-    }
-    if (name == "RRGstar") {
-        int n = static_cast<int>(evi(0));
-        int Tr = (args.size() == 2) ? static_cast<int>(evi(1)) : T;
-        return RRGstar(n, Tr);
-    }
-    if (name == "RRHstar") {
-        int n = static_cast<int>(evi(0));
-        int Tr = (args.size() == 2) ? static_cast<int>(evi(1)) : T;
-        return RRHstar(n, Tr);
-    }
-    if (name == "geta") {
-        if (args.size() != 4)
-            throw std::runtime_error(runtimeErr(name, "expects geta(g,d,n,T)"));
-        return geta(static_cast<int>(evi(0)), static_cast<int>(evi(1)),
-                   static_cast<int>(evi(2)), static_cast<int>(evi(3)));
-    }
-    if (name == "checkid") {
-        if (args.size() < 2 || args.size() > 3)
-            throw std::runtime_error(runtimeErr(name, "expects checkid(expr,T) or checkid(expr,T,acc)"));
-        Series f = ev(0);
-        int Tr = static_cast<int>(evi(1));
-        int acc = (args.size() == 3) ? static_cast<int>(evi(2)) : 10;
-        auto r = checkid(f, Tr, acc);
-        if (!r.ok) {
-            std::cout << "not an eta product" << std::endl;
-        } else {
-            std::string prefix;
-            if (r.ldq != 0)
-                prefix = "q^" + std::to_string(r.ldq) + " * ";
-            else
-                prefix = "";
-            std::cout << prefix << formatEtamake(r.eta) << std::endl;
-        }
-        return DisplayOnly{};
-    }
-    if (name == "findids") {
-        if (args.size() < 1 || args.size() > 2)
-            throw std::runtime_error(runtimeErr(name, "expects findids(type) or findids(type,T)"));
-        int typeVal = static_cast<int>(evi(0));
-        int Tr = (args.size() == 2) ? static_cast<int>(evi(1)) : T;
-        auto ids = findids(typeVal, Tr);
-        for (const auto& [a, b, c1] : ids)
-            std::cout << "[" << a << ", " << b << ", " << c1 << "]" << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "newprodmake") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
-        auto r = newprodmake(ev(0), static_cast<int>(evi(1)));
-        std::ostringstream lead;
-        if (r.lead_exp == 0)
-            lead << r.lead_coeff.str();
-        else if (r.lead_coeff == Frac(1))
-            lead << "q^" << r.lead_exp;
-        else if (r.lead_coeff == Frac(-1))
-            lead << "-q^" << r.lead_exp;
-        else
-            lead << r.lead_coeff.str() << "*q^" << r.lead_exp;
-        std::cout << lead.str() << " * " << formatProdmake(r.a, true) << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "dilly") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
-        return dilly(ev(0), static_cast<int>(evi(1)));
-    }
-    if (name == "sieveqcheck") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
-        return static_cast<int64_t>(sieveqcheck(ev(0), static_cast<int>(evi(1))) ? 1 : 0);
-    }
-    if (name == "siftfindrange") {
-        if (args.size() != 3)
-            throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
-        auto r = siftfindrange(ev(0), static_cast<int>(evi(1)), static_cast<int>(evi(2)));
-        std::cout << "minnops=" << r.min_count << " minres=" << r.min_res
-                  << " average=" << r.avg << " maxnops=" << r.max_count << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "polyfind") {
-        if (args.size() != 4)
-            throw std::runtime_error(runtimeErr(name, "expects 4 arguments"));
-        auto r = polyfind(evi(0), evi(1), evi(2), evi(3));
-        if (!r.ok) {
-            std::cout << "polyfind: no integer quadratic fit" << std::endl;
-            return DisplayOnly{};
-        }
-        std::cout << "a b c: " << r.a.str() << " " << r.b.str() << " " << r.c.str() << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "mprodmake") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
-        return mprodmake(ev(0), static_cast<int>(evi(1)));
-    }
-    if (name == "checkprod") {
-        if (args.size() == 1)
-            return checkprod(ev(0), T);
-        if (args.size() == 2)
-            return checkprod(ev(0), static_cast<int>(evi(1)));
-        if (args.size() == 3)
-            return checkprod(ev(0), static_cast<int>(evi(1)), static_cast<int>(evi(2)));
-        throw std::runtime_error(runtimeErr(name, "expects 1, 2, or 3 arguments"));
-    }
-    if (name == "checkmult") {
-        if (args.size() == 1)
-            return checkmult(ev(0), T, false);
-        if (args.size() == 2)
-            return checkmult(ev(0), static_cast<int>(evi(1)), false);
-        if (args.size() == 3)
-            return checkmult(ev(0), static_cast<int>(evi(1)), evi(2) != 0);
-        throw std::runtime_error(runtimeErr(name, "expects 1, 2, or 3 arguments"));
-    }
-    if (name == "etamake") {
-        if (args.size() == 2)
-            return etamake(ev(0), static_cast<int>(evi(1)));
-        if (args.size() == 3)
-            return etamake(ev(0), static_cast<int>(evi(2)));
-        throw std::runtime_error(runtimeErr(name, expectArg(1, "arguments", "2 or 3", std::to_string(args.size()) + " arguments")));
-    }
-    if (name == "jacprodmake") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
-        return jacprodmake(ev(0), static_cast<int>(evi(1)));
-    }
-    if (name == "jac2prod") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        if (args[0]->tag != Expr::Tag::Var)
-            throw std::runtime_error(runtimeErr(name, "expects variable name"));
-        auto it = env.env.find(args[0]->varName);
-        if (it == env.env.end())
-            throw std::runtime_error(runtimeErr(name, formatUndefinedVariableMsg(env, args[0]->varName)));
-        if (std::holds_alternative<std::vector<JacFactor>>(it->second)) {
-            std::cout << jac2prod(std::get<std::vector<JacFactor>>(it->second)) << std::endl;
-            return DisplayOnly{};
-        }
-        throw std::runtime_error(runtimeErr(name, "expects jacprodmake result"));
-    }
-    if (name == "jac2series") {
-        if (args.size() < 1 || args.size() > 2)
-            throw std::runtime_error(runtimeErr(name, "expects jac2series(var) or jac2series(var,T)"));
-        if (args[0]->tag != Expr::Tag::Var)
-            throw std::runtime_error(runtimeErr(name, "expects variable name"));
-        auto it = env.env.find(args[0]->varName);
-        if (it == env.env.end())
-            throw std::runtime_error(runtimeErr(name, formatUndefinedVariableMsg(env, args[0]->varName)));
-        if (!std::holds_alternative<std::vector<JacFactor>>(it->second))
-            throw std::runtime_error(runtimeErr(name, "expects jacprodmake result"));
-        int Tr = (args.size() == 2) ? static_cast<int>(evi(1)) : T;
-        return jac2series(std::get<std::vector<JacFactor>>(it->second), Tr);
-    }
-    if (name == "qfactor") {
-        if (args.size() == 1)
-            return qfactor(ev(0), T);
-        if (args.size() == 2)
-            return qfactor(ev(0), static_cast<int>(evi(1)));
-        throw std::runtime_error(runtimeErr(name, "expected qfactor(f) or qfactor(f,T)"));
-    }
-    if (name == "factor") {
-        if (args.size() == 1)
-            return factor(ev(0), T);
-        if (args.size() == 2)
-            return factor(ev(0), static_cast<int>(evi(1)));
-        throw std::runtime_error(runtimeErr(name, "expected factor(f) or factor(f,T)"));
-    }
-    if (name == "series") {
-        if (args.size() == 1) {
-            Series f = ev(0).truncTo(T);
-            std::cout << f.str(std::min(100, T)) << std::endl;
-            return DisplayOnly{};
-        }
-        if (args.size() == 2) {
-            int Tr = static_cast<int>(evi(1));
-            Series f = ev(0).truncTo(Tr);
-            std::cout << f.str(std::min(Tr, 100)) << std::endl;
-            return DisplayOnly{};
-        }
-        throw std::runtime_error(runtimeErr(name, "expected series(f) or series(f,T)"));
-    }
-    if (name == "coeffs") {
-        if (args.size() != 3)
-            throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
-        Series f = ev(0);
-        int from = static_cast<int>(evi(1));
-        int to = static_cast<int>(evi(2));
-        auto list = f.coeffList(from, to);
-        std::cout << "[";
-        for (size_t i = 0; i < list.size(); ++i) {
-            if (i) std::cout << ", ";
-            std::cout << list[i].str();
-        }
-        std::cout << "]" << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "coeff") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
-        Frac c = ev(0).coeff(static_cast<int>(evi(1)));
-        std::cout << c.str() << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "dissect") {
-        if (args.size() != 3)
-            throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
-        Series f = ev(0);
-        int m = static_cast<int>(evi(1));
-        int Td = static_cast<int>(evi(2));
-        if (m <= 0)
-            throw std::runtime_error(runtimeErr(name, "m must be positive"));
-        for (int k = 0; k < m; ++k) {
-            Series s = sift(f, m, k, Td);
-            std::cout << "k=" << k << ": " << s.str(30) << std::endl;
-        }
-        return DisplayOnly{};
-    }
-    if (name == "set_trunc") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        int N = static_cast<int>(evi(0));
-        if (N <= 0)
-            throw std::runtime_error(runtimeErr(name, "truncation must be positive"));
-        env.T = N;
-        env.env["q"] = Series::q(N);
-        clear_etaq_cache();
-        return std::monostate{};
-    }
-    if (name == "clear_cache") {
-        if (args.size() != 0)
-            throw std::runtime_error(runtimeErr(name, "expects no arguments"));
-        clear_etaq_cache();
-        return std::monostate{};
-    }
-    if (name == "version") {
-        if (args.size() != 0)
-            throw std::runtime_error(runtimeErr(name, "expects no arguments"));
-        std::cout << "qseries 4.1\n";
-        return DisplayOnly{};
-    }
-    if (name == "qdegree") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Series f = ev(0);
-        return static_cast<int64_t>(f.maxExp());
-    }
-    if (name == "lqdegree") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Series f = ev(0);
-        if (f.c.empty())
-            return static_cast<int64_t>(0);
-        return static_cast<int64_t>(f.minExp());
-    }
-
     auto evalListToSeries = [&](const Expr* listExpr) {
         if (!listExpr || listExpr->tag != Expr::Tag::List)
             throw std::runtime_error(runtimeErr(name, "expected list of series"));
@@ -1244,1040 +1918,16 @@ inline EvalResult dispatchBuiltin(const std::string& name,
         throw std::runtime_error(runtimeErr(name, "expected partition (integer list)"));
     };
 
-    if (name == "findhom") {
-        if (args.size() != 3)
-            throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
-        auto L = evalListToSeries(args[0].get());
-        int n = static_cast<int>(evi(1));
-        int topshift = static_cast<int>(evi(2));
-        auto basis = findhom(L, n, topshift);
-        std::vector<std::vector<int>> exps;
-        enumerate_hom_exponents(static_cast<int>(L.size()), n, {}, exps);
-        return RelationKernelResult{std::move(basis), std::move(exps)};
-    }
-    if (name == "findhommodp") {
-        if (args.size() != 4)
-            throw std::runtime_error(runtimeErr(name, "expects 4 arguments"));
-        auto L = evalListToSeries(args[0].get());
-        int p = static_cast<int>(evi(1));
-        int n = static_cast<int>(evi(2));
-        int topshift = static_cast<int>(evi(3));
-        auto basis = findhommodp(L, p, n, topshift);
-        std::vector<std::vector<int>> exps;
-        enumerate_hom_exponents(static_cast<int>(L.size()), n, {}, exps);
-        std::vector<std::vector<Frac>> frac_basis;
-        for (const auto& v : basis) {
-            std::vector<Frac> fv;
-            for (int64_t x : v) fv.push_back(Frac(x));
-            frac_basis.push_back(std::move(fv));
-        }
-        return RelationKernelResult{std::move(frac_basis), std::move(exps)};
-    }
-    if (name == "findnonhom") {
-        if (args.size() != 3)
-            throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
-        auto L = evalListToSeries(args[0].get());
-        int n = static_cast<int>(evi(1));
-        int topshift = static_cast<int>(evi(2));
-        auto basis = findnonhom(L, n, topshift);
-        std::vector<std::vector<int>> exps;
-        enumerate_nonhom_exponents(static_cast<int>(L.size()), n, exps);
-        return RelationKernelResult{std::move(basis), std::move(exps)};
-    }
-    if (name == "findhomcombo") {
-        if (args.size() < 4 || args.size() > 5)
-            throw std::runtime_error(runtimeErr(name, "expects 4 or 5 arguments"));
-        Series f = ev(0);
-        auto L = evalListToSeries(args[1].get());
-        int n = static_cast<int>(evi(2));
-        int topshift = static_cast<int>(evi(3));
-        bool etaopt = (args.size() == 5) && (evi(4) != 0);
-        (void)etaopt;
-        auto coeffs = findhomcombo(f, L, n, topshift, false);
-        std::vector<std::vector<int>> exps;
-        enumerate_hom_exponents(static_cast<int>(L.size()), n, {}, exps);
-        return RelationComboResult{std::move(coeffs), std::move(exps)};
-    }
-    if (name == "findlincombo") {
-        if (args.size() != 3)
-            throw std::runtime_error(runtimeErr(name, "expects 3 arguments: findlincombo(f,L,topshift)"));
-        Series f = ev(0);
-        auto L = evalListToSeries(args[1].get());
-        int topshift = static_cast<int>(evi(2));
-        auto coeffs = findhomcombo(f, L, 1, topshift, false);
-        std::vector<std::vector<int>> exps;
-        enumerate_hom_exponents(static_cast<int>(L.size()), 1, {}, exps);
-        return RelationComboResult{std::move(coeffs), std::move(exps)};
-    }
-    if (name == "findlincombomodp") {
-        if (args.size() != 3 && args.size() != 4)
-            throw std::runtime_error(runtimeErr(name, "expects 3 or 4 arguments: findlincombomodp(f,L,p[,topshift])"));
-        Series f = ev(0);
-        auto L = evalListToSeries(args[1].get());
-        int p = static_cast<int>(evi(2));
-        int topshift = (args.size() == 4) ? static_cast<int>(evi(3)) : 0;
-        auto coeffs = findlincombomodp(f, L, p, topshift);
-        return FindlincombomodpResult{std::move(coeffs), p, L.size()};
-    }
-    if (name == "findnonhomcombo") {
-        if (args.size() < 4 || args.size() > 5)
-            throw std::runtime_error(runtimeErr(name, "expects 4 or 5 arguments"));
-        Series f = ev(0);
-        auto L = evalListToSeries(args[1].get());
-        auto n_list = evalListToInt(args[2].get());
-        int topshift = static_cast<int>(evi(3));
-        bool etaopt = (args.size() == 5) && (evi(4) != 0);
-        (void)etaopt;
-        auto coeffs = findnonhomcombo(f, L, n_list, topshift, false);
-        std::vector<std::vector<int>> exps;
-        enumerate_nlist_exponents(n_list, {}, 0, exps);
-        return RelationComboResult{std::move(coeffs), std::move(exps)};
-    }
-    if (name == "findmaxind") {
-        if (args.size() == 1) {
-            auto L = evalListToSeries(args[0].get());
-            return findmaxind(L, 0);
-        }
-        if (args.size() == 2) {
-            auto L = evalListToSeries(args[0].get());
-            int topshift = static_cast<int>(evi(1));
-            return findmaxind(L, topshift);
-        }
-        throw std::runtime_error(runtimeErr(name, "expects 1 or 2 arguments: findmaxind(L) or findmaxind(L, topshift)"));
-    }
-    if (name == "findpoly") {
-        if (args.size() < 4 || args.size() > 5)
-            throw std::runtime_error(runtimeErr(name, "expects 4 or 5 arguments"));
-        Series x = ev(0);
-        Series y = ev(1);
-        int deg1 = static_cast<int>(evi(2));
-        int deg2 = static_cast<int>(evi(3));
-        std::optional<int> check;
-        if (args.size() == 5) check = static_cast<int>(evi(4));
-        auto basis = findpoly(x, y, deg1, deg2, check);
-        std::vector<std::vector<int>> exps;
-        for (int j = 0; j <= deg2; ++j)
-            for (int i = 0; i <= deg1; ++i)
-                exps.push_back({i, j});
-        return RelationKernelResult{std::move(basis), std::move(exps)};
-    }
-    if (name == "legendre") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
-        return static_cast<int64_t>(legendre(evi(0), evi(1)));
-    }
-    if (name == "jacobi") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
-        return static_cast<int64_t>(jacobi(evi(0), evi(1)));
-    }
-    if (name == "kronecker") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
-        return static_cast<int64_t>(kronecker(evi(0), evi(1)));
-    }
-    if (name == "sigma") {
-        if (args.size() == 1)
-            return sigma(static_cast<int>(evi(0)), 1);
-        if (args.size() == 2)
-            return sigma(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
-        throw std::runtime_error(runtimeErr(name, "expected sigma(n) or sigma(n,k)"));
-    }
-    if (name == "divisors") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        auto d = divisors(static_cast<int>(evi(0)));
-        std::cout << "[";
-        for (size_t i = 0; i < d.size(); ++i) {
-            if (i > 0) std::cout << ", ";
-            std::cout << d[i];
-        }
-        std::cout << "]" << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "modp") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
-        Series f = ev(0);
-        int p = static_cast<int>(evi(1));
-        return f.modp(p);
-    }
-    if (name == "nterms") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Series f = ev(0);
-        return static_cast<int64_t>(f.c.size());
-    }
-    if (name == "mod") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
-        int64_t a = evi(0), b = evi(1);
-        if (b == 0) throw std::runtime_error(runtimeErr(name, "modulus cannot be zero"));
-        int64_t r = a % b;
-        if (r < 0) r += (b < 0 ? -b : b);
-        return r;
-    }
-    if (name == "mobius") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        return static_cast<int64_t>(mobius(static_cast<int>(evi(0))));
-    }
-    if (name == "mockqs") {
-        if (args.size() != 3)
-            throw std::runtime_error(runtimeErr(name, "expects 3 arguments: mockqs(name, order, T)"));
-        if (args[0]->tag != Expr::Tag::Var)
-            throw std::runtime_error(runtimeErr(name, "first argument must be a mock theta function name (e.g. f3, phi3)"));
-        std::string fn = args[0]->varName;
-        int ord = static_cast<int>(evi(1));
-        int Tr = static_cast<int>(evi(2));
-        if (!mock_valid(fn, ord))
-            throw std::runtime_error(runtimeErr(name, "unknown mock theta function " + fn + " of order " + std::to_string(ord)));
-        return mockqs(fn, ord, Tr);
-    }
-    if (name == "mockdesorder") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        int m = static_cast<int>(evi(0));
-        auto list = mockdesorder(m);
-        if (list.empty())
-            throw std::runtime_error(runtimeErr(name, "order must be 2, 3, 5, 6, 7, 8, or 10"));
-        std::cout << "There are " << list.size() << " mock theta functions of order " << m << ":" << std::endl;
-        for (size_t i = 0; i < list.size(); ++i)
-            std::cout << (i ? ", " : "") << list[i];
-        std::cout << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "euler_phi") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        return static_cast<int64_t>(euler_phi(static_cast<int>(evi(0))));
-    }
-    if (name == "min") {
-        if (args.size() < 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 or more arguments"));
-        int64_t result = evi(0);
-        for (size_t i = 1; i < args.size(); ++i)
-            result = std::min(result, evi(i));
-        return result;
-    }
-    if (name == "max") {
-        if (args.size() < 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 or more arguments"));
-        int64_t result = evi(0);
-        for (size_t i = 1; i < args.size(); ++i)
-            result = std::max(result, evi(i));
-        return result;
-    }
-    if (name == "eisenstein") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
-        return eisenstein(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
-    }
-    if (name == "DELTA12") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects DELTA12(T)"));
-        return DELTA12(static_cast<int>(evi(0)));
-    }
-    if (name == "EISENq") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
-        return EISENq(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
-    }
-    if (name == "makebasisM") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects makebasisM(k, T)"));
-        auto basis = makebasisM(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
-        std::cout << "[" << basis.size() << " basis elements]" << std::endl;
-        for (size_t i = 0; i < basis.size(); ++i)
-            std::cout << "  " << (i + 1) << ": " << basis[i].str() << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "makeALTbasisM") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects makeALTbasisM(k, T)"));
-        auto basis = makeALTbasisM(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
-        std::cout << "[" << basis.size() << " basis elements]" << std::endl;
-        for (size_t i = 0; i < basis.size(); ++i)
-            std::cout << "  " << (i + 1) << ": " << basis[i].str() << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "makebasisPX") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects makebasisPX(k, T)"));
-        auto basis = makebasisPX(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
-        std::cout << "[" << basis.size() << " basis elements]" << std::endl;
-        for (size_t i = 0; i < basis.size(); ++i)
-            std::cout << "  " << (i + 1) << ": " << basis[i].str() << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "QP2") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects QP2(num, den)"));
-        Frac x(static_cast<int64_t>(evi(0)), static_cast<int64_t>(evi(1)));
-        std::cout << QP2(x).str() << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "getacuspord") {
-        if (args.size() != 4) throw std::runtime_error(runtimeErr(name, "expects getacuspord(n, r, a, c)"));
-        Frac ord = getacuspord(static_cast<int>(evi(0)), static_cast<int>(evi(1)),
-                              static_cast<int>(evi(2)), static_cast<int>(evi(3)));
-        std::cout << ord.str() << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "cuspmake1") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects cuspmake1(N)"));
-        auto cusps = cuspmake1(static_cast<int>(evi(0)));
-        std::cout << "{";
-        bool first = true;
-        for (const auto& [a, c] : cusps) {
-            if (!first) std::cout << ", ";
-            if (c == 0) std::cout << "oo";
-            else std::cout << a << "/" << c;
-            first = false;
-        }
-        std::cout << "}" << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "Gamma1ModFunc") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects Gamma1ModFunc(L, N)"));
-        const Expr* listExpr = args[0].get();
-        if (!listExpr || listExpr->tag != Expr::Tag::List)
-            throw std::runtime_error(runtimeErr(name, "L must be list of [n,a,c]"));
-        std::vector<std::vector<int>> L;
-        for (const auto& elem : listExpr->elements) {
-            if (!elem || elem->tag != Expr::Tag::List || elem->elements.size() < 3)
-                throw std::runtime_error(runtimeErr(name, "each element must be [n,a,c]"));
-            L.push_back({static_cast<int>(evalToInt(elem->elements[0].get(), env, sumIndices)),
-                         static_cast<int>(evalToInt(elem->elements[1].get(), env, sumIndices)),
-                         static_cast<int>(evalToInt(elem->elements[2].get(), env, sumIndices))});
-        }
-        int N = static_cast<int>(evi(1));
-        int r = Gamma1ModFunc(L, N);
-        std::cout << (r ? "1" : "0") << std::endl;
-        return static_cast<int64_t>(r);
-    }
-    if (name == "jac2eprod") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects jac2eprod(var)"));
-        std::string vname = args[0]->tag == Expr::Tag::Var ? args[0]->varName : "";
-        if (vname.empty()) throw std::runtime_error(runtimeErr(name, "argument must be variable name"));
-        auto it = env.env.find(vname);
-        if (it == env.env.end()) throw std::runtime_error(formatUndefinedVariableMsg(env, vname));
-        if (!std::holds_alternative<std::vector<JacFactor>>(it->second))
-            throw std::runtime_error(vname + " must hold Jacobi product (from jacprodmake)");
-        auto geta = jac2eprod(std::get<std::vector<JacFactor>>(it->second));
-        std::ostringstream os;
-        for (size_t i = 0; i < geta.size(); ++i) {
-            auto [n, a, c] = geta[i];
-            if (i) os << " ";
-            if (a == 0) os << "EETA(" << n << ")^" << c.str();
-            else os << "GETA(" << n << "," << a << ")^" << c.str();
-        }
-        std::cout << os.str() << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "eta2jac") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects eta2jac(getalist)"));
-        const Expr* listExpr = args[0].get();
-        if (!listExpr || listExpr->tag != Expr::Tag::List)
-            throw std::runtime_error(runtimeErr(name, "getalist must be list of [n,a,c]"));
-        std::vector<std::tuple<int, int, Frac>> geta;
-        for (const auto& elem : listExpr->elements) {
-            if (!elem || elem->tag != Expr::Tag::List || elem->elements.size() < 3)
-                throw std::runtime_error(runtimeErr(name, "each element must be [n,a,c]"));
-            int n = static_cast<int>(evalToInt(elem->elements[0].get(), env, sumIndices));
-            int a = static_cast<int>(evalToInt(elem->elements[1].get(), env, sumIndices));
-            Frac c(static_cast<int64_t>(evalToInt(elem->elements[2].get(), env, sumIndices)));
-            geta.push_back({n, a, c});
-        }
-        std::vector<JacFactor> jac = eta2jac(geta);
-        std::cout << jac2prod(jac) << std::endl;
-        return jac;
-    }
-    if (name == "Phiq") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
-        return Phiq(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
-    }
-    if (name == "rankgf") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments: rankgf(m, T)"));
-        return rankgf(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
-    }
-    if (name == "crankgf") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments: crankgf(m, T)"));
-        return crankgf(static_cast<int>(evi(0)), static_cast<int>(evi(1)));
-    }
-    if (name == "NS") {
-        if (args.size() == 2)
-            return static_cast<int64_t>(NS(static_cast<int>(evi(0)), static_cast<int>(evi(1))));
-        if (args.size() == 3)
-            return static_cast<int64_t>(sptcrankresnum(static_cast<int>(evi(0)), static_cast<int>(evi(1)), static_cast<int>(evi(2))));
-        throw std::runtime_error(runtimeErr(name, "expects NS(m,n) or NS(k,r,n)"));
-    }
-    if (name == "MBAR") {
-        if (args.size() == 2)
-            return static_cast<int64_t>(MBAR(static_cast<int>(evi(0)), static_cast<int>(evi(1))));
-        if (args.size() == 3)
-            return static_cast<int64_t>(ocrankresnum(static_cast<int>(evi(0)), static_cast<int>(evi(1)), static_cast<int>(evi(2))));
-        throw std::runtime_error(runtimeErr(name, "expects MBAR(m,n) or MBAR(k,r,n)"));
-    }
-    if (name == "M2N") {
-        if (args.size() == 2)
-            return static_cast<int64_t>(M2N(static_cast<int>(evi(0)), static_cast<int>(evi(1))));
-        if (args.size() == 3)
-            return static_cast<int64_t>(m2rankresnum(static_cast<int>(evi(0)), static_cast<int>(evi(1)), static_cast<int>(evi(2))));
-        throw std::runtime_error(runtimeErr(name, "expects M2N(m,n) or M2N(k,r,n)"));
-    }
-    if (name == "GFDM2N") {
-        if (args.size() < 4 || args.size() > 5)
-            throw std::runtime_error(runtimeErr(name, "expects GFDM2N(k1,k2,t,r) or GFDM2N(k1,k2,t,r,T)"));
-        int k1 = static_cast<int>(evi(0)), k2 = static_cast<int>(evi(1));
-        int t = static_cast<int>(evi(2)), r = static_cast<int>(evi(3));
-        int Tr = (args.size() == 5) ? static_cast<int>(evi(4)) : 50;
-        return GFDM2N(k1, k2, t, r, Tr);
-    }
-    if (name == "sptcrankresnum") {
-        if (args.size() != 3) throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
-        return static_cast<int64_t>(sptcrankresnum(static_cast<int>(evi(0)), static_cast<int>(evi(1)), static_cast<int>(evi(2))));
-    }
-    if (name == "ocrankresnum") {
-        if (args.size() != 3) throw std::runtime_error(runtimeErr(name, "expects 3 arguments"));
-        return static_cast<int64_t>(ocrankresnum(static_cast<int>(evi(0)), static_cast<int>(evi(1)), static_cast<int>(evi(2))));
-    }
-    if (name == "pbar") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        return static_cast<int64_t>(pbar(static_cast<int>(evi(0))));
-    }
-    if (name == "betafind") {
-        if (args.size() < 1 || args.size() > 2) throw std::runtime_error(runtimeErr(name, "expects betafind(n) or betafind(n,T)"));
-        int n = static_cast<int>(evi(0));
-        int Tr = (args.size() >= 2) ? static_cast<int>(evi(1)) : T;
-        Series a = Series::one(Tr);
-        return betafind(unit_alpha, a, q, n, Tr);
-    }
-    if (name == "alphaup") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects alphaup(alpha,T)"));
-        Series alpha = ev(0);
-        int Tr = static_cast<int>(evi(1));
-        Series a = Series::one(Tr);
-        return alphaup(alpha, a, q, Tr);
-    }
-    if (name == "alphadown") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects alphadown(alpha,T)"));
-        Series alpha = ev(0);
-        int Tr = static_cast<int>(evi(1));
-        Series a = Series::one(Tr);
-        return alphadown(alpha, a, q, Tr);
-    }
-    if (name == "bailey_sum") {
-        if (args.size() != 3) throw std::runtime_error(runtimeErr(name, "expects bailey_sum(pair,N,T)"));
-        int pair = static_cast<int>(evi(0));
-        int N = static_cast<int>(evi(1));
-        int Tr = static_cast<int>(evi(2));
-        Series a = Series::one(Tr);
-        BetaFunc bf = (pair == 1) ? rr_beta : (pair == 2) ? gg_beta : unit_beta;
-        return bailey_sum(bf, a, q, N, Tr);
-    }
-    auto evalListToIntVec = [&](const Expr* listExpr) {
-        if (!listExpr || listExpr->tag != Expr::Tag::List)
-            throw std::runtime_error(runtimeErr(name, "expected list of integers"));
-        std::vector<int> out;
-        for (const auto& e : listExpr->elements)
-            out.push_back(static_cast<int>(evalToInt(e.get(), env, sumIndices)));
-        return out;
-    };
-    if (name == "cuspmake") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects cuspmake(N)"));
-        int N = static_cast<int>(evi(0));
-        auto cusps = cuspmake(N);
-        std::cout << "{";
-        bool first = true;
-        for (const auto& [d, c] : cusps) {
-            if (!first) std::cout << ", ";
-            if (c == 1) std::cout << d; else std::cout << d << "/" << c;
-            first = false;
-        }
-        std::cout << "}" << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "cuspord") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects cuspord(GP, cusp)"));
-        std::vector<int> GP = evalListToIntVec(args[0].get());
-        std::vector<int> cusp = evalListToIntVec(args[1].get());
-        if (cusp.size() < 2) throw std::runtime_error(runtimeErr(name, "cusp must be [num,den]"));
-        Frac ord = cuspord(GP, cusp[0], cusp[1]);
-        std::cout << ord.str() << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "gammacheck") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects gammacheck(GP, N)"));
-        std::vector<int> GP = evalListToIntVec(args[0].get());
-        int N = static_cast<int>(evi(1));
-        return static_cast<int64_t>(gammacheck(GP, N));
-    }
-    if (name == "etaprodtoqseries") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects etaprodtoqseries(GP, T)"));
-        std::vector<int> GP = evalListToIntVec(args[0].get());
-        int Tr = static_cast<int>(evi(1));
-        return etaprodtoqseries(GP, Tr);
-    }
-    if (name == "vp") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects vp(n, p)"));
-        return static_cast<int64_t>(vp(static_cast<int>(evi(0)), static_cast<int>(evi(1))));
-    }
-    if (name == "provemodfuncGAMMA0id") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects provemodfuncGAMMA0id(etaid, N)"));
-        const Expr* listExpr = args[0].get();
-        if (!listExpr || listExpr->tag != Expr::Tag::List)
-            throw std::runtime_error(runtimeErr(name, "etaid must be list of [c, GP] terms"));
-        std::vector<std::pair<Frac, std::vector<int>>> etaid;
-        for (const auto& term : listExpr->elements) {
-            if (!term || term->tag != Expr::Tag::List || term->elements.size() < 1)
-                throw std::runtime_error(runtimeErr(name, "each term must be [c] or [c, t1, r1, ...]"));
-            Frac c = Frac(static_cast<int64_t>(evalToInt(term->elements[0].get(), env, sumIndices)));
-            std::vector<int> GP;
-            if (term->elements.size() >= 2) {
-                for (size_t i = 1; i < term->elements.size(); ++i)
-                    GP.push_back(static_cast<int>(evalToInt(term->elements[i].get(), env, sumIndices)));
-            }
-            etaid.push_back({c, GP});
-        }
-        int N = static_cast<int>(evi(1));
-        ProveModfuncResult res = provemodfuncGAMMA0id(etaid, N);
-        std::cout << "sturm_bound=" << res.sturm_bound << " proven=" << res.proven << " " << res.message << std::endl;
-        return static_cast<int64_t>(res.proven);
-    }
-    if (name == "provemodfuncGAMMA0idBATCH") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects provemodfuncGAMMA0idBATCH(etaids, N)"));
-        const Expr* listExpr = args[0].get();
-        if (!listExpr || listExpr->tag != Expr::Tag::List)
-            throw std::runtime_error(runtimeErr(name, "etaids must be list of etaid terms"));
-        std::vector<std::vector<std::pair<Frac, std::vector<int>>>> etaids;
-        for (const auto& etaidExpr : listExpr->elements) {
-            if (!etaidExpr || etaidExpr->tag != Expr::Tag::List)
-                throw std::runtime_error(runtimeErr(name, "each etaid must be list of [c, GP] terms"));
-            std::vector<std::pair<Frac, std::vector<int>>> etaid;
-            for (const auto& term : etaidExpr->elements) {
-                if (!term || term->tag != Expr::Tag::List || term->elements.size() < 1)
-                    throw std::runtime_error(runtimeErr(name, "each term must be [c] or [c, t1, r1, ...]"));
-                Frac c = Frac(static_cast<int64_t>(evalToInt(term->elements[0].get(), env, sumIndices)));
-                std::vector<int> GP;
-                if (term->elements.size() >= 2) {
-                    for (size_t i = 1; i < term->elements.size(); ++i)
-                        GP.push_back(static_cast<int>(evalToInt(term->elements[i].get(), env, sumIndices)));
-                }
-                etaid.push_back({c, GP});
-            }
-            etaids.push_back(std::move(etaid));
-        }
-        int N = static_cast<int>(evi(1));
-        auto results = provemodfuncGAMMA0idBATCH(etaids, N);
-        int all_proven = 1;
-        for (size_t i = 0; i < results.size(); ++i) {
-            std::cout << "id[" << (i+1) << "] sturm_bound=" << results[i].sturm_bound
-                      << " proven=" << results[i].proven << " " << results[i].message << std::endl;
-            if (results[i].proven != 1) all_proven = 0;
-        }
-        return static_cast<int64_t>(all_proven);
-    }
-    if (name == "provemodfuncid") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects provemodfuncid(jacid, N)"));
-        const Expr* listExpr = args[0].get();
-        if (!listExpr || listExpr->tag != Expr::Tag::List)
-            throw std::runtime_error(runtimeErr(name, "jacid must be list of [coeff, jaclist] terms"));
-        std::vector<std::pair<Frac, std::vector<JacFactor>>> jacid;
-        for (const auto& term : listExpr->elements) {
-            if (!term || term->tag != Expr::Tag::List || term->elements.size() < 1)
-                throw std::runtime_error(runtimeErr(name, "each term must be [coeff] or [coeff, [a,b,exp], ...]"));
-            Frac c = Frac(static_cast<int64_t>(evalToInt(term->elements[0].get(), env, sumIndices)));
-            std::vector<JacFactor> jac;
-            if (term->elements.size() >= 2) {
-                for (size_t i = 1; i < term->elements.size(); ++i) {
-                    const Expr* fac = term->elements[i].get();
-                    if (!fac || fac->tag != Expr::Tag::List || fac->elements.size() < 3)
-                        throw std::runtime_error(runtimeErr(name, "each JacFactor must be [a, b, exp]"));
-                    int a = static_cast<int>(evalToInt(fac->elements[0].get(), env, sumIndices));
-                    int b = static_cast<int>(evalToInt(fac->elements[1].get(), env, sumIndices));
-                    Frac e = Frac(static_cast<int64_t>(evalToInt(fac->elements[2].get(), env, sumIndices)));
-                    jac.push_back({a, b, e});
-                }
-            }
-            jacid.push_back({c, jac});
-        }
-        int N = static_cast<int>(evi(1));
-        ProveModfuncIdResult res = provemodfuncid(jacid, N);
-        std::cout << "sturm_bound=" << res.sturm_bound << " proven=" << res.proven << " " << res.message << std::endl;
-        return static_cast<int64_t>(res.proven);
-    }
-    if (name == "provemodfuncidBATCH") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects provemodfuncidBATCH(jacids, N)"));
-        const Expr* listExpr = args[0].get();
-        if (!listExpr || listExpr->tag != Expr::Tag::List)
-            throw std::runtime_error(runtimeErr(name, "jacids must be list of jacid"));
-        std::vector<std::vector<std::pair<Frac, std::vector<JacFactor>>>> jacids;
-        for (const auto& jacidExpr : listExpr->elements) {
-            if (!jacidExpr || jacidExpr->tag != Expr::Tag::List)
-                throw std::runtime_error(runtimeErr(name, "each jacid must be list of [coeff, jaclist] terms"));
-            std::vector<std::pair<Frac, std::vector<JacFactor>>> jacid;
-            for (const auto& term : jacidExpr->elements) {
-                if (!term || term->tag != Expr::Tag::List || term->elements.size() < 1)
-                    throw std::runtime_error(runtimeErr(name, "each term must be [coeff] or [coeff, [a,b,exp], ...]"));
-                Frac c = Frac(static_cast<int64_t>(evalToInt(term->elements[0].get(), env, sumIndices)));
-                std::vector<JacFactor> jac;
-                if (term->elements.size() >= 2) {
-                    for (size_t i = 1; i < term->elements.size(); ++i) {
-                        const Expr* fac = term->elements[i].get();
-                        if (!fac || fac->tag != Expr::Tag::List || fac->elements.size() < 3)
-                            throw std::runtime_error(runtimeErr(name, "each JacFactor must be [a, b, exp]"));
-                        int a = static_cast<int>(evalToInt(fac->elements[0].get(), env, sumIndices));
-                        int b = static_cast<int>(evalToInt(fac->elements[1].get(), env, sumIndices));
-                        Frac e = Frac(static_cast<int64_t>(evalToInt(fac->elements[2].get(), env, sumIndices)));
-                        jac.push_back({a, b, e});
-                    }
-                }
-                jacid.push_back({c, jac});
-            }
-            jacids.push_back(std::move(jacid));
-        }
-        int N = static_cast<int>(evi(1));
-        auto results = provemodfuncidBATCH(jacids, N);
-        int all_proven = 1;
-        for (size_t i = 0; i < results.size(); ++i) {
-            std::cout << "id[" << (i+1) << "] sturm_bound=" << results[i].sturm_bound
-                      << " proven=" << results[i].proven << " " << results[i].message << std::endl;
-            if (results[i].proven != 1) all_proven = 0;
-        }
-        return static_cast<int64_t>(all_proven);
-    }
-    if (name == "partition") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Frac p = partition_number(static_cast<int>(evi(0)));
-        std::cout << p.str() << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "partitions") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        int n = static_cast<int>(evi(0));
-        if (n > 100)
-            throw std::runtime_error(runtimeErr(name, "n too large (limit 100)"));
-        auto raw = enumerate_partitions(n);
-        std::vector<Partition> result;
-        result.reserve(raw.size());
-        for (auto& v : raw) {
-            Partition ptn;
-            ptn.parts = std::move(v);
-            result.push_back(std::move(ptn));
-        }
-        return result;
-    }
-    if (name == "conjpart") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Partition ptn = evalToPartition(args[0].get());
-        Partition conj;
-        conj.parts = conjugate_partition(ptn.parts);
-        return conj;
-    }
-    if (name == "lp") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Partition ptn = evalToPartition(args[0].get());
-        if (ptn.parts.empty()) return static_cast<int64_t>(0);
-        return *std::max_element(ptn.parts.begin(), ptn.parts.end());
-    }
-    if (name == "np_parts") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Partition ptn = evalToPartition(args[0].get());
-        return static_cast<int64_t>(ptn.parts.size());
-    }
-    if (name == "nep") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Partition ptn = evalToPartition(args[0].get());
-        int64_t count = 0;
-        for (int64_t p : ptn.parts)
-            if (p % 2 == 0) ++count;
-        return count;
-    }
-    if (name == "ptnnorm") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Partition ptn = evalToPartition(args[0].get());
-        int64_t sum = 0;
-        for (int64_t p : ptn.parts) sum += p;
-        return sum;
-    }
+    DispatchContext ctx{name, args, env, sumIndices, q, T, ev, evi, evalListToSeries, evalListToInt, evalToPartition};
 
-    // ---- partition statistics (Phase 76) ----
-    if (name == "drank") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Partition ptn = evalToPartition(args[0].get());
-        return ptn_drank(ptn.parts);
-    }
-    if (name == "agcrank") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Partition ptn = evalToPartition(args[0].get());
-        return ptn_agcrank(ptn.parts);
-    }
-    if (name == "kapPD") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Partition ptn = evalToPartition(args[0].get());
-        return ptn_kapPD(ptn.parts);
-    }
-    if (name == "lamPD") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Partition ptn = evalToPartition(args[0].get());
-        return ptn_lamPD(ptn.parts);
-    }
-    if (name == "numLE") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Partition ptn = evalToPartition(args[0].get());
-        return ptn_numLE(ptn.parts);
-    }
-    if (name == "ptnDP") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Partition ptn = evalToPartition(args[0].get());
-        return static_cast<int64_t>(ptn_is_distinct(ptn.parts) ? 1 : 0);
-    }
-    if (name == "ptnOP") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Partition ptn = evalToPartition(args[0].get());
-        return static_cast<int64_t>(ptn_is_odd_parts(ptn.parts) ? 1 : 0);
-    }
-    if (name == "ptnRR") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Partition ptn = evalToPartition(args[0].get());
-        return static_cast<int64_t>(ptn_is_RR(ptn.parts) ? 1 : 0);
-    }
-    if (name == "ptnCC") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Partition ptn = evalToPartition(args[0].get());
-        return static_cast<int64_t>(ptn_is_CC(ptn.parts) ? 1 : 0);
-    }
-    if (name == "ptnSCHUR") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Partition ptn = evalToPartition(args[0].get());
-        return static_cast<int64_t>(ptn_is_SCHUR(ptn.parts) ? 1 : 0);
-    }
-    if (name == "ptnOE") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        Partition ptn = evalToPartition(args[0].get());
-        return static_cast<int64_t>(ptn_is_OE(ptn.parts) ? 1 : 0);
-    }
-    if (name == "PDP") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        return count_PDP(static_cast<int>(evi(0)));
-    }
-    if (name == "POE") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        return count_POE(static_cast<int>(evi(0)));
-    }
-    if (name == "PRR") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        return count_PRR(static_cast<int>(evi(0)));
-    }
-    if (name == "PSCHUR") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        return count_PSCHUR(static_cast<int>(evi(0)));
-    }
-    if (name == "overptns") {
-        if (args.size() != 1) throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        int n = static_cast<int>(evi(0));
-        auto ops = enumerate_overpartitions(n);
-        for (const auto& [dp, p] : ops) {
-            std::cout << "[" << formatPartition({dp}) << ", " << formatPartition({p}) << "]" << std::endl;
-        }
-        std::cout << "Total: " << ops.size() << " overpartitions" << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "overptnrank") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects 2 arguments: overptnrank(dptn, ptn)"));
-        Partition dptn = evalToPartition(args[0].get());
-        Partition ptn = evalToPartition(args[1].get());
-        return overptn_rank(dptn.parts, ptn.parts);
-    }
-    if (name == "overptncrank") {
-        if (args.size() != 2) throw std::runtime_error(runtimeErr(name, "expects 2 arguments: overptncrank(dptn, ptn)"));
-        Partition dptn = evalToPartition(args[0].get());
-        Partition ptn = evalToPartition(args[1].get());
-        return overptn_crank(dptn.parts, ptn.parts);
-    }
-
-    // ---- t-core functions ----
-    if (name == "rvec") {
-        if (args.size() != 3)
-            throw std::runtime_error(runtimeErr(name, "expects 3 arguments: rvec(ptn, t, k)"));
-        Partition ptn = evalToPartition(args[0].get());
-        int t = static_cast<int>(evi(1));
-        int k = static_cast<int>(evi(2));
-        if (t <= 0) throw std::runtime_error(runtimeErr(name, "t must be positive"));
-        return tcore_rvec(ptn.parts, t, k);
-    }
-    if (name == "istcore") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments: istcore(ptn, t)"));
-        Partition ptn = evalToPartition(args[0].get());
-        int t = static_cast<int>(evi(1));
-        if (t <= 0) throw std::runtime_error(runtimeErr(name, "t must be positive"));
-        return static_cast<int64_t>(tcore_istcore(ptn.parts, t) ? 1 : 0);
-    }
-    if (name == "tcoreofptn") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments: tcoreofptn(ptn, t)"));
-        Partition ptn = evalToPartition(args[0].get());
-        int t = static_cast<int>(evi(1));
-        if (t <= 0) throw std::runtime_error(runtimeErr(name, "t must be positive"));
-        Partition core;
-        core.parts = tcore_tcoreofptn(ptn.parts, t);
-        return core;
-    }
-    if (name == "tcores") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments: tcores(t, n)"));
-        int t = static_cast<int>(evi(0));
-        int n = static_cast<int>(evi(1));
-        if (t <= 0) throw std::runtime_error(runtimeErr(name, "t must be positive"));
-        if (n > 100) throw std::runtime_error(runtimeErr(name, "n too large (limit 100)"));
-        auto all = enumerate_partitions(n);
-        auto cores = tcore_tcores(t, n, all);
-        std::vector<Partition> result;
-        result.reserve(cores.size());
-        for (auto& v : cores) {
-            Partition p;
-            p.parts = std::move(v);
-            result.push_back(std::move(p));
-        }
-        return result;
-    }
-    if (name == "ptn2nvec") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments: ptn2nvec(ptn, t)"));
-        Partition ptn = evalToPartition(args[0].get());
-        int t = static_cast<int>(evi(1));
-        if (t <= 0) throw std::runtime_error(runtimeErr(name, "t must be positive"));
-        Partition nvec;
-        nvec.parts = tcore_ptn2nvec(ptn.parts, t);
-        return nvec;
-    }
-    if (name == "ptn2rvec") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments: ptn2rvec(ptn, t)"));
-        Partition ptn = evalToPartition(args[0].get());
-        int t = static_cast<int>(evi(1));
-        if (t <= 0) throw std::runtime_error(runtimeErr(name, "t must be positive"));
-        Partition rvec;
-        rvec.parts = tcore_ptn2rvec(ptn.parts, t);
-        return rvec;
-    }
-    if (name == "nvec2ptn") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument: nvec2ptn(nvec)"));
-        Partition nvec = evalToPartition(args[0].get());
-        Partition result;
-        result.parts = tcore_nvec2ptn(nvec.parts);
-        return result;
-    }
-    if (name == "nvec2alphavec") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument: nvec2alphavec(nvec)"));
-        Partition nvec = evalToPartition(args[0].get());
-        int t = static_cast<int>(nvec.parts.size());
-        if (t == 5) {
-            int64_t n0 = nvec.parts[0], n1 = nvec.parts[1], n2 = nvec.parts[2],
-                    n3 = nvec.parts[3];
-            // Hardcoded rational linear formulas from Garvan's tcore package
-            Frac a3 = Frac(1,5)*Frac(n0) + Frac(1,5) + Frac(3,5)*Frac(n2)
-                     + Frac(2,5)*Frac(n1) + Frac(4,5)*Frac(n3);
-            Frac a0 = Frac(-1,5)*Frac(n3) + Frac(1,5)*Frac(n0) + Frac(1,5)
-                     - Frac(2,5)*Frac(n2) - Frac(3,5)*Frac(n1);
-            Frac a2 = Frac(-1,5)*Frac(n1) - Frac(2,5)*Frac(n3) - Frac(3,5)*Frac(n0)
-                     + Frac(2,5) + Frac(1,5)*Frac(n2);
-            Frac a1 = Frac(-4,5)*Frac(n2) - Frac(1,5)*Frac(n1) - Frac(2,5)*Frac(n3)
-                     - Frac(3,5)*Frac(n0) + Frac(2,5);
-            Frac a4 = Frac(1) - a0 - a1 - a2 - a3;
-            std::cout << "[" << a0.str() << ", " << a1.str() << ", " << a2.str()
-                      << ", " << a3.str() << ", " << a4.str() << "]" << std::endl;
-            return DisplayOnly{};
-        }
-        if (t == 7) {
-            int64_t n0 = nvec.parts[0], n1 = nvec.parts[1], n2 = nvec.parts[2],
-                    n3 = nvec.parts[3], n4 = nvec.parts[4], n5 = nvec.parts[5];
-            Frac a3 = Frac(6,7)*Frac(n1) + Frac(5,7)*Frac(n3) + Frac(1,7)*Frac(n4)
-                     + Frac(3,7)*Frac(n0) - Frac(1,7) + Frac(2,7)*Frac(n2) + Frac(4,7)*Frac(n5);
-            Frac a4 = Frac(-1,7)*Frac(n4) - Frac(3,7)*Frac(n0) + Frac(1,7)
-                     - Frac(2,7)*Frac(n2) - Frac(4,7)*Frac(n5) + Frac(2,7)*Frac(n3) + Frac(1,7)*Frac(n1);
-            Frac a0 = Frac(-1,7)*Frac(n5) + Frac(1,7)*Frac(n0) - Frac(2,7)*Frac(n4)
-                     + Frac(2,7) - Frac(4,7)*Frac(n2) - Frac(3,7)*Frac(n3) - Frac(5,7)*Frac(n1);
-            Frac a2 = Frac(3,7)*Frac(n2) + Frac(6,7)*Frac(n5) + Frac(1,7)*Frac(n0)
-                     + Frac(5,7)*Frac(n4) + Frac(2,7) + Frac(4,7)*Frac(n3) + Frac(2,7)*Frac(n1);
-            Frac a1 = Frac(-2,7)*Frac(n0) + Frac(3,7) + Frac(1,7)*Frac(n2)
-                     + Frac(2,7)*Frac(n5) - Frac(3,7)*Frac(n4) - Frac(1,7)*Frac(n3) - Frac(4,7)*Frac(n1);
-            Frac a5 = Frac(-5,7)*Frac(n3) - Frac(1,7)*Frac(n4) - Frac(3,7)*Frac(n0)
-                     + Frac(1,7) - Frac(2,7)*Frac(n2) - Frac(4,7)*Frac(n5) + Frac(1,7)*Frac(n1);
-            Frac a6 = Frac(1) - a0 - a1 - a2 - a3 - a4 - a5;
-            std::cout << "[" << a0.str() << ", " << a1.str() << ", " << a2.str()
-                      << ", " << a3.str() << ", " << a4.str() << ", " << a5.str()
-                      << ", " << a6.str() << "]" << std::endl;
-            return DisplayOnly{};
-        }
-        throw std::runtime_error(runtimeErr(name, "only implemented for t=5 and t=7"));
-    }
-    if (name == "tquot") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments: tquot(ptn, t)"));
-        Partition ptn = evalToPartition(args[0].get());
-        int t = static_cast<int>(evi(1));
-        if (t <= 0) throw std::runtime_error(runtimeErr(name, "t must be positive"));
-        auto raw = tcore_tquot(ptn.parts, t);
-        std::vector<Partition> result;
-        for (auto& v : raw) {
-            Partition p;
-            p.parts = std::move(v);
-            result.push_back(std::move(p));
-        }
-        return result;
-    }
-    if (name == "phi1") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments: phi1(ptn, t)"));
-        Partition ptn = evalToPartition(args[0].get());
-        int t = static_cast<int>(evi(1));
-        if (t <= 0) throw std::runtime_error(runtimeErr(name, "t must be positive"));
-        Phi1Result res;
-        res.core.parts = tcore_tcoreofptn(ptn.parts, t);
-        auto raw_quot = tcore_tquot(ptn.parts, t);
-        for (auto& v : raw_quot) {
-            Partition p;
-            p.parts = std::move(v);
-            res.quotient.push_back(std::move(p));
-        }
-        return res;
-    }
-    if (name == "invphi1") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments: invphi1(phi1result, t)"));
-        int t = static_cast<int>(evi(1));
-        if (t <= 0) throw std::runtime_error(runtimeErr(name, "t must be positive"));
-        // First arg: Phi1Result from phi1() or variable
-        EvalResult r = eval(args[0].get(), env, sumIndices);
-        if (!std::holds_alternative<Phi1Result>(r))
-            throw std::runtime_error(runtimeErr(name, "first argument must be a phi1 result"));
-        const auto& phi1r = std::get<Phi1Result>(r);
-        std::vector<std::vector<int64_t>> quot_raw;
-        for (const auto& p : phi1r.quotient)
-            quot_raw.push_back(p.parts);
-        Partition result;
-        result.parts = tcore_invphi1(phi1r.core.parts, quot_raw, t);
-        return result;
-    }
-    if (name == "tcrank") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments: tcrank(ptn, t)"));
-        Partition ptn = evalToPartition(args[0].get());
-        int64_t t = evi(1);
-        if (t < 3 || t % 2 == 0)
-            throw std::runtime_error(runtimeErr(name, "t must be an odd prime >= 3"));
-        int64_t val = tcore_tcrank(ptn.parts, t);
-        std::cout << val << std::endl;
-        return DisplayOnly{};
-    }
-    if (name == "tresdiag") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments: tresdiag(ptn, t)"));
-        Partition ptn = evalToPartition(args[0].get());
-        int t = static_cast<int>(evi(1));
-        if (t <= 0) throw std::runtime_error(runtimeErr(name, "t must be positive"));
-        for (size_t row = 0; row < ptn.parts.size(); ++row) {
-            for (int64_t col = 1; col <= ptn.parts[row]; ++col) {
-                if (col > 1) std::cout << " ";
-                std::cout << safe_mod(col - static_cast<int64_t>(row) - 1, t);
-            }
-            std::cout << "\n";
-        }
-        return DisplayOnly{};
-    }
-    if (name == "makebiw") {
-        if (args.size() != 3)
-            throw std::runtime_error(runtimeErr(name, "expects 3 arguments: makebiw(ptn, t, m)"));
-        Partition ptn = evalToPartition(args[0].get());
-        int t = static_cast<int>(evi(1));
-        int mj = static_cast<int>(evi(2));
-        if (t <= 0) throw std::runtime_error(runtimeErr(name, "t must be positive"));
-        if (mj <= 0) throw std::runtime_error(runtimeErr(name, "m must be positive"));
-        int np = static_cast<int>(ptn.parts.size());
-        int pad = (mj + 1) * t;
-        std::vector<int64_t> ip;
-        for (int k = 0; k < np; ++k) ip.push_back(ptn.parts[k]);
-        for (int k = 0; k < pad; ++k) ip.push_back(0);
-        std::map<std::pair<int,int>, char> reg;
-        for (int i = -100; i <= 100; ++i)
-            for (int k = 0; k < t; ++k)
-                reg[{i, k}] = 'N';
-        for (size_t j = 0; j < ip.size(); ++j) {
-            int64_t a = ip[j];
-            int64_t maple_j = static_cast<int64_t>(j) + 1;
-            int b = static_cast<int>(safe_mod(a - maple_j, t));
-            int r = static_cast<int>(floor_div(a - maple_j, t)) + 1;
-            if (r >= -100 && r <= 100) reg[{r, b}] = 'E';
-        }
-        // Header
-        std::cout << "   ";
-        for (int r = -mj; r <= mj; ++r) {
-            if (r < 0) std::cout << r;
-            else std::cout << " " << r;
-        }
-        std::cout << "\n";
-        // Words
-        for (int i = 0; i < t; ++i) {
-            std::cout << "W" << i << " ";
-            for (int r = -mj; r <= mj; ++r) {
-                std::cout << " " << reg[{r, i}];
-            }
-            std::cout << "\n";
-        }
-        return DisplayOnly{};
-    }
-
-    if (name == "qdiff") {
-        if (args.size() != 1)
-            throw std::runtime_error(runtimeErr(name, "expects 1 argument"));
-        return qdiff(ev(0));
-    }
-    if (name == "subs_q") {
-        if (args.size() != 2)
-            throw std::runtime_error(runtimeErr(name, "expects 2 arguments"));
-        return ev(0).subs_q(static_cast<int>(evi(1)));
-    }
-
-    if (name == "help") {
-        const auto& table = getHelpTable();
-        if (args.size() == 0) {
-            std::cout << "q-series REPL. Commands: expr, var := expr, help, help(func).\nBuilt-ins: ";
-            bool first = true;
-            for (const auto& [n, _] : table) {
-                if (!first) std::cout << ", ";
-                std::cout << ansi::gold() << n << ansi::reset();
-                first = false;
-            }
-            std::cout << std::endl;
-            return DisplayOnly{};
-        }
-        if (args.size() == 1 && args[0]->tag == Expr::Tag::Var) {
-            const std::string& fn = args[0]->varName;
-            auto it = table.find(fn);
-            if (it != table.end()) {
-                formatHelpEntry(fn, it->second);
-            } else {
-                std::cout << "unknown function: " << fn << std::endl;
-            }
-            return DisplayOnly{};
-        }
-        throw std::runtime_error(runtimeErr(name, "expects 0 or 1 argument"));
-    }
+    auto it = getBuiltinRegistry().find(name);
+    if (it != getBuiltinRegistry().end())
+        return it->second.handler(ctx);
 
     {
-        const auto& table = getHelpTable();
+        const auto& reg = getBuiltinRegistry();
         std::vector<std::pair<int, std::string>> suggestions;
-        for (const auto& [key, _] : table) {
+        for (const auto& [key, _] : reg) {
             int d = levenshteinDistance(name, key);
             if (d <= 3)
                 suggestions.push_back({d, key});
