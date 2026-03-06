@@ -1820,7 +1820,10 @@ Plans:
   2. Document lists complexity hotspots, code duplication, known brittle areas
   3. One-pass lightweight format (not an exhaustive audit)
   4. Actionable for future planning (prioritization or phase mapping)
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 115-01-PLAN.md — Create TECH_DEBT.md (hotspots, duplication, brittle areas)
 
 ### v11.3 Progress
 
