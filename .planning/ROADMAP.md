@@ -1599,7 +1599,7 @@ Plans:
 
 ## Milestone v11.1 (Gap Closure & Improvements) — phases 103–107
 
-- [ ] **Phase 103: Block 25 fix** - findpoly q-shift via addAligned; maple-checklist Block 25 passes
+- [x] **Phase 103: Block 25 fix** - findpoly q-shift via addAligned; maple-checklist Block 25 passes (completed 2026-03-06)
 - [ ] **Phase 104: Block 24 N/A rationale** - Document N/A (collect is Maple formatting-only); no implementation
 - [ ] **Phase 105: findlincombomodp** - findlincombomodp(f, L, p, T); REPL dispatch; mod-p linear combo
 - [ ] **Phase 106: provemodfuncid extensions** - provemodfuncidBATCH; theta_aids regression; acceptance-theta-ids passes
@@ -1614,7 +1614,10 @@ Plans:
   2. maple-checklist Block 25 passes (no skip)
   3. Series with different q-shifts are normalized (addAligned) before findpoly
   4. No regressions in existing findpoly or related tests
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 103-01-PLAN.md — Verification-first: run Block 25 + EX-10; fix only if fail
 
 ### Phase 104: Block 24 N/A rationale
 **Goal**: Document Block 24 as N/A; clarify scope without implementing collect
@@ -1624,7 +1627,10 @@ Plans:
   1. Block 24 has documented N/A rationale (collect is Maple formatting-only)
   2. maple-checklist Block 24 has explicit skip rationale in test file or adjacent doc
   3. No implementation of collect — scope explicitly deferred
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 104-01-PLAN.md — Verify Block 24 N/A rationale; fix if inadequate; validate maple-checklist SKIP
 
 ### Phase 105: findlincombomodp
 **Goal**: User can express a series as linear combination of others mod p
@@ -1663,7 +1669,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 103. Block 25 fix | 0/? | Not started | - |
+| 103. Block 25 fix | 0/? | Complete    | 2026-03-06 |
 | 104. Block 24 N/A rationale | 0/? | Not started | - |
 | 105. findlincombomodp | 0/? | Not started | - |
 | 106. provemodfuncid extensions | 0/? | Not started | - |
