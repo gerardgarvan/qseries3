@@ -120,7 +120,6 @@ inline std::string formatParseErrorWithSnippet(const std::string& input, const s
 #include <termios.h>
 #include <unistd.h>
 #include <csignal>
-#include <sys/signal.h>
 #else
 #include <windows.h>
 #endif
@@ -146,6 +145,16 @@ struct RawModeGuard {
             tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig);
     }
 };
+static struct termios g_repl_orig_termios;
+static void repl_sigint_handler(int) {
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &g_repl_orig_termios);
+    signal(SIGINT, SIG_DFL);
+    raise(SIGINT);
+}
+static void repl_install_sigint_handler() {
+    if (tcgetattr(STDIN_FILENO, &g_repl_orig_termios) != 0) return;
+    signal(SIGINT, repl_sigint_handler);
+}
 inline int readOneChar() {
     unsigned char c;
     if (read(STDIN_FILENO, &c, 1) == 1)
@@ -2977,8 +2986,12 @@ inline void runRepl() {
     const size_t maxHistory = 1000;
     size_t inputLineNum = 0;
 
-    if (stdin_is_tty())
+    if (stdin_is_tty()) {
+#if defined(__CYGWIN__) || !defined(_WIN32)
+        repl_install_sigint_handler();
+#endif
         loadHistory(history, maxHistory);
+    }
 
     constexpr size_t maxContinuations = 100;
 
