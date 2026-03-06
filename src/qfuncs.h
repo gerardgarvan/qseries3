@@ -514,6 +514,7 @@ inline Frac partition_number(int n) {
 inline Series qdiff(const Series& f) {
     Series result;
     result.trunc = f.trunc;
+    result.q_shift = f.q_shift;
     for (const auto& [e, v] : f.c) {
         if (e != 0 && e < f.trunc)
             result.setCoeff(e, v * Frac(e));
