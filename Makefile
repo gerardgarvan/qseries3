@@ -1,7 +1,7 @@
 # Use g++ by default (Cygwin/Linux). Override: make CXX=x86_64-w64-mingw32-g++
 # LDFLAGS: -static for static linking (add make LDFLAGS=-static if needed)
 CXX ?= g++
-CXXFLAGS = -std=c++20 -O2 -Wall -Wextra -Wpedantic
+CXXFLAGS = -std=c++20 -O2 -Wall -Wextra -Wpedantic -Wshadow
 LDFLAGS ?= 
 
 .PHONY: all clean test acceptance acceptance-all acceptance-maple acceptance-factor acceptance-qol acceptance-wins acceptance-v18 acceptance-suppress-output acceptance-arrow-keys acceptance-optional-args acceptance-history acceptance-omega acceptance-exercises acceptance-etamake-format integration-eta-theta-modforms demo test-package wasm bench docker-build docker-run
