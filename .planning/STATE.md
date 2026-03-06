@@ -9,10 +9,10 @@
 ## Position
 
 **Milestone:** v11.3 Code Health
-**Current phase:** 113 (Build Hygiene)
+**Current phase:** 114 (make lint)
 **Plan:** 01 complete
 **Status:** Milestone complete
-**Last activity:** 2026-03-06 — v11.3 roadmap created (phases 112–115)
+**Last activity:** 2026-03-06 — Phase 114 Plan 01 complete (make lint)
 
 ## Progress
 
@@ -20,11 +20,13 @@
 |-------|------|--------|
 | 112. Warning Audit | Zero warnings; -Wshadow; fix tcore.h, eta_cusp.h | 1 plan complete |
 | 113. Build Hygiene | CXXFLAGS aligned | 1 plan complete |
-| 114. make lint | cppcheck target | Not started |
+| 114. make lint | cppcheck target | 1 plan complete |
 | 115. Tech Debt Inventory | TECH_DEBT.md | Not started |
 
 ## Session Log
 
+- 2026-03-06: Phase 114 Plan 01 complete — make lint target; cppcheck --enable=warning,style,performance -I src src/main.cpp; commit 06c3ff0; 114-01-SUMMARY.md
+- 2026-03-06: Phase 114 planned — 1 plan (114-01); add make lint (cppcheck); research + verification passed
 - 2026-03-06: Phase 113 Plan 01 complete — add -Wpedantic -Wshadow to build.sh and release.yml; CXXFLAGS aligned with Makefile; commits 62b40ce, 4eb5c9f; 113-01-SUMMARY.md
 - 2026-03-06: Phase 112 Plan 01 complete — fix tcore.h/eta_cusp.h warnings, add -Wshadow to Makefile; commits 8571009, 45c060b, ed89709; 112-01-SUMMARY.md
 - 2026-03-06: Phase 111 Plan 03 complete — re-add SIGINT handler (ERGO-03 gap closure); commit ad0b09d; 111-03-SUMMARY.md; uses signal() not sigaction (Cygwin)
