@@ -1717,10 +1717,10 @@ Plans:
   1. help(prodmake), help(etamake), and other key built-ins include 1–2 examples
   2. Help output has SYNOPSIS section; optionally SEE ALSO
   3. Examples are sourced from qseriesdoc.md / Garvan tutorial where applicable
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 109-01-PLAN.md — TBD (run /gsd:plan-phase 109 to break down)
+- [ ] 109-01-PLAN.md — HelpEntry struct, formatHelpEntry, examples for prodmake/etamake/jacprodmake/aqprod/etaq/theta
 
 ### Phase 110: Input Convenience
 **Goal**: Users get helpful suggestions and completion hints without buffer conflicts
@@ -1754,7 +1754,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 108. Error Diagnostics | 0/2 | Complete    | 2026-03-06 |
-| 109. Help Extensions | 0/? | Not started | - |
+| 109. Help Extensions | 0/1 | Not started | - |
 | 110. Input Convenience | 0/? | Not started | - |
 | 111. Ergonomics Polish | 0/? | Not started | - |
 
