@@ -1778,7 +1778,10 @@ Plans:
   2. tcore.h and eta_cusp.h have no unused-parameter or other warning sources (fix or annotate)
   3. No global -Wno-* flags used to suppress warnings
   4. All existing acceptance tests still pass
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 112-01-PLAN.md — Fix tcore.h and eta_cusp.h; add -Wshadow; zero warnings
 
 ### Phase 113: Build Hygiene
 **Goal**: CXXFLAGS consistent across all build entry points
@@ -1817,7 +1820,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 112. Warning Audit | 0/? | Not started | - |
+| 112. Warning Audit | 0/1 | Not started | - |
 | 113. Build Hygiene | 0/? | Not started | - |
 | 114. make lint | 0/? | Not started | - |
 | 115. Tech Debt Inventory | 0/? | Not started | - |
