@@ -11,7 +11,7 @@
 **Milestone:** v11.2 Improve User Experience
 **Current phase:** 109 (Help Extensions)
 **Plan:** 01 complete (109-01)
-**Status:** Phase 109 Plan 01 complete
+**Status:** Milestone complete
 
 ## Progress
 
