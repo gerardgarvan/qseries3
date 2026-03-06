@@ -11,7 +11,7 @@
 **Milestone:** v11.2 Improve User Experience
 **Current phase:** 108 (Error Diagnostics)
 **Plan:** 02
-**Status:** Complete
+**Status:** Milestone complete
 
 ## Progress
 
