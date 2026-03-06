@@ -9,9 +9,9 @@
 ## Position
 
 **Milestone:** v11.2 Improve User Experience
-**Current phase:** 109 (Help Extensions)
-**Plan:** 01 complete (109-01)
-**Status:** Milestone complete
+**Current phase:** 110 (Input Convenience)
+**Plan:** 01 complete
+**Status:** Completed 110-01-PLAN.md
 
 ## Progress
 
@@ -19,11 +19,13 @@
 |-------|------|--------|
 | 108 | Error Diagnostics | 2/2 plans complete |
 | 109 | Help Extensions | 1/1 plans complete |
-| 110 | Input Convenience | Not started |
+| 110 | Input Convenience | 1/1 plans complete |
 | 111 | Ergonomics Polish | Not started |
 
 ## Session Log
 
+- 2026-03-06: Phase 110 Plan 01 complete — formatUndefinedVariableMsg, sig hint on tab, single-buffer doc; acceptance-input-convenience.sh; commits 58b8610, b7036c6, ba8c01c
+- 2026-03-06: Phase 110 planned — 1 plan (110-01); typo suggestions, sig hint on tab, single-buffer doc; research + verification passed
 - 2026-03-06: Phase 109 Plan 01 complete — HelpEntry, formatHelpEntry, examples for prodmake/etamake/jacprodmake/aqprod/etaq/theta3; commits c4174f7, 56d9d77
 - 2026-03-06: Phase 109 planned — 1 plan; research + verification passed
 - 2026-03-06: Phase 108 Plan 02 complete — parse error snippet + caret, formatParseErrorWithSnippet, script line prefix, WASM Maple format; acceptance-error-diagnostics.sh; commits 11e79a3, 0f1b1f9, 55c226e
