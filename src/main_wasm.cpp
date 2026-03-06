@@ -41,7 +41,11 @@ inline std::string evaluate(std::string input) {
             display(res, g_env, g_env.T);
         }
     } catch (const std::exception& e) {
-        oss << "error: " << e.what() << std::endl;
+        std::string text = e.what();
+        if (text.size() >= 8 && text.compare(0, 8, "parser: ") == 0)
+            oss << "Error, (in parser) " << text.substr(8) << std::endl;
+        else
+            oss << text << std::endl;
     } catch (...) {
         oss << "error: unknown exception" << std::endl;
     }

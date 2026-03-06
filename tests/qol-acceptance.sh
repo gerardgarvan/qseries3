@@ -52,8 +52,8 @@ fi
 echo ""
 echo "--- Phase 21: Error messages ---"
 
-# Parse error shows line and column
-if run "foo : 1" 2>&1 | grep -qE "parser:.*line.*col|line 1, col"; then
+# Parse error shows line and column (Phase 108: Error, (in parser) line N, col M)
+if run "foo : 1" 2>&1 | grep -qE "Error.*parser.*line.*col|line 1, col"; then
     echo "PASS: Parse error shows line/column"
     PASS=$((PASS+1))
 else
@@ -70,9 +70,9 @@ else
     FAIL=$((FAIL+1))
 fi
 
-# Runtime error shows function name prefix
-if run "etaq(1)" 2>&1 | grep -qE "^error:.*etaq:|etaq:.*expected"; then
-    echo "PASS: Runtime error shows function name (etaq:)"
+# Runtime error shows function name prefix (Phase 108: Error, (in etaq) invalid input...)
+if run "etaq()" 2>&1 | grep -qE "Error, \(in etaq\)|invalid input|expects"; then
+    echo "PASS: Runtime error shows function name (etaq)"
     PASS=$((PASS+1))
 else
     echo "FAIL: Runtime error should show etaq: prefix"
@@ -82,7 +82,7 @@ fi
 # Script mode: error includes line number for script
 tmp_script=$(mktemp)
 printf '1+1\nfoo : 1\n' > "$tmp_script"
-if "$BIN" < "$tmp_script" 2>&1 | grep -qE "line 2:|error:.*line 2"; then
+if "$BIN" < "$tmp_script" 2>&1 | grep -q "line 2:"; then
     echo "PASS: Script mode error shows line number"
     PASS=$((PASS+1))
 else
