@@ -1672,7 +1672,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 107-01-PLAN.md — findids types 4 and 5; acceptance-rr-id extended
+- [x] 107-01-PLAN.md — findids types 4 and 5; acceptance-rr-id extended
 
 ### v11.1 Progress
 
@@ -1682,5 +1682,5 @@ Plans:
 | 104. Block 24 N/A rationale | 0/? | Complete    | 2026-03-06 |
 | 105. findlincombomodp | 1/1 | Complete | 2026-03-01 |
 | 106. provemodfuncid extensions | 1/1 | Complete | 2026-03-06 |
-| 107. RR Identity Search | 0/? | Not started | - |
+| 107. RR Identity Search | 1/1 | Complete | 2026-03-06 |
 
