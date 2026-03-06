@@ -1766,7 +1766,7 @@ Plans:
 
 - [x] **Phase 112: Warning Audit** - Zero compiler warnings; fix tcore.h, eta_cusp.h; add -Wshadow, fix shadow warnings (completed 2026-03-06)
 - [x] **Phase 113: Build Hygiene** - CXXFLAGS aligned across Makefile, build.sh, release.yml (completed 2026-03-06)
-- [ ] **Phase 114: make lint** - make lint runs cppcheck; no compile DB required
+- [x] **Phase 114: make lint** - make lint runs cppcheck; no compile DB required (completed 2026-03-06)
 - [ ] **Phase 115: Tech Debt Inventory** - Lightweight one-pass document: hotspots, duplication, brittle areas
 
 ### Phase 112: Warning Audit
@@ -1806,7 +1806,10 @@ Plans:
   2. cppcheck uses --enable=warning,style,performance
   3. No compile database required (standalone cppcheck invocation)
   4. make lint completes and reports findings (or passes with zero issues)
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 114-01-PLAN.md — Add make lint target (cppcheck, no compile DB)
 
 ### Phase 115: Tech Debt Inventory
 **Goal**: Documented tech debt for future remediation planning
@@ -1825,6 +1828,6 @@ Plans:
 |-------|----------------|--------|-----------|
 | 112. Warning Audit | 0/1 | Complete    | 2026-03-06 |
 | 113. Build Hygiene | 0/? | Complete    | 2026-03-06 |
-| 114. make lint | 0/? | Not started | - |
+| 114. make lint | 0/? | Complete    | 2026-03-06 |
 | 115. Tech Debt Inventory | 0/? | Not started | - |
 
