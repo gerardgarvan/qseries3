@@ -9,10 +9,10 @@
 ## Position
 
 **Milestone:** v11.4 Tech Debt
-**Current phase:** 118 (Brittle Guards)
+**Current phase:** 119 (Fix Cygwin Build)
 **Plan:** 01 complete
-**Status:** Ready for next
-**Last activity:** 2026-03-06 — Phase 118 Plan 01 complete (118-01)
+**Status:** Complete
+**Last activity:** 2026-03-06 — Phase 119 Plan 01 complete (119-01)
 
 ## Progress
 
@@ -21,9 +21,12 @@
 | 116. Built-in Registration | Name→handler lookup; getHelpTable from table | 1 plan complete |
 | 117. Duplication Reduction | expectArg/ev/evi; TTY abstraction | 1 plan complete |
 | 118. Brittle Guards | Guard env.at("q"); named constants | 1 plan complete |
+| 119. Fix Cygwin Build | Cygwin g++ 13 build fixes in repl.h | 1 plan complete |
 
 ## Session Log
 
+- 2026-03-06: Phase 119 Plan 01 complete — Cygwin build fixes (forward decls, SEE2/SEE3/SEE4/EX2 macros, tripleprod/quinprod/add/sum, L.push_back); commit d6dffc1; 119-01-SUMMARY.md
+- 2026-03-01: Phase 119 planned — 1 plan (119-01); Fix Cygwin g++ 13 build (H macro parens, forward decls, tripleprod/quinprod, add/sum, L.push_back); plan-check passed; gap closure for v11.4 tech debt
 - 2026-03-06: Phase 118 Plan 01 complete — named constants, q-guard in dispatchBuiltin; commit e62d8c2; 118-01-SUMMARY.md
 - 2026-03-06: Phase 118 planned — 1 plan (118-01); q guard, named constants; plan-check passed
 - 2026-03-06: Phase 117 Plan 01 complete — expectArgCount, readLineFn; etaq/prodmake/etamake migrated; commits 1ee3029, 9224cb5, 548a94c; 117-01-SUMMARY.md
