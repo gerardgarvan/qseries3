@@ -3,10 +3,10 @@
 set -e
 mkdir -p dist
 if command -v x86_64-w64-mingw32-g++ >/dev/null 2>&1; then
-  x86_64-w64-mingw32-g++ -std=c++20 -O2 -static -Wall -Wextra -o dist/qseries.exe src/main.cpp
+  x86_64-w64-mingw32-g++ -std=c++20 -O2 -static -Wall -Wextra -Wpedantic -Wshadow -o dist/qseries.exe src/main.cpp
 else
-  g++ -std=c++20 -O2 -static -Wall -Wextra -o dist/qseries.exe src/main.cpp 2>/dev/null || \
-  g++ -std=c++20 -O2 -Wall -Wextra -o dist/qseries.exe src/main.cpp
+  g++ -std=c++20 -O2 -static -Wall -Wextra -Wpedantic -Wshadow -o dist/qseries.exe src/main.cpp 2>/dev/null || \
+  g++ -std=c++20 -O2 -Wall -Wextra -Wpedantic -Wshadow -o dist/qseries.exe src/main.cpp
 fi
 echo "Built dist/qseries.exe"
 mkdir -p dist/demo
